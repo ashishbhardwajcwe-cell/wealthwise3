@@ -1,5 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { redis, snapshotRateLimit, inputHash, isRedisConfigured } from "@/lib/redis";
+
+export const runtime = "nodejs";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -55,6 +58,17 @@ function validate(input: Partial<SnapshotInput>): input is SnapshotInput {
   );
 }
 
+/** Best-effort client IP extraction from common proxy headers. */
+function getClientIp(req: NextRequest): string {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  const real = req.headers.get("x-real-ip");
+  if (real) return real;
+  return "unknown";
+}
+
+const CACHE_TTL_SECONDS = 60 * 60 * 24; // 24h
+
 export async function POST(req: NextRequest) {
   try {
     const data: Partial<SnapshotInput> = await req.json();
@@ -64,6 +78,33 @@ export async function POST(req: NextRequest) {
         { error: "Invalid input. Please check your form values and try again." },
         { status: 400 },
       );
+    }
+
+    // Rate limit per IP (3 / hour). Skipped silently if Upstash isn't configured.
+    if (snapshotRateLimit) {
+      const ip = getClientIp(req);
+      const result = await snapshotRateLimit.limit(ip);
+      if (!result.success) {
+        const reset = Math.max(0, result.reset - Date.now());
+        return NextResponse.json(
+          {
+            error: "Rate limit reached. You can generate up to 3 snapshots per hour from this IP.",
+            retryInSeconds: Math.ceil(reset / 1000),
+          },
+          { status: 429 },
+        );
+      }
+    }
+
+    // Cache lookup by stable input hash
+    const cacheKey = isRedisConfigured() ? `auris:snapshot:cache:${await inputHash(data)}` : null;
+    if (cacheKey && redis) {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        // Upstash auto-deserialises JSON, but tolerate either shape
+        const value = typeof cached === "string" ? JSON.parse(cached) : cached;
+        return NextResponse.json(value, { headers: { "X-Cache": "HIT" } });
+      }
     }
 
     const currency = data.country === "India" ? "INR" : data.country === "US" ? "USD" : data.country === "UK" ? "GBP" : data.country === "UAE" ? "AED" : data.country === "Singapore" ? "SGD" : "USD";
@@ -97,7 +138,6 @@ Provide a calm, honest assessment. Use educational language only. Output JSON on
       throw new Error("Unexpected response type from model");
     }
 
-    // Extract JSON (handle potential markdown code fence)
     const text = content.text.trim();
     const jsonText = text.startsWith("```")
       ? text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "")
@@ -105,7 +145,19 @@ Provide a calm, honest assessment. Use educational language only. Output JSON on
 
     const parsed = JSON.parse(jsonText);
 
-    return NextResponse.json(parsed);
+    // Cache for 24h
+    if (cacheKey && redis) {
+      await redis.set(cacheKey, JSON.stringify(parsed), { ex: CACHE_TTL_SECONDS });
+    }
+
+    // Anonymised audit log (no PII — just shape of input + country/age bucket)
+    if (redis) {
+      const day = new Date().toISOString().slice(0, 10);
+      await redis.hincrby(`auris:snapshot:metrics:${day}`, `${data.country}|${data.riskTolerance}`, 1);
+      await redis.expire(`auris:snapshot:metrics:${day}`, 60 * 60 * 24 * 90);
+    }
+
+    return NextResponse.json(parsed, { headers: { "X-Cache": "MISS" } });
   } catch (error) {
     console.error("Wealth snapshot error:", error);
     return NextResponse.json(

@@ -5,6 +5,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
+import { ConsentBanner } from "@/components/ConsentBanner";
+import { Analytics } from "@/components/Analytics";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 
@@ -65,25 +67,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main>{children}</main>
           <DisclaimerBanner />
           <Footer />
+          <ConsentBanner />
         </CurrencyProvider>
 
-        {/* Google Analytics */}
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ga-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');
-              `}
-            </Script>
-          </>
-        )}
+        {/* Google Analytics — only fires after user accepts consent */}
+        <Analytics gaId={process.env.NEXT_PUBLIC_GA_ID ?? ""} />
 
         {/* Organisation structured data */}
         <Script
