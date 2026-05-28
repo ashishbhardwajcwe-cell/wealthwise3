@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { pmsData } from "@/lib/product-data";
+import { PMSGraph } from "@/components/ProductGraphs";
 
 export const metadata: Metadata = {
   title: "PMS (Portfolio Management Services) — Complete Guide for Indian HNI",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <InvestmentProductPage data={pmsData} />;
+  return <InvestmentProductPage data={{ ...pmsData, graphic: <PMSGraph /> }} />;
 }

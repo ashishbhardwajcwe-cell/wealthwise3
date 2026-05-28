@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { realEstateData } from "@/lib/product-data";
+import { RealEstateGraph } from "@/components/ProductGraphs";
 
 export const metadata: Metadata = {
   title: "Real Estate — Residential, Commercial, REITs in India",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <InvestmentProductPage data={realEstateData} />;
+  return <InvestmentProductPage data={{ ...realEstateData, graphic: <RealEstateGraph /> }} />;
 }

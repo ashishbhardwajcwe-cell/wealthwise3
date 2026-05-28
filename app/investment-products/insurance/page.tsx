@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { insuranceData } from "@/lib/product-data";
+import { InsuranceGraph } from "@/components/ProductGraphs";
 
 export const metadata: Metadata = {
   title: "Insurance — Term Life, Health, Why to Avoid ULIPs and Endowment",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <InvestmentProductPage data={insuranceData} />;
+  return <InvestmentProductPage data={{ ...insuranceData, graphic: <InsuranceGraph /> }} />;
 }

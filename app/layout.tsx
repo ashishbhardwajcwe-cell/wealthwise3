@@ -4,6 +4,7 @@ import Script from "next/script";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 
@@ -59,10 +60,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body>
-        <Header />
-        <main>{children}</main>
-        <DisclaimerBanner />
-        <Footer />
+        <CurrencyProvider>
+          <Header />
+          <main>{children}</main>
+          <DisclaimerBanner />
+          <Footer />
+        </CurrencyProvider>
 
         {/* Google Analytics */}
         {process.env.NEXT_PUBLIC_GA_ID && (

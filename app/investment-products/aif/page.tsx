@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { aifData } from "@/lib/product-data";
+import { AIFGraph } from "@/components/ProductGraphs";
 
 export const metadata: Metadata = {
   title: "AIF Categories I, II, III — Alternative Investment Funds in India",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <InvestmentProductPage data={aifData} />;
+  return <InvestmentProductPage data={{ ...aifData, graphic: <AIFGraph /> }} />;
 }

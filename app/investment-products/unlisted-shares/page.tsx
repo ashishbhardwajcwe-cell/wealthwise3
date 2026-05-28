@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { unlistedSharesData } from "@/lib/product-data";
+import { UnlistedSharesGraph } from "@/components/ProductGraphs";
 
 export const metadata: Metadata = {
   title: "Unlisted Shares & Pre-IPO Investing in India — 2026 Guide",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <InvestmentProductPage data={unlistedSharesData} />;
+  return <InvestmentProductPage data={{ ...unlistedSharesData, graphic: <UnlistedSharesGraph /> }} />;
 }

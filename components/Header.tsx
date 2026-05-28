@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Menu, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { investmentProducts, audiences } from "@/lib/site-config";
+import { CurrencySwitcher } from "./CurrencySwitcher";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -50,6 +51,7 @@ export function Header() {
         </nav>
 
         <div className="hidden lg:flex items-center gap-3">
+          <CurrencySwitcher />
           <Link href="/guided" className="text-sm font-semibold text-[var(--color-navy)] hover:text-[var(--color-gold-dim)] inline-flex items-center gap-1">
             <Sparkles className="w-4 h-4 text-[var(--color-gold)]" />
             Guided Plan
