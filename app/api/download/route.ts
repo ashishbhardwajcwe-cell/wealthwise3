@@ -8,22 +8,22 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DOWNLOAD_CATALOG: Record<string, { title: string; url: string; pages: number }> = {
   "financial-health-check": {
     title: "The 15-minute financial health check for professionals",
-    url: "https://auriswealth.co/downloads/financial-health-check.pdf",
+    url: "https://auriswealth.co/resources/guides/financial-health-check",
     pages: 8,
   },
   "defence-transition-planner": {
     title: "The defence officer's transition financial planner",
-    url: "https://auriswealth.co/downloads/defence-transition-planner.pdf",
+    url: "https://auriswealth.co/resources/guides/defence-transition-planner",
     pages: 24,
   },
   "nri-india-cheatsheet": {
     title: "NRI investing in India: 2026 cheat sheet",
-    url: "https://auriswealth.co/downloads/nri-india-cheatsheet.pdf",
+    url: "https://auriswealth.co/resources/guides/nri-india-cheatsheet",
     pages: 16,
   },
   "pms-empanelment-guide": {
     title: "PMS empanelment: how to evaluate a manager",
-    url: "https://auriswealth.co/downloads/pms-empanelment-guide.pdf",
+    url: "https://auriswealth.co/resources/guides/pms-empanelment-guide",
     pages: 12,
   },
 };
@@ -76,11 +76,14 @@ function downloadHtml(item: { title: string; url: string; pages: number }) {
   <body style="font-family: -apple-system, system-ui, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; color: #0A1628; line-height: 1.6;">
     <div style="border-top: 4px solid #C9A84C; padding-top: 24px;">
       <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 24px; margin: 0 0 16px;">
-        Your download is ready
+        Your guide is ready
       </h1>
-      <p>${item.title}<br/><span style="color: #5A6B80; font-size: 13px;">${item.pages}-page PDF</span></p>
+      <p>${item.title}<br/><span style="color: #5A6B80; font-size: 13px;">Approximately a ${item.pages}-minute read</span></p>
       <p style="margin: 32px 0;">
-        <a href="${item.url}" style="display: inline-block; padding: 12px 24px; background: #0A1628; color: #FFFDF5; text-decoration: none; border-radius: 8px; font-weight: 600;">Download PDF →</a>
+        <a href="${item.url}" style="display: inline-block; padding: 12px 24px; background: #0A1628; color: #FFFDF5; text-decoration: none; border-radius: 8px; font-weight: 600;">Read your guide →</a>
+      </p>
+      <p style="font-size: 13px; color: #5A6B80;">
+        On the guide page, you'll also find a "Save as PDF" button if you'd like to keep an offline copy.
       </p>
       <p>I'll also send you our weekly note every Friday. Reply "unsubscribe" anytime to stop.</p>
       <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, Auris Wealth</span></p>
@@ -94,12 +97,14 @@ function downloadHtml(item: { title: string; url: string; pages: number }) {
 }
 
 function downloadText(item: { title: string; url: string; pages: number }) {
-  return `Your download is ready.
+  return `Your guide is ready.
 
 ${item.title}
-${item.pages}-page PDF
+Approximately a ${item.pages}-minute read
 
-Download: ${item.url}
+Read your guide: ${item.url}
+
+(On the guide page, you'll also find a "Save as PDF" button for an offline copy.)
 
 I'll also send you our weekly note every Friday. Reply "unsubscribe" anytime.
 

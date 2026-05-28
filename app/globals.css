@@ -112,3 +112,16 @@
   .gradient-navy { background: linear-gradient(180deg, var(--color-navy), var(--color-midnight)); }
   .gradient-hero { background: linear-gradient(180deg, var(--color-offwhite) 0%, var(--color-parchment) 100%); }
 }
+
+/* Print styles — clean PDF export from guide pages */
+@media print {
+  header, footer, nav, .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  main { padding: 0 !important; }
+  article { padding: 0 !important; }
+  a { color: inherit !important; text-decoration: none !important; }
+  .gradient-hero, .gradient-navy { background: white !important; }
+  .card-soft, .btn-primary, .btn-outline { display: none !important; }
+  h1, h2, h3, h4 { page-break-after: avoid; }
+  p, ul, ol { page-break-inside: avoid; }
+}

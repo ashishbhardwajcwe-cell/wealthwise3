@@ -61,8 +61,8 @@ export default function DownloadsPage() {
     <>
       <Hero
         eyebrow="Free Resources"
-        title="Free PDF guides"
-        subtitle="Four practical PDFs we&apos;ve refined with hundreds of clients. Drop your email — we&apos;ll send the link and a calm weekly note, nothing else."
+        title="Free guides"
+        subtitle="Four practical guides we&apos;ve refined with hundreds of clients. Drop your email — we&apos;ll send the link and a calm weekly note, nothing else. Each guide has a one-click &lsquo;Save as PDF&rsquo; button if you want to keep an offline copy."
       />
 
       <section className="py-16">
@@ -73,8 +73,10 @@ export default function DownloadsPage() {
                 <div className="flex items-start gap-3 mb-3">
                   <FileText className="w-6 h-6 text-[var(--color-gold-dim)] flex-shrink-0 mt-1" />
                   <div>
-                    <h3 className="text-lg font-semibold leading-tight">{d.title}</h3>
-                    <div className="text-xs text-[var(--color-slate)] mt-1">{d.pages}-page PDF</div>
+                    <h3 className="text-lg font-semibold leading-tight">
+                      <a href={`/resources/guides/${d.slug}`} className="hover:text-[var(--color-gold-dim)]">{d.title}</a>
+                    </h3>
+                    <div className="text-xs text-[var(--color-slate)] mt-1">{d.pages}-minute read</div>
                   </div>
                 </div>
                 <p className="text-sm text-[var(--color-slate)] leading-relaxed mb-4">{d.desc}</p>
