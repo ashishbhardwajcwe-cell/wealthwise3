@@ -8,10 +8,28 @@ import { siteConfig } from "@/lib/site-config";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const body = new URLSearchParams();
+    body.append("form-name", "contact");
+    formData.forEach((value, key) => body.append(key, value.toString()));
+
+    try {
+      const res = await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      if (!res.ok) throw new Error("Submission failed");
+      setSubmitted(true);
+    } catch {
+      setError("Couldn't send your message. Please email us directly.");
+    }
   }
 
   return (
@@ -36,7 +54,11 @@ export default function ContactPage() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4" name="contact" data-netlify="true">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input type="hidden" name="form-name" value="contact" />
+                <p hidden>
+                  <label>Don&apos;t fill this out: <input name="bot-field" /></label>
+                </p>
                 <Field label="Name" name="name" required />
                 <Field label="Email" name="email" type="email" required />
                 <Field label="Phone (optional)" name="phone" type="tel" />
@@ -51,6 +73,7 @@ export default function ContactPage() {
                   "Something else",
                 ]} />
                 <Field label="Message" name="message" textarea required />
+                {error && <p className="text-sm text-[var(--color-ruby)]">{error}</p>}
                 <button type="submit" className="btn-primary w-full">Send</button>
               </form>
             )}

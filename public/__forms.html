@@ -1,0 +1,35 @@
+<!--
+  Netlify Forms detection file for Next.js Runtime v5.
+  See https://ntl.fyi/next-runtime-forms-migration
+
+  Forms defined here are picked up by Netlify at build time.
+  The actual React form in app/contact/page.tsx posts to this endpoint
+  via fetch with form-encoded data.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Auris Wealth Forms</title>
+  </head>
+  <body>
+    <form name="contact" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="tel" name="phone" />
+      <input type="text" name="topic" />
+      <textarea name="message"></textarea>
+      <input type="text" name="bot-field" />
+    </form>
+
+    <form name="newsletter" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="email" name="email" />
+      <input type="text" name="bot-field" />
+    </form>
+
+    <form name="download" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="email" name="email" />
+      <input type="text" name="slug" />
+      <input type="text" name="bot-field" />
+    </form>
+  </body>
+</html>
