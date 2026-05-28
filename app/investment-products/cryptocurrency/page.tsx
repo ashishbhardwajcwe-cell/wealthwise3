@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { cryptoData } from "@/lib/product-data";
+import { CryptoGraph } from "@/components/ProductGraphs";
 
 export const metadata: Metadata = {
   title: "Cryptocurrency in India — Tax, Exchanges, Allocation, Custody",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <InvestmentProductPage data={cryptoData} />;
+  return <InvestmentProductPage data={{ ...cryptoData, graphic: <CryptoGraph /> }} />;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { goldData } from "@/lib/product-data";
+import { GoldGraph } from "@/components/ProductGraphs";
 
 export const metadata: Metadata = {
   title: "Gold — Physical vs ETF vs Sovereign Gold Bond (SGB) Compared",
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <InvestmentProductPage data={goldData} />;
+  return <InvestmentProductPage data={{ ...goldData, graphic: <GoldGraph /> }} />;
 }
