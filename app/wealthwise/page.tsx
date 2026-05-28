@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Eye, Brain, GitBranch, Check } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { CTASection } from "@/components/CTASection";
+import { AppScreenshot } from "@/components/Illustrations";
 
 export const metadata: Metadata = {
   title: "WealthWise — The wealth platform that thinks alongside you",
@@ -52,8 +53,8 @@ export default function WealthWiseAppPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {tourScreens.map((s, i) => (
               <div key={i} className="card-soft">
-                <div className="aspect-video bg-[var(--color-sand)] rounded-lg mb-4 flex items-center justify-center text-xs text-[var(--color-slate)]">
-                  [{s.title} screenshot]
+                <div className="aspect-video rounded-lg mb-4 overflow-hidden border border-[var(--color-silver)]/40">
+                  <AppScreenshot title={s.title} kind={s.kind} />
                 </div>
                 <h3 className="text-base font-semibold mb-1.5">{s.title}</h3>
                 <p className="text-sm text-[var(--color-slate)] leading-relaxed">{s.copy}</p>
@@ -131,13 +132,13 @@ export default function WealthWiseAppPage() {
   );
 }
 
-const tourScreens = [
-  { title: "Unified portfolio", copy: "All your holdings in one view — drillable to scheme, AMC, fund manager, current NAV, cost basis, and gain/loss." },
-  { title: "Goal projections", copy: "Every goal projected with inflation, required SIP, current trajectory, and on-track / off-track flag." },
-  { title: "Tax harvesting", copy: "March-end automation: identifies LTCG up to ₹1.25L to harvest tax-free, and STCG losses to offset." },
-  { title: "Scenario builder", copy: "Toggle 'retire at 55' vs 60, 'SIP +₹15k', 'market drops 30%'. Trajectory rebuilds in real-time." },
-  { title: "Insurance gap", copy: "Recommended term cover vs current cover, health insurance adequacy, and where you're under-protected." },
-  { title: "Asset allocation drift", copy: "Live tracking of equity/debt/gold drift from your target. Rebalancing alerts only when threshold breached." },
+const tourScreens: { title: string; copy: string; kind: "dashboard" | "goals" | "harvest" | "scenarios" | "insurance" | "drift" }[] = [
+  { title: "Unified portfolio", kind: "dashboard", copy: "All your holdings in one view — drillable to scheme, AMC, fund manager, current NAV, cost basis, and gain/loss." },
+  { title: "Goal projections", kind: "goals", copy: "Every goal projected with inflation, required SIP, current trajectory, and on-track / off-track flag." },
+  { title: "Tax harvesting", kind: "harvest", copy: "March-end automation: identifies LTCG up to ₹1.25L to harvest tax-free, and STCG losses to offset." },
+  { title: "Scenario builder", kind: "scenarios", copy: "Toggle 'retire at 55' vs 60, 'SIP +₹15k', 'market drops 30%'. Trajectory rebuilds in real-time." },
+  { title: "Insurance gap", kind: "insurance", copy: "Recommended term cover vs current cover, health insurance adequacy, and where you're under-protected." },
+  { title: "Asset allocation drift", kind: "drift", copy: "Live tracking of equity/debt/gold drift from your target. Rebalancing alerts only when threshold breached." },
 ];
 
 const comparisonRows = [

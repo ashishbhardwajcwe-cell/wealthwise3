@@ -6,6 +6,7 @@ import { CTASection } from "@/components/CTASection";
 import { ProductCard } from "@/components/ProductCard";
 import { BlogCard } from "@/components/BlogCard";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
+import { FounderPortrait, UnifiedPlanDiagram } from "@/components/Illustrations";
 
 export default function HomePage() {
   return (
@@ -107,7 +108,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-16 grid md:grid-cols-3 gap-6">
+          <div className="mt-12 max-w-5xl mx-auto">
+            <UnifiedPlanDiagram />
+          </div>
+
+          <div className="mt-12 grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <FlowStep
               icon={<Compass className="w-5 h-5" />}
               step="01"
@@ -210,11 +215,11 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="aspect-[3/4] bg-[var(--color-midnight)] rounded-xl border border-white/10 flex items-center justify-center text-xs text-[var(--color-silver)]">
-              [Uniform photo]
+            <div className="aspect-[3/4] rounded-xl overflow-hidden">
+              <FounderPortrait variant="uniform" />
             </div>
-            <div className="aspect-[3/4] bg-[var(--color-midnight)] rounded-xl border border-white/10 flex items-center justify-center text-xs text-[var(--color-silver)] mt-8">
-              [Civilian photo]
+            <div className="aspect-[3/4] rounded-xl overflow-hidden mt-8">
+              <FounderPortrait variant="civilian" />
             </div>
           </div>
         </div>

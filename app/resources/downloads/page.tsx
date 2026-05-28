@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, FileText, Check } from "lucide-react";
+import { Download, FileText, Check, Loader2 } from "lucide-react";
 import { Hero } from "@/components/Hero";
 
 const DOWNLOADS = [
@@ -34,6 +34,28 @@ const DOWNLOADS = [
 export default function DownloadsPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState<string | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent, slug: string) {
+    e.preventDefault();
+    if (!email.includes("@")) return;
+    setError(null);
+    setLoading(slug);
+    try {
+      const res = await fetch("/api/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, slug }),
+      });
+      if (!res.ok) throw new Error();
+      setSubmitted(slug);
+    } catch {
+      setError("Couldn't queue the download. Please try again.");
+    } finally {
+      setLoading(null);
+    }
+  }
 
   return (
     <>
@@ -62,27 +84,29 @@ export default function DownloadsPage() {
                     <Check className="w-4 h-4" /> Check your inbox for the link.
                   </div>
                 ) : (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (email.includes("@")) setSubmitted(d.slug);
-                    }}
-                    className="flex gap-2"
-                  >
+                  <form onSubmit={(e) => handleSubmit(e, d.slug)} className="flex gap-2">
                     <input
                       type="email" required value={email}
+                      disabled={loading === d.slug}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
-                      className="flex-1 px-3 py-2 border border-[var(--color-silver)]/40 rounded text-sm focus:outline-none focus:border-[var(--color-gold)]"
+                      className="flex-1 px-3 py-2 border border-[var(--color-silver)]/40 rounded text-sm focus:outline-none focus:border-[var(--color-gold)] disabled:opacity-60"
                     />
-                    <button type="submit" className="px-3 py-2 bg-[var(--color-navy)] text-[var(--color-cream)] text-sm font-semibold rounded inline-flex items-center gap-1.5">
-                      <Download className="w-3.5 h-3.5" /> Get
+                    <button type="submit" disabled={loading === d.slug} className="px-3 py-2 bg-[var(--color-navy)] text-[var(--color-cream)] text-sm font-semibold rounded inline-flex items-center gap-1.5 disabled:opacity-60">
+                      {loading === d.slug ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      Get
                     </button>
                   </form>
                 )}
               </div>
             ))}
           </div>
+
+          {error && (
+            <div className="mt-8 p-4 bg-[var(--color-ruby)]/10 border border-[var(--color-ruby)]/30 rounded-lg text-sm text-[var(--color-ruby)]">
+              {error}
+            </div>
+          )}
 
           <div className="mt-12 p-5 bg-[var(--color-parchment)] rounded-xl border border-[var(--color-gold)]/20 text-sm text-[var(--color-slate)]">
             <strong className="text-[var(--color-navy)]">Privacy:</strong> We use your email only to send the PDF and our weekly note.
