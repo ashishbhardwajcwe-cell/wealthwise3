@@ -1,0 +1,131 @@
+/**
+ * Adapters that read PMS / AIF / Unlisted Share / Stock Analysis data
+ * from Sanity. Each returns an empty array when Sanity is not configured
+ * or has no documents yet — the calling page hides the section in that case.
+ */
+
+import { sanityClient, isSanityConfigured } from "@/sanity/client";
+import {
+  allStockAnalysesQuery,
+  stockAnalysisBySlugQuery,
+  stockAnalysisSlugsQuery,
+  allPmsStrategiesQuery,
+  allAifFundsQuery,
+  allUnlistedSharesQuery,
+} from "@/sanity/queries";
+
+export interface StockAnalysisCard {
+  _id: string;
+  slug: string;
+  title: string;
+  ticker: string;
+  company: string;
+  sector?: string;
+  marketCap?: "Large" | "Mid" | "Small" | "Micro";
+  thesis?: string;
+  keyMetrics?: {
+    cmp?: number;
+    pe?: number;
+    roe?: number;
+    debtToEquity?: number;
+    marketCapCr?: number;
+  };
+  analysisDate: string;
+  author?: { name?: string; role?: string };
+}
+
+export interface StockAnalysisDetail extends StockAnalysisCard {
+  body?: unknown;
+  strengths?: string[];
+  risks?: string[];
+  conclusion?: string;
+  author?: { name?: string; role?: string; image?: unknown };
+}
+
+export interface PmsStrategy {
+  _id: string;
+  strategyName: string;
+  manager: string;
+  category?: string;
+  aumCr?: number;
+  minInvestmentL?: number;
+  returns?: { y1?: number; y3?: number; y5?: number; sinceInception?: number };
+  fees?: { fixed?: number; performance?: number; hurdle?: number };
+  asOfDate: string;
+  source?: string;
+  notes?: string;
+}
+
+export interface AifFund {
+  _id: string;
+  fundName: string;
+  manager: string;
+  category?: string;
+  vintage?: number;
+  fundSize?: number;
+  minCommitmentCr?: number;
+  tenor?: number;
+  fees?: { management?: number; carry?: number; hurdle?: number };
+  returns?: { netIrr?: number; moic?: number; dpi?: number; tvpi?: number };
+  asOfDate: string;
+  notes?: string;
+}
+
+export interface UnlistedShare {
+  _id: string;
+  company: string;
+  slug?: string;
+  sector?: string;
+  priceLowINR: number;
+  priceHighINR: number;
+  lotSize?: number;
+  ipoStatus?: string;
+  platformsAvailable?: string[];
+  asOfDate: string;
+  summary?: string;
+  risks?: string[];
+}
+
+async function safeFetch<T>(query: string, fallback: T, params?: Record<string, unknown>, tags: string[] = []): Promise<T> {
+  if (!isSanityConfigured) return fallback;
+  try {
+    return await sanityClient.fetch(query, params ?? {}, {
+      next: { revalidate: 300, tags },
+    });
+  } catch (err) {
+    console.warn("Sanity fetch failed:", err);
+    return fallback;
+  }
+}
+
+export async function getStockAnalyses(): Promise<StockAnalysisCard[]> {
+  return safeFetch<StockAnalysisCard[]>(allStockAnalysesQuery, [], undefined, ["stockAnalysis"]);
+}
+
+export async function getStockAnalysisSlugs(): Promise<string[]> {
+  return safeFetch<string[]>(stockAnalysisSlugsQuery, [], undefined, ["stockAnalysis"]);
+}
+
+export async function getStockAnalysis(slug: string): Promise<StockAnalysisDetail | null> {
+  if (!isSanityConfigured) return null;
+  try {
+    return await sanityClient.fetch(stockAnalysisBySlugQuery, { slug }, {
+      next: { revalidate: 300, tags: ["stockAnalysis", `stockAnalysis:${slug}`] },
+    });
+  } catch (err) {
+    console.warn("Sanity fetch failed:", err);
+    return null;
+  }
+}
+
+export async function getPmsStrategies(): Promise<PmsStrategy[]> {
+  return safeFetch<PmsStrategy[]>(allPmsStrategiesQuery, [], undefined, ["pmsStrategy"]);
+}
+
+export async function getAifFunds(): Promise<AifFund[]> {
+  return safeFetch<AifFund[]>(allAifFundsQuery, [], undefined, ["aifFund"]);
+}
+
+export async function getUnlistedShares(): Promise<UnlistedShare[]> {
+  return safeFetch<UnlistedShare[]>(allUnlistedSharesQuery, [], undefined, ["unlistedShare"]);
+}

@@ -42,6 +42,7 @@ export function Header() {
             }))}
           />
           <NavLink href="/ai-wealth-planner">AI Planner</NavLink>
+          <NavLink href="/equity/analysis">Research</NavLink>
           <NavLink href="/wealthwise">WealthWise App</NavLink>
           <DropdownNavItem
             label="For"
@@ -84,6 +85,7 @@ export function Header() {
           <div className="container-wide py-4 flex flex-col gap-1">
             <MobileLink href="/investment-products/mutual-funds">Investment Products</MobileLink>
             <MobileLink href="/ai-wealth-planner">AI Planner</MobileLink>
+            <MobileLink href="/equity/analysis">Research</MobileLink>
             <MobileLink href="/wealthwise">WealthWise App</MobileLink>
             <MobileLink href="/for/professionals">For You</MobileLink>
             <MobileLink href="/blog">Blog</MobileLink>

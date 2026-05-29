@@ -92,3 +92,13 @@ export const allUnlistedSharesQuery = groq`
       priceLowINR, priceHighINR, lotSize, ipoStatus,
       platformsAvailable, asOfDate, summary, risks }
 `;
+
+export const stockAnalysisSlugsQuery = groq`
+  *[_type == "stockAnalysis" && defined(slug.current)][].slug.current
+`;
+
+export const stockAnalysisCountQuery = groq`count(*[_type == "stockAnalysis"])`;
+export const pmsStrategyCountQuery   = groq`count(*[_type == "pmsStrategy"])`;
+export const aifFundCountQuery       = groq`count(*[_type == "aifFund"])`;
+export const unlistedShareCountQuery = groq`count(*[_type == "unlistedShare"])`;
+
