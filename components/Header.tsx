@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { Menu, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,15 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--color-offwhite)]/85 border-b border-[var(--color-silver)]/40">
       <div className="container-wide flex items-center justify-between h-16">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2.5" aria-label="Auris Wealth — Home">
+          <Image
+            src="/auris-logo.png"
+            alt="Auris Wealth"
+            width={36}
+            height={36}
+            priority
+            className="rounded-md"
+          />
           <span className="text-lg font-semibold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
             Auris<span className="text-[var(--color-gold-dim)]">Wealth</span>
           </span>
