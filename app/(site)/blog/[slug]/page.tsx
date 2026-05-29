@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ArrowLeft, Clock, Calendar, User } from "lucide-react";
 import { StructuredData, articleSchema } from "@/components/StructuredData";
 import { PortableContent } from "@/components/PortableContent";
+import { ShareButtons } from "@/components/ShareButtons";
 import { getBlogPost, getAllBlogSlugs, getAllBlogCards } from "@/lib/blog";
 import { urlFor } from "@/sanity/client";
 import { siteConfig } from "@/lib/site-config";
@@ -101,8 +102,17 @@ export default async function BlogPostPage({ params }: Props) {
               <div className="aspect-[16/9] bg-[var(--color-sand)] rounded-xl mt-8" />
             )}
 
+            <div className="mt-8 flex justify-end">
+              <ShareButtons url={`${siteConfig.url}/blog/${slug}`} title={post.title} summary={post.excerpt} utmCampaign={`blog-${slug}`} />
+            </div>
+
             <div className="prose-article mt-10">
               <PortableContent value={post.body} />
+            </div>
+
+            <div className="mt-10 flex justify-between items-center flex-wrap gap-3 pb-6 border-b border-[var(--color-silver)]/30">
+              <span className="text-sm font-semibold text-[var(--color-navy)]">Enjoyed this? Share it.</span>
+              <ShareButtons url={`${siteConfig.url}/blog/${slug}`} title={post.title} summary={post.excerpt} utmCampaign={`blog-${slug}`} />
             </div>
 
             <AuthorAndRelated authorName={author} authorRole={post.author?.role} related={related} />
@@ -146,8 +156,17 @@ export default async function BlogPostPage({ params }: Props) {
 
           <div className="aspect-[16/9] bg-[var(--color-sand)] rounded-xl mt-8" />
 
+          <div className="mt-8 flex justify-end">
+            <ShareButtons url={`${siteConfig.url}/blog/${post.slug}`} title={post.title} summary={post.excerpt} utmCampaign={`blog-${post.slug}`} />
+          </div>
+
           <div className="prose-article mt-10">
             <LegacyBlogContent content={post.content} />
+          </div>
+
+          <div className="mt-10 flex justify-between items-center flex-wrap gap-3 pb-6 border-b border-[var(--color-silver)]/30">
+            <span className="text-sm font-semibold text-[var(--color-navy)]">Enjoyed this? Share it.</span>
+            <ShareButtons url={`${siteConfig.url}/blog/${post.slug}`} title={post.title} summary={post.excerpt} utmCampaign={`blog-${post.slug}`} />
           </div>
 
           <AuthorAndRelated authorName={post.author} related={related} />

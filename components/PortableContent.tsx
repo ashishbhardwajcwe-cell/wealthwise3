@@ -3,6 +3,8 @@ import type { PortableTextComponents } from "@portabletext/react";
 import Link from "next/link";
 import Image from "next/image";
 import { urlFor } from "@/sanity/client";
+import { TradingViewChart } from "./TradingViewChart";
+import { YouTubeEmbed } from "./YouTubeEmbed";
 
 const components: PortableTextComponents = {
   block: {
@@ -59,6 +61,15 @@ const components: PortableTextComponents = {
         </div>
       );
     },
+    youtubeEmbed: ({ value }) => <YouTubeEmbed url={value.url} caption={value.caption} />,
+    tradingViewChart: ({ value }) => (
+      <TradingViewChart
+        symbol={value.symbol}
+        interval={value.interval}
+        height={value.height}
+        caption={value.caption}
+      />
+    ),
   },
 };
 

@@ -49,6 +49,12 @@ export const metadata: Metadata = {
     description: siteConfig.description,
   },
   robots: { index: true, follow: true },
+  alternates: {
+    canonical: siteConfig.url,
+    types: {
+      "application/rss+xml": [{ url: "/rss.xml", title: "Auris Wealth Blog" }],
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -82,6 +82,61 @@ export const blogPost = defineType({
             { name: "body", type: "text", rows: 3 },
           ],
         },
+        {
+          type: "object",
+          name: "youtubeEmbed",
+          title: "YouTube video",
+          fields: [
+            {
+              name: "url",
+              type: "url",
+              title: "YouTube URL",
+              description: "Paste the full URL — youtube.com/watch?v=... or youtu.be/...",
+              validation: (r) => r.required(),
+            },
+            { name: "caption", type: "string", title: "Caption (optional)" },
+          ],
+          preview: {
+            select: { url: "url", caption: "caption" },
+            prepare({ url, caption }) {
+              return { title: caption || "YouTube video", subtitle: url };
+            },
+          },
+        },
+        {
+          type: "object",
+          name: "tradingViewChart",
+          title: "TradingView chart",
+          fields: [
+            {
+              name: "symbol",
+              type: "string",
+              title: "Symbol",
+              description: 'e.g. "NSE:RELIANCE", "NSE:NIFTY", "BSE:SENSEX", "BINANCE:BTCINR"',
+              validation: (r) => r.required(),
+            },
+            {
+              name: "interval",
+              type: "string",
+              title: "Default interval",
+              options: { list: ["1D", "1W", "1M", "3M", "1Y", "5Y"] },
+              initialValue: "1Y",
+            },
+            {
+              name: "height",
+              type: "number",
+              title: "Height (px)",
+              initialValue: 400,
+            },
+            { name: "caption", type: "string", title: "Caption (optional)" },
+          ],
+          preview: {
+            select: { symbol: "symbol", caption: "caption" },
+            prepare({ symbol, caption }) {
+              return { title: caption || `Chart: ${symbol}`, subtitle: symbol };
+            },
+          },
+        },
       ],
     }),
     defineField({
