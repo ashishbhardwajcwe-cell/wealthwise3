@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { siteConfig, investmentProducts, audiences, calculators } from "@/lib/site-config";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 
@@ -8,8 +9,17 @@ export function Footer() {
       <div className="container-wide py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           <div className="col-span-2">
-            <div className="text-xl font-semibold mb-3" style={{ fontFamily: "var(--font-display)" }}>
-              Auris<span className="text-[var(--color-gold)]">Wealth</span>
+            <div className="flex items-center gap-3 mb-3">
+              <Image
+                src="/auris-logo.png"
+                alt="Auris Wealth"
+                width={44}
+                height={44}
+                className="rounded-md"
+              />
+              <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-display)" }}>
+                Auris<span className="text-[var(--color-gold)]">Wealth</span>
+              </div>
             </div>
             <p className="text-sm text-[var(--color-silver)] max-w-xs mb-6">
               Wealth that compounds. Plans that hold under fire.

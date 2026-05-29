@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Hero } from "@/components/Hero";
 import { BlogCard } from "@/components/BlogCard";
-import { BLOG_POSTS, BLOG_CATEGORIES } from "@/lib/blog-data";
+import { getBlogPostsByCategory, BLOG_CATEGORIES } from "@/lib/blog";
 
 interface Props {
   params: Promise<{ category: string }>;
 }
+
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   return BLOG_CATEGORIES.map((c) => ({
@@ -32,7 +34,7 @@ export default async function CategoryPage({ params }: Props) {
   );
   if (!cat) notFound();
 
-  const posts = BLOG_POSTS.filter((p) => p.category === cat);
+  const posts = await getBlogPostsByCategory(category);
 
   return (
     <>

@@ -1,12 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
-import Script from "next/script";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { DisclaimerBanner } from "@/components/DisclaimerBanner";
-import { CurrencyProvider } from "@/components/CurrencyProvider";
-import { ConsentBanner } from "@/components/ConsentBanner";
-import { Analytics } from "@/components/Analytics";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 
@@ -61,36 +54,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body>
-        <CurrencyProvider>
-          <Header />
-          <main>{children}</main>
-          <DisclaimerBanner />
-          <Footer />
-          <ConsentBanner />
-        </CurrencyProvider>
-
-        {/* Google Analytics — only fires after user accepts consent */}
-        <Analytics gaId={process.env.NEXT_PUBLIC_GA_ID ?? ""} />
-
-        {/* Organisation structured data */}
-        <Script
-          id="org-schema"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              name: siteConfig.name,
-              legalName: siteConfig.legalName,
-              url: siteConfig.url,
-              email: siteConfig.email,
-              identifier: siteConfig.cin,
-              sameAs: Object.values(siteConfig.social),
-            }),
-          }}
-        />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
