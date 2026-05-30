@@ -3,9 +3,9 @@ import type { PortableTextComponents } from "@portabletext/react";
 import Link from "next/link";
 import Image from "next/image";
 import { urlFor } from "@/sanity/client";
+import { slugifyHeading } from "@/lib/slugify";
 import { TradingViewChart } from "./TradingViewChart";
 import { YouTubeEmbed } from "./YouTubeEmbed";
-import { slugifyHeading } from "./TableOfContents";
 
 function extractText(children: React.ReactNode): string {
   if (children == null) return "";
