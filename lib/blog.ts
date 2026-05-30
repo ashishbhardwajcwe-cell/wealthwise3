@@ -9,7 +9,7 @@
  * lib/blog-data.ts entirely.
  */
 
-import { sanityClient, isSanityConfigured } from "@/sanity/client";
+import { sanityClient, isSanityConfigured, urlFor } from "@/sanity/client";
 import {
   allBlogPostsQuery, featuredBlogPostQuery, blogPostBySlugQuery,
   blogPostSlugsQuery, blogPostsByCategoryQuery,
@@ -24,6 +24,8 @@ export interface BlogCardData {
   date: string;
   readTime?: string;
   image?: string;
+  imageAlt?: string;
+  authorName?: string;
 }
 
 interface SanityCardShape {
@@ -40,6 +42,12 @@ interface SanityCardShape {
 }
 
 function shapeSanityCard(p: SanityCardShape): BlogCardData {
+  let image: string | undefined;
+  try {
+    if (p.heroImage?.asset) {
+      image = urlFor(p.heroImage as never).width(1200).height(675).fit("crop").auto("format").url();
+    }
+  } catch { /* asset URL building failed; skip image */ }
   return {
     slug: p.slug,
     title: p.title,
@@ -47,6 +55,9 @@ function shapeSanityCard(p: SanityCardShape): BlogCardData {
     category: p.category?.title ?? "Uncategorised",
     date: p.publishedAt?.slice(0, 10) ?? "",
     readTime: p.readTime,
+    image,
+    imageAlt: p.heroImage?.alt ?? p.title,
+    authorName: p.author?.name,
   };
 }
 
@@ -58,6 +69,7 @@ function shapeLocalCard(p: typeof LOCAL_POSTS[number]): BlogCardData {
     category: p.category,
     date: p.date,
     readTime: p.readTime,
+    authorName: p.author,
   };
 }
 
