@@ -2,20 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { slugifyHeading } from "@/lib/slugify";
 
 export interface TocItem {
   id: string;
   text: string;
   level: 2 | 3;
-}
-
-export function slugifyHeading(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 /** Reads the rendered article DOM and pulls out an ordered list of H2 and H3
