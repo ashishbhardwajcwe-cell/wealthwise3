@@ -5,13 +5,35 @@ import Image from "next/image";
 import { urlFor } from "@/sanity/client";
 import { TradingViewChart } from "./TradingViewChart";
 import { YouTubeEmbed } from "./YouTubeEmbed";
+import { slugifyHeading } from "./TableOfContents";
+
+function extractText(children: React.ReactNode): string {
+  if (children == null) return "";
+  if (typeof children === "string") return children;
+  if (typeof children === "number") return String(children);
+  if (Array.isArray(children)) return children.map(extractText).join("");
+  if (typeof children === "object" && "props" in children) {
+    const props = (children as { props?: { children?: React.ReactNode } }).props;
+    return extractText(props?.children);
+  }
+  return "";
+}
 
 const components: PortableTextComponents = {
   block: {
-    h2: ({ children }) => <h2>{children}</h2>,
-    h3: ({ children }) => <h3>{children}</h3>,
-    h4: ({ children }) => <h4>{children}</h4>,
-    blockquote: ({ children }) => <blockquote className="border-l-4 border-[var(--color-gold)] pl-4 italic my-6">{children}</blockquote>,
+    h2: ({ children }) => {
+      const id = slugifyHeading(extractText(children));
+      return <h2 id={id}>{children}</h2>;
+    },
+    h3: ({ children }) => {
+      const id = slugifyHeading(extractText(children));
+      return <h3 id={id}>{children}</h3>;
+    },
+    h4: ({ children }) => {
+      const id = slugifyHeading(extractText(children));
+      return <h4 id={id}>{children}</h4>;
+    },
+    blockquote: ({ children }) => <blockquote>{children}</blockquote>,
     normal: ({ children }) => <p>{children}</p>,
   },
   marks: {

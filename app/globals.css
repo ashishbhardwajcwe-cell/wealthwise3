@@ -89,15 +89,115 @@
     color: var(--color-gold-dim);
   }
 
+  /* ------- Long-form article typography -------
+     Based on research: 18-20px body, 60-70 char line length, 1.7 line-height,
+     soft body color (not pure black). Mirrors patterns from Stripe, Medium,
+     and high-quality editorial sites. */
   .prose-article {
-    color: var(--color-navy); max-width: 42rem;
+    color: rgb(15 32 53 / 0.92);
+    max-width: 68ch;
+    font-size: 1.1875rem;        /* 19px */
+    line-height: 1.7;
   }
-  .prose-article p { margin-block: 1rem; line-height: 1.7; color: rgb(15 32 53 / 0.85); }
-  .prose-article h2 { margin-top: 2.5rem; margin-bottom: 1rem; }
-  .prose-article h3 { margin-top: 1.75rem; margin-bottom: 0.75rem; }
-  .prose-article ul { list-style: disc; padding-left: 1.5rem; margin-block: 1rem; }
-  .prose-article li { margin-block: 0.4rem; line-height: 1.7; }
-  .prose-article a { color: var(--color-gold-dim); text-decoration: underline; text-underline-offset: 3px; }
+  .prose-article p {
+    margin-block: 1.4em;
+    color: inherit;
+  }
+  .prose-article > p:first-of-type {
+    font-size: 1.3125rem;        /* 21px lede */
+    line-height: 1.6;
+    color: rgb(15 32 53 / 0.95);
+  }
+  /* Drop cap on the very first paragraph */
+  .prose-article > p:first-of-type::first-letter {
+    font-family: var(--font-display);
+    font-size: 4.5em;
+    line-height: 0.85;
+    float: left;
+    padding: 0.05em 0.12em 0 0;
+    color: var(--color-gold-dim);
+    font-weight: 600;
+  }
+  .prose-article h2 {
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    scroll-margin-top: 6rem;     /* TOC anchor offset */
+  }
+  .prose-article h3 {
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.3125rem;
+    scroll-margin-top: 6rem;
+  }
+  .prose-article h4 {
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+    scroll-margin-top: 6rem;
+  }
+  .prose-article ul, .prose-article ol {
+    padding-left: 1.5rem;
+    margin-block: 1.25em;
+  }
+  .prose-article ul { list-style: disc; }
+  .prose-article ol { list-style: decimal; }
+  .prose-article li {
+    margin-block: 0.5em;
+    padding-left: 0.25rem;
+  }
+  .prose-article li > p { margin-block: 0.5em; }
+  .prose-article a {
+    color: var(--color-gold-dim);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: color 0.15s ease;
+  }
+  .prose-article a:hover {
+    color: var(--color-navy);
+  }
+  .prose-article strong {
+    color: var(--color-navy);
+    font-weight: 600;
+  }
+  .prose-article blockquote {
+    margin: 2em 0;
+    padding-left: 1.5rem;
+    border-left: 3px solid var(--color-gold);
+    font-style: italic;
+    color: var(--color-navy);
+    font-size: 1.1875rem;
+  }
+  .prose-article code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    padding: 0.15em 0.4em;
+    background: var(--color-sand);
+    border-radius: 4px;
+  }
+  .prose-article hr {
+    margin: 3rem 0;
+    border: none;
+    border-top: 1px solid var(--color-silver);
+    opacity: 0.5;
+  }
+  .prose-article figure {
+    margin: 2.25rem 0;
+  }
+  .prose-article figure img {
+    border-radius: 0.5rem;
+    width: 100%;
+    height: auto;
+  }
+  .prose-article figure figcaption {
+    margin-top: 0.625rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-slate);
+    font-style: italic;
+  }
 
   .card-soft {
     background: white; border: 1px solid rgb(196 205 213 / 0.4);
