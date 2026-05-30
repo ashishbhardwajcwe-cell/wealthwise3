@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, BarChart3, Compass } from "lucide-react";
+import { ArrowRight, ShieldCheck, BarChart3, Compass, Sparkles, ListChecks, Layers, ExternalLink } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { FeatureGrid } from "@/components/FeatureGrid";
 import { CTASection } from "@/components/CTASection";
@@ -15,7 +15,7 @@ export default function HomePage() {
       <Hero
         title="Wealth that compounds. Plans that hold under fire."
         subtitle="AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity."
-        primaryCta={{ label: "Try the AI Wealth Planner", href: "/ai-wealth-planner" }}
+        primaryCta={{ label: "Get my AI Snapshot", href: "/ai-wealth-planner" }}
         secondaryCta={{ label: "Talk to Ashish", href: siteConfig.topmateUrl }}
         trustLine={`Run by ${siteConfig.legalName} (CIN: ${siteConfig.cin}) · NISM-certified · DPDP compliant`}
       />
@@ -34,65 +34,52 @@ export default function HomePage() {
         columns={3}
       />
 
-      {/* The AI Wealth Planner — hero feature */}
+      {/* Three planning depths */}
       <section className="bg-[var(--color-parchment)]">
-        <div className="container-wide py-20 md:py-28 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="eyebrow">AI Wealth Planner</span>
-            <h2 className="mt-3 text-balance">
-              A second opinion that thinks like a planner — in 60 seconds.
-            </h2>
-            <div className="mt-6 space-y-4 text-[var(--color-slate)] leading-relaxed">
-              <p>
-                Drop in three numbers — age, savings, monthly income. The planner runs the maths, considers your country&apos;s tax and inflation,
-                and writes you a personalised financial snapshot in plain English.
-              </p>
-              <p>
-                It isn&apos;t magic. It&apos;s the same framework a SEBI-registered planner would walk you through, distilled and made accessible.
-                You get a 30-year trajectory, the three things that would change your outcome the most, and one specific next step.
-              </p>
-              <p>
-                Free, no signup. The full WealthWise app extends this into 16 sections — tax harvesting, insurance gap, retirement scenarios, and detailed goal planning.
-              </p>
-            </div>
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link href="/ai-wealth-planner" className="btn-primary">
-                Get my snapshot <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link href="/guided" className="btn-outline">
-                Try the Guided Plan
-              </Link>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[var(--color-silver)]/40 rounded-2xl p-6 shadow-sm">
-            <div className="text-xs uppercase tracking-wider text-[var(--color-gold-dim)] font-semibold mb-3">Sample snapshot</div>
-            <div className="space-y-4">
-              <div className="rounded-lg bg-[var(--color-sand)]/50 p-4">
-                <div className="text-xs text-[var(--color-slate)] mb-1">Where you stand</div>
-                <p className="text-sm text-[var(--color-navy)] leading-relaxed">
-                  At 34 with ₹18L invested and ₹1.6L monthly income, you&apos;re tracking ahead of 70% of professionals in your bracket — but
-                  your equity allocation is light and you have no tax-loss harvesting in place.
-                </p>
-              </div>
-              <div className="rounded-lg bg-[var(--color-sand)]/50 p-4">
-                <div className="text-xs text-[var(--color-slate)] mb-1">Projected corpus at 60</div>
-                <div className="text-2xl font-semibold text-[var(--color-navy)]">₹7.4 Cr</div>
-                <div className="text-xs text-[var(--color-slate)] mt-1">in today&apos;s rupees, assuming 11% equity / 7% debt and 6% inflation</div>
-              </div>
-              <div className="rounded-lg bg-[var(--color-sand)]/50 p-4">
-                <div className="text-xs text-[var(--color-slate)] mb-1">Three levers that move the needle</div>
-                <ul className="text-sm text-[var(--color-navy)] space-y-1 mt-1">
-                  <li>· Increase SIP by ₹15k → +₹2.8 Cr at 60</li>
-                  <li>· Shift 20% from FD to equity → +₹1.4 Cr</li>
-                  <li>· Harvest LTCG yearly under ₹1.25L → +₹38L</li>
-                </ul>
-              </div>
-            </div>
-            <p className="text-[10px] text-[var(--color-slate)] mt-3 leading-relaxed">
-              Illustrative only. Returns shown are historical assumptions and do not guarantee future performance.
+        <div className="container-wide py-20 md:py-28">
+          <div className="max-w-3xl mx-auto text-center mb-12 md:mb-16">
+            <span className="eyebrow">Three ways to plan</span>
+            <h2 className="mt-3 text-balance">Pick the depth that matches the moment.</h2>
+            <p className="mt-4 text-lg text-[var(--color-slate)] leading-relaxed">
+              Curious browse, focused planning session, or full portfolio analysis — start where you are.
             </p>
           </div>
+
+          <div className="grid md:grid-cols-3 gap-5 lg:gap-6">
+            <PlanningCard
+              icon={<Sparkles className="w-5 h-5" />}
+              eyebrow="60 seconds"
+              title="AI Snapshot"
+              copy="Drop in three numbers — age, savings, monthly income. Get a personalised read on where you stand, where you're headed, and the three things that would change your outcome the most."
+              time="~1 minute"
+              gate="Free · No signup"
+              cta={{ label: "Get my snapshot", href: "/ai-wealth-planner" }}
+            />
+            <PlanningCard
+              icon={<ListChecks className="w-5 h-5" />}
+              eyebrow="10 minutes"
+              title="Guided Plan"
+              copy="Forty simple questions, plain language. Builds a monthly budget, debt payoff strategy, net-worth projection, and goal map. No login required."
+              time="~10 minutes"
+              gate="Free · No signup"
+              cta={{ label: "Build my plan", href: "/guided" }}
+              featured
+            />
+            <PlanningCard
+              icon={<Layers className="w-5 h-5" />}
+              eyebrow="The full picture"
+              title="Full WealthWise Analysis"
+              copy="The complete planner: SWOT, retirement scenarios, tax harvesting, insurance gap, asset allocation drift, 5-year cashflow. PDF export."
+              time="~30 minutes"
+              gate="Free trial · Login required"
+              cta={{ label: "Open the app", href: siteConfig.appUrl, external: true }}
+            />
+          </div>
+
+          <p className="text-xs text-[var(--color-slate)] text-center mt-8 italic max-w-2xl mx-auto">
+            All three are free to try. The AI Snapshot and Guided Plan run in your browser with no data stored.
+            The full WealthWise app saves your plan and tracks it over time — that&apos;s why it needs an account.
+          </p>
         </div>
       </section>
 
@@ -252,8 +239,8 @@ export default function HomePage() {
       {/* Final CTA */}
       <CTASection
         title="Ready to build your wealth plan?"
-        subtitle="Start with the free AI snapshot. Upgrade to the full WealthWise app or a 1:1 session whenever you're ready."
-        primaryCta={{ label: "Try the AI Wealth Planner", href: "/ai-wealth-planner" }}
+        subtitle="Start with the free AI snapshot. Graduate to the Guided Plan when you have ten minutes. Open the full app when you're ready to commit."
+        primaryCta={{ label: "Get my AI Snapshot", href: "/ai-wealth-planner" }}
         secondaryCta={{ label: "Talk to Ashish", href: siteConfig.topmateUrl }}
       />
     </>
@@ -272,5 +259,61 @@ function FlowStep({ icon, step, title, copy }: { icon: React.ReactNode; step: st
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-sm text-[var(--color-slate)] leading-relaxed">{copy}</p>
     </div>
+  );
+}
+
+function PlanningCard({
+  icon, eyebrow, title, copy, time, gate, cta, featured,
+}: {
+  icon: React.ReactNode;
+  eyebrow: string;
+  title: string;
+  copy: string;
+  time: string;
+  gate: string;
+  cta: { label: string; href: string; external?: boolean };
+  featured?: boolean;
+}) {
+  const Wrapper = ({ children }: { children: React.ReactNode }) => cta.external
+    ? <a href={cta.href} target="_blank" rel="noreferrer" className="contents">{children}</a>
+    : <Link href={cta.href} className="contents">{children}</Link>;
+
+  return (
+    <Wrapper>
+      <div className={`group h-full flex flex-col bg-white rounded-2xl p-6 md:p-7 border transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer
+        ${featured ? "border-[var(--color-gold)] shadow-md ring-1 ring-[var(--color-gold)]/20" : "border-[var(--color-silver)]/40 hover:border-[var(--color-gold)]"}`}>
+        <div className="flex items-center justify-between mb-5">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${featured ? "bg-[var(--color-navy)] text-[var(--color-gold)]" : "bg-[var(--color-sand)]/70 text-[var(--color-gold-dim)]"}`}>
+            {icon}
+          </div>
+          {featured && (
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[var(--color-gold)]/15 text-[var(--color-gold-dim)]">
+              Most popular
+            </span>
+          )}
+        </div>
+        <div className="text-xs uppercase tracking-wider font-semibold text-[var(--color-gold-dim)]">{eyebrow}</div>
+        <h3 className="text-xl font-semibold mt-1.5 mb-3">{title}</h3>
+        <p className="text-sm text-[var(--color-slate)] leading-relaxed flex-1">{copy}</p>
+        <div className="mt-5 pt-5 border-t border-[var(--color-silver)]/30 space-y-2 text-xs text-[var(--color-slate)]">
+          <div className="flex items-center justify-between">
+            <span>Typical time</span>
+            <span className="font-semibold text-[var(--color-navy)]">{time}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Access</span>
+            <span className="font-semibold text-[var(--color-navy)]">{gate}</span>
+          </div>
+        </div>
+        <div className={`mt-5 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm w-full
+          ${featured
+            ? "bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-gold-light)] text-[var(--color-navy)]"
+            : "bg-[var(--color-navy)] text-[var(--color-cream)]"}
+          group-hover:gap-3 transition-all`}>
+          {cta.label}
+          {cta.external ? <ExternalLink className="w-3.5 h-3.5" /> : <ArrowRight className="w-4 h-4" />}
+        </div>
+      </div>
+    </Wrapper>
   );
 }

@@ -27,7 +27,7 @@ The marketing site for [Auris Wealth](https://auriswealth.co) — built with Nex
   /real-estate                     Residential, commercial, REITs
   /gold                            Physical, ETF, SGB
 /ai-wealth-planner                 Free AI planner (Claude-powered)
-/guided                            GUIDED Plan (YNAB-style wizard)
+/guided                            Guided Plan (interactive Q&A wizard)
 /wealthwise                        WealthWise app product page
 /for/                              Audience landing pages
   /defence-officers
