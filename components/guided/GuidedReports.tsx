@@ -89,7 +89,7 @@ export function GuidedReports({ data }: { data: GuidedData }) {
       )}
 
       <p className="text-xs text-[var(--color-slate)] mt-4 leading-relaxed">
-        &ldquo;Age of Money&rdquo; estimates how many days your liquid savings could cover expenses — higher is healthier (YNAB rule #4).
+        &ldquo;Age of Money&rdquo; estimates how many days your liquid savings could cover expenses — higher is healthier.
         Net-worth projection assumes a {(portR * 100).toFixed(1)}% return and your current savings rate. Educational only.
       </p>
     </div>

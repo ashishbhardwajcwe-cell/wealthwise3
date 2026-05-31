@@ -82,7 +82,7 @@ export function ZeroBudget({ data, n }: { data: GuidedData; n: Numbers }) {
       <div className="flex justify-between items-center flex-wrap gap-3 mb-3">
         <div>
           <h3 className="text-2xl font-semibold text-[var(--color-navy)]">Monthly Budget</h3>
-          <p className="text-sm text-[var(--color-slate)]">YNAB rule #1: give every one of your {fmtINR(income)} a job.</p>
+          <p className="text-sm text-[var(--color-slate)]">Give every one of your {fmtINR(income)} a job — this month.</p>
         </div>
         <div className="text-right">
           <div className="text-xs uppercase tracking-wider font-semibold text-[var(--color-slate)]">To Assign</div>
@@ -147,7 +147,7 @@ export function ZeroBudget({ data, n }: { data: GuidedData; n: Numbers }) {
       </div>
 
       <p className="text-xs text-[var(--color-slate)] mt-3 leading-relaxed">
-        💡 <strong>True Expenses:</strong> big yearly bills (insurance, festivals, vacations, repairs) are divided into monthly set-asides so they never blindside you — that&apos;s YNAB rule #2.
+        💡 <strong>True Expenses:</strong> big yearly bills (insurance, festivals, vacations, repairs) are divided into monthly set-asides so they never blindside you.
       </p>
     </div>
   );

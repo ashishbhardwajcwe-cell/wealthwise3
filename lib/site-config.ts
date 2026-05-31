@@ -6,7 +6,8 @@ export const siteConfig = {
   url: "https://auriswealth.co",
   description:
     "AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity.",
-  appUrl: "https://wealth.auris8.com",
+  appUrl: "https://app.auriswealth.co",
+  signupUrl: "https://app.auriswealth.co/?signup",
   topmateUrl: "https://topmate.io/auris8",
   social: {
     linkedin: "https://www.linkedin.com/company/auris-wealth",

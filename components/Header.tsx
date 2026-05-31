@@ -3,14 +3,41 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { investmentProducts, audiences } from "@/lib/site-config";
+import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
 import { CurrencySwitcher } from "./CurrencySwitcher";
+
+interface NavMenuItem {
+  href: string;
+  label: string;
+  desc: string;
+  external?: boolean;
+}
+
+const planningMenu: NavMenuItem[] = [
+  {
+    href: "/ai-wealth-planner",
+    label: "AI Snapshot",
+    desc: "60-second personalised view · No signup",
+  },
+  {
+    href: "/guided",
+    label: "Guided Plan",
+    desc: "10-minute interactive Q&A · No signup",
+  },
+  {
+    href: siteConfig.appUrl,
+    label: "Full Analysis",
+    desc: "Complete planner with all sections · Free trial",
+    external: true,
+  },
+];
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState(false);
+  const [planning, setPlanning] = useState(false);
   const [forMenu, setForMenu] = useState(false);
 
   return (
@@ -41,9 +68,14 @@ export function Header() {
               desc: p.short,
             }))}
           />
-          <NavLink href="/ai-wealth-planner">AI Planner</NavLink>
+          <DropdownNavItem
+            label="Plan"
+            open={planning}
+            setOpen={setPlanning}
+            items={planningMenu}
+            width="w-[24rem]"
+          />
           <NavLink href="/equity/analysis">Research</NavLink>
-          <NavLink href="/wealthwise">WealthWise App</NavLink>
           <DropdownNavItem
             label="For"
             open={forMenu}
@@ -62,13 +94,14 @@ export function Header() {
 
         <div className="hidden lg:flex items-center gap-3">
           <CurrencySwitcher />
-          <Link href="/guided" className="text-sm font-semibold text-[var(--color-navy)] hover:text-[var(--color-gold-dim)] inline-flex items-center gap-1">
-            <Sparkles className="w-4 h-4 text-[var(--color-gold)]" />
-            Guided Plan
-          </Link>
-          <Link href="/ai-wealth-planner" className="btn-primary text-sm py-2 px-4">
-            Try AI Planner
-          </Link>
+          <a
+            href={siteConfig.appUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-primary text-sm py-2 px-4"
+          >
+            Open the app <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
 
         <button
@@ -84,22 +117,32 @@ export function Header() {
         <div className="lg:hidden border-t border-[var(--color-silver)]/40 bg-white">
           <div className="container-wide py-4 flex flex-col gap-1">
             <MobileLink href="/investment-products/mutual-funds">Investment Products</MobileLink>
-            <MobileLink href="/ai-wealth-planner">AI Planner</MobileLink>
+            <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Plan</div>
+            <MobileLink href="/ai-wealth-planner">AI Snapshot · 60 sec</MobileLink>
+            <MobileLink href="/guided">Guided Plan · 10 min</MobileLink>
+            <a
+              href={siteConfig.appUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="px-2 py-3 text-base font-medium text-[var(--color-navy)] border-b border-[var(--color-silver)]/30 inline-flex items-center gap-1.5"
+            >
+              Full Analysis (app) <ExternalLink className="w-3.5 h-3.5" />
+            </a>
             <MobileLink href="/equity/analysis">Research</MobileLink>
-            <MobileLink href="/wealthwise">WealthWise App</MobileLink>
             <MobileLink href="/for/professionals">For You</MobileLink>
             <MobileLink href="/blog">Blog</MobileLink>
             <MobileLink href="/resources/calculators">Calculators</MobileLink>
             <MobileLink href="/about">About</MobileLink>
             <MobileLink href="/pricing">Pricing</MobileLink>
-            <MobileLink href="/guided">
-              <span className="inline-flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-[var(--color-gold)]" /> Guided Plan
-              </span>
-            </MobileLink>
-            <Link href="/ai-wealth-planner" className="btn-primary text-sm mt-3" onClick={() => setOpen(false)}>
-              Try AI Planner
-            </Link>
+            <a
+              href={siteConfig.appUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-primary text-sm mt-3"
+              onClick={() => setOpen(false)}
+            >
+              Open the app
+            </a>
           </div>
         </div>
       )}
@@ -134,11 +177,13 @@ function DropdownNavItem({
   open,
   setOpen,
   items,
+  width = "w-[28rem]",
 }: {
   label: string;
   open: boolean;
   setOpen: (v: boolean) => void;
-  items: { href: string; label: string; desc: string }[];
+  items: NavMenuItem[];
+  width?: string;
 }) {
   return (
     <div
@@ -150,20 +195,28 @@ function DropdownNavItem({
         {label}
       </button>
       {open && (
-        <div className="absolute top-full left-0 pt-2 w-[28rem]">
+        <div className={`absolute top-full left-0 pt-2 ${width}`}>
           <div className="bg-white border border-[var(--color-silver)]/50 rounded-xl shadow-lg p-3 grid grid-cols-1 gap-1">
-            {items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/60 transition-colors",
-                )}
-              >
-                <div className="text-sm font-semibold text-[var(--color-navy)]">{item.label}</div>
-                <div className="text-xs text-[var(--color-slate)] mt-0.5">{item.desc}</div>
-              </Link>
-            ))}
+            {items.map((item) => {
+              const content = (
+                <div className="rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/60 transition-colors">
+                  <div className="text-sm font-semibold text-[var(--color-navy)] inline-flex items-center gap-1">
+                    {item.label}
+                    {item.external && <ExternalLink className="w-3 h-3 text-[var(--color-slate)]" />}
+                  </div>
+                  <div className="text-xs text-[var(--color-slate)] mt-0.5">{item.desc}</div>
+                </div>
+              );
+              return item.external ? (
+                <a key={item.href} href={item.href} target="_blank" rel="noreferrer" className={cn("block")}>
+                  {content}
+                </a>
+              ) : (
+                <Link key={item.href} href={item.href} className={cn("block")}>
+                  {content}
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}

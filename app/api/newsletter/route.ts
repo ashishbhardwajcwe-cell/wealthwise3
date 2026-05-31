@@ -63,8 +63,9 @@ const WELCOME_HTML = `
       </p>
       <p>While you're here, two free tools you may not have seen:</p>
       <ul>
-        <li><a href="https://auriswealth.co/ai-wealth-planner" style="color: #A08030;">AI Wealth Planner</a> — 60-second personalised snapshot</li>
-        <li><a href="https://auriswealth.co/guided" style="color: #A08030;">Guided Plan</a> — 10-minute YNAB-style financial plan</li>
+        <li><a href="https://auriswealth.co/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot</li>
+        <li><a href="https://auriswealth.co/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive financial plan</li>
+        <li><a href="https://app.auriswealth.co" style="color: #A08030;">Full Analysis</a> — login required, complete planner with all sections</li>
       </ul>
       <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, Auris Wealth</span></p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
