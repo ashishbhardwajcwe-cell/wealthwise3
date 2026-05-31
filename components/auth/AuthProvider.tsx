@@ -10,7 +10,11 @@ interface AuthContextValue {
   configured: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    profile?: { full_name?: string; phone?: string },
+  ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -63,13 +67,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error?.message ?? null };
   }, []);
 
-  const signUpWithEmail = useCallback(async (email: string, password: string) => {
+  const signUpWithEmail = useCallback(async (
+    email: string,
+    password: string,
+    profile?: { full_name?: string; phone?: string },
+  ) => {
     const supabase = getSupabase();
     if (!supabase) return { error: "Signup is not available right now.", needsConfirmation: false };
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined },
+      options: {
+        emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+        data: profile,
+      },
     });
     // If email confirmation is on, session is null until they confirm
     const needsConfirmation = !error && !data.session;

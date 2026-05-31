@@ -24,16 +24,16 @@ export function AccountButton({ variant = "desktop" }: { variant?: "desktop" | "
         {variant === "mobile" ? (
           <button
             onClick={() => setModalOpen(true)}
-            className="px-2 py-3 text-base font-medium text-[var(--color-navy)] border-b border-[var(--color-silver)]/30 text-left inline-flex items-center gap-2"
+            className="px-2 py-3 text-base font-medium text-[var(--color-navy)] border-b border-[var(--color-silver)]/30 text-left inline-flex items-center gap-2 w-full"
           >
-            <UserIcon className="w-4 h-4" /> Login
+            <UserIcon className="w-4 h-4" /> Sign in
           </button>
         ) : (
           <button
             onClick={() => setModalOpen(true)}
-            className="text-sm font-semibold text-[var(--color-navy)] hover:text-[var(--color-gold-dim)] inline-flex items-center gap-1.5"
+            className="text-sm font-semibold text-[var(--color-navy)] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-silver)]/50 hover:border-[var(--color-gold)] hover:text-[var(--color-gold-dim)] transition-colors"
           >
-            <UserIcon className="w-4 h-4" /> Login
+            <UserIcon className="w-4 h-4" /> Sign in
           </button>
         )}
         <LoginModal open={modalOpen} onClose={() => setModalOpen(false)} />
