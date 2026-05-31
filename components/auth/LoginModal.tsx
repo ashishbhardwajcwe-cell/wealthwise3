@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Loader2, Check, X } from "lucide-react";
 import { useAuth } from "./AuthProvider";
@@ -17,8 +18,28 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
   const [loading, setLoading] = useState<"google" | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmSent, setConfirmSent] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!open) return null;
+  // Portals require document.body, which is only available after first mount.
+  useEffect(() => { setMounted(true); }, []);
+
+  // Lock body scroll while the modal is open.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  // Close on Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || !mounted) return null;
 
   function reset() {
     setError(null);
@@ -69,7 +90,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
     }
   }
 
-  return (
+  return createPortal((
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-12 md:pt-16 px-4 overflow-y-auto auris-login-fadein"
       style={{ background: "rgba(5,12,25,0.7)", backdropFilter: "blur(8px)" }}
@@ -254,7 +275,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
         .auris-login-scalein { animation: auris-login-scalein 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </div>
-  );
+  ), document.body);
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
