@@ -84,9 +84,17 @@ export default function ContactPage() {
 
             <div className="space-y-5">
               <ContactBlock
+                icon={<WhatsAppGlyph />}
+                title="WhatsApp"
+                body="Tap to start a chat. Fastest way to reach us — usually answered within an hour during the day."
+                cta={{ label: "Open WhatsApp →", href: siteConfig.whatsappUrl }}
+                tone="whatsapp"
+              />
+
+              <ContactBlock
                 icon={<MessageCircle className="w-5 h-5" />}
                 title="Book a 30-minute call"
-                body="The fastest way to evaluate fit. Free for the first session."
+                body="Schedule a slot via Topmate. Free for the first session."
                 cta={{ label: "Open Topmate", href: siteConfig.topmateUrl }}
               />
 
@@ -149,21 +157,48 @@ function SelectField({ label, name, options }: { label: string; name: string; op
   );
 }
 
-function ContactBlock({ icon, title, body, cta }: { icon: React.ReactNode; title: string; body: string; cta?: { label: string; href: string } }) {
+function ContactBlock({ icon, title, body, cta, tone }: { icon: React.ReactNode; title: string; body: string; cta?: { label: string; href: string }; tone?: "whatsapp" }) {
+  const isWa = tone === "whatsapp";
   return (
-    <div className="flex gap-4 p-5 bg-white rounded-xl border border-[var(--color-silver)]/40">
-      <div className="w-10 h-10 rounded-lg bg-[var(--color-navy)] text-[var(--color-gold)] flex items-center justify-center flex-shrink-0">
+    <div
+      className="flex gap-4 p-5 rounded-xl border"
+      style={{
+        background: isWa ? "rgba(37,211,102,0.06)" : "white",
+        borderColor: isWa ? "rgba(37,211,102,0.30)" : "rgb(196 205 213 / 0.4)",
+      }}
+    >
+      <div
+        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{
+          background: isWa ? "#25D366" : "var(--color-navy)",
+          color: isWa ? "white" : "var(--color-gold)",
+        }}
+      >
         {icon}
       </div>
       <div className="flex-1">
         <h3 className="font-semibold text-[var(--color-navy)]">{title}</h3>
         <p className="text-sm text-[var(--color-slate)] mt-1 whitespace-pre-line">{body}</p>
         {cta && (
-          <a href={cta.href} target={cta.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="text-sm font-semibold text-[var(--color-gold-dim)] mt-2 inline-block">
-            {cta.label} →
+          <a
+            href={cta.href}
+            target={cta.href.startsWith("http") ? "_blank" : undefined}
+            rel="noreferrer"
+            className="text-sm font-semibold mt-2 inline-block"
+            style={{ color: isWa ? "#1e9c4d" : "var(--color-gold-dim)" }}
+          >
+            {cta.label}
           </a>
         )}
       </div>
     </div>
+  );
+}
+
+function WhatsAppGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden>
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.92 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm4.52 12.15c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.76-1.84-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.48-.01-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.39 1.01 2.56.12.17 1.75 2.67 4.24 3.74.59.26 1.05.41 1.42.52.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.17-.46-.29z"/>
+    </svg>
   );
 }

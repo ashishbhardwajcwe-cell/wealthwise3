@@ -108,6 +108,11 @@ export function Footer() {
               <li><a href={siteConfig.social.youtube} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">YouTube</a></li>
               <li><a href={siteConfig.social.twitter} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">Twitter</a></li>
               <li><a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">Instagram</a></li>
+              <li>
+                <a href={siteConfig.whatsappUrl} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white inline-flex items-center gap-1.5">
+                  <span aria-hidden>💬</span> WhatsApp
+                </a>
+              </li>
               <li><a href={`mailto:${siteConfig.email}`} className="text-[var(--color-silver)] hover:text-white">{siteConfig.email}</a></li>
             </ul>
           </div>

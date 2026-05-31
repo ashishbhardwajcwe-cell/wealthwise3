@@ -20,7 +20,7 @@ export function AudienceLanding({ content }: { content: AudienceContent }) {
         title={content.title}
         subtitle={content.subtitle}
         primaryCta={{ label: "Try the AI Wealth Planner", href: "/ai-wealth-planner" }}
-        secondaryCta={{ label: "Talk to Ashish", href: "/contact" }}
+        secondaryCta={{ label: "Book a call", href: "/contact" }}
       />
 
       <section className="py-20">
