@@ -7,6 +7,7 @@ import { Menu, X, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
 import { CurrencySwitcher } from "./CurrencySwitcher";
+import { AccountButton } from "./auth/AccountButton";
 
 interface NavMenuItem {
   href: string;
@@ -92,8 +93,9 @@ export function Header() {
           <NavLink href="/pricing">Pricing</NavLink>
         </nav>
 
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-4">
           <CurrencySwitcher />
+          <AccountButton />
           <a
             href={siteConfig.appUrl}
             target="_blank"
@@ -134,6 +136,7 @@ export function Header() {
             <MobileLink href="/resources/calculators">Calculators</MobileLink>
             <MobileLink href="/about">About</MobileLink>
             <MobileLink href="/pricing">Pricing</MobileLink>
+            <AccountButton variant="mobile" />
             <a
               href={siteConfig.appUrl}
               target="_blank"

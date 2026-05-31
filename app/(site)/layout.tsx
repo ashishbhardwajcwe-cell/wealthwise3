@@ -5,10 +5,12 @@ import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { Analytics } from "@/components/Analytics";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { siteConfig } from "@/lib/site-config";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
+    <AuthProvider>
     <CurrencyProvider>
       <Header />
       <main>{children}</main>
@@ -38,5 +40,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         }}
       />
     </CurrencyProvider>
+    </AuthProvider>
   );
 }
