@@ -29,7 +29,7 @@ export const investmentProducts = [
   { slug: "direct-equity", name: "Direct Equity", short: "Stocks on NSE/BSE for long-term investors.", icon: "LineChart" },
   { slug: "insurance", name: "Insurance", short: "Term, health, and what to skip.", icon: "ShieldCheck" },
   { slug: "real-estate", name: "Real Estate", short: "Residential, commercial, REITs.", icon: "Home" },
-  { slug: "gold", name: "Gold", short: "Physical, ETF, SGB — the right way.", icon: "Coins" },
+  { slug: "gold", name: "Gold & Silver", short: "Physical, ETF, SGB, silver ETF — the right way.", icon: "Coins" },
 ] as const;
 
 export const audiences = [

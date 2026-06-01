@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Check, X, TrendingUp } from "lucide-react";
 import { PortableContent } from "@/components/PortableContent";
 import { StructuredData, articleSchema } from "@/components/StructuredData";
 import { ShareButtons } from "@/components/ShareButtons";
+import { SymbolInfo } from "@/components/markets/SymbolInfo";
 import { getStockAnalysis, getStockAnalysisSlugs, getStockAnalyses } from "@/lib/investment-data";
 import { urlFor } from "@/sanity/client";
 import { siteConfig } from "@/lib/site-config";
@@ -74,7 +75,13 @@ export default async function StockAnalysisPage({ params }: Props) {
             </div>
           )}
 
-          
+          {/* Live price card — auto-derives the TradingView symbol from the ticker */}
+          {a.ticker && (
+            <div className="mt-8">
+              <SymbolInfo symbol={`NSE:${a.ticker}`} />
+            </div>
+          )}
+
           {a.keyMetrics && (
             <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
               {a.keyMetrics.cmp !== undefined && <MetricCard label="CMP" value={`₹${a.keyMetrics.cmp.toLocaleString("en-IN")}`} />}

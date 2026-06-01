@@ -137,6 +137,26 @@ export const blogPost = defineType({
             },
           },
         },
+        {
+          type: "object",
+          name: "stockQuote",
+          title: "Live stock quote",
+          fields: [
+            {
+              name: "symbol",
+              type: "string",
+              title: "Symbol",
+              description: 'e.g. "NSE:TCS", "NSE:RELIANCE", "BSE:RELIANCE". Renders a small live-quote card.',
+              validation: (r) => r.required(),
+            },
+          ],
+          preview: {
+            select: { symbol: "symbol" },
+            prepare({ symbol }) {
+              return { title: `Live quote: ${symbol}`, subtitle: "TradingView card" };
+            },
+          },
+        },
       ],
     }),
     defineField({
