@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <>
-      <InvestmentProductPage data={{ ...goldData, graphic: <GoldGraph /> }} />
-      <LiveMetalsSection />
-    </>
+    <InvestmentProductPage
+      data={{ ...goldData, graphic: <GoldGraph /> }}
+      liveSection={<LiveMetalsSection />}
+    />
   );
 }

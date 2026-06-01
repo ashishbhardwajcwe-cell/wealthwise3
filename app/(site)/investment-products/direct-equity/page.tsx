@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <>
-      <InvestmentProductPage data={{ ...directEquityData, graphic: <DirectEquityGraph /> }} />
-      <LiveMarketsSection />
-    </>
+    <InvestmentProductPage
+      data={{ ...directEquityData, graphic: <DirectEquityGraph /> }}
+      liveSection={<LiveMarketsSection />}
+    />
   );
 }

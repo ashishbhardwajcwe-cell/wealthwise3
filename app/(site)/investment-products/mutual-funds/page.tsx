@@ -17,9 +17,9 @@ export const revalidate = 21600;
 export default async function Page() {
   const rows = await getTrackedMFNAVs();
   return (
-    <>
-      <InvestmentProductPage data={{ ...mutualFundsData, graphic: <MutualFundsGraph /> }} />
-      <MFLiveTable rows={rows} />
-    </>
+    <InvestmentProductPage
+      data={{ ...mutualFundsData, graphic: <MutualFundsGraph /> }}
+      liveSection={<MFLiveTable rows={rows} />}
+    />
   );
 }
