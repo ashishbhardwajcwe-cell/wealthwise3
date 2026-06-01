@@ -1,22 +1,17 @@
 /**
  * CoinGecko free-tier integration.
  *
- * No API key required. Free tier is generous (~30 calls/min, ~10k/month).
- * We rely on Next.js fetch caching: a single shared upstream call per
- * revalidation window across all visitors per region.
- *
- * Docs: https://www.coingecko.com/en/api/documentation
+ * Free tier: ~30 calls/min, ~10k/month, no API key required.
+ * Single shared upstream call per revalidation window per region.
  */
 
 const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
-
-/** Cache the upstream response for 5 minutes. ~290 calls / region / day. */
-const REVALIDATE_SECONDS = 300;
+const REVALIDATE_SECONDS = 300; // 5 min cache
 
 export interface CoinMarketRow {
   id: string;
-  symbol: string;     // e.g. "btc"
-  name: string;       // e.g. "Bitcoin"
+  symbol: string;
+  name: string;
   image: string;
   rank: number;
   priceInr: number;
@@ -24,7 +19,10 @@ export interface CoinMarketRow {
   volume24hInr: number;
   change24hPct: number | null;
   change7dPct: number | null;
-  sparkline7d: number[];   // 168 hourly prices
+  athChangePct: number | null;
+  high24hInr: number | null;
+  low24hInr: number | null;
+  sparkline7d: number[];
 }
 
 interface CoinGeckoMarketRow {
@@ -38,10 +36,13 @@ interface CoinGeckoMarketRow {
   market_cap_rank: number | null;
   price_change_percentage_24h: number | null;
   price_change_percentage_7d_in_currency: number | null;
+  ath_change_percentage: number | null;
+  high_24h: number | null;
+  low_24h: number | null;
   sparkline_in_7d?: { price?: number[] };
 }
 
-export async function getTopCryptoInINR(limit: number = 10): Promise<CoinMarketRow[]> {
+export async function getTopCryptoInINR(limit: number = 100): Promise<CoinMarketRow[]> {
   const url =
     `${COINGECKO_BASE}/coins/markets` +
     `?vs_currency=inr` +
@@ -72,6 +73,9 @@ export async function getTopCryptoInINR(limit: number = 10): Promise<CoinMarketR
       volume24hInr: r.total_volume,
       change24hPct: r.price_change_percentage_24h,
       change7dPct: r.price_change_percentage_7d_in_currency,
+      athChangePct: r.ath_change_percentage,
+      high24hInr: r.high_24h,
+      low24hInr: r.low_24h,
       sparkline7d: r.sparkline_in_7d?.price ?? [],
     }));
   } catch (err) {
@@ -80,9 +84,9 @@ export async function getTopCryptoInINR(limit: number = 10): Promise<CoinMarketR
   }
 }
 
-/** USD prices for a small set of coins — secondary display alongside INR. */
 export async function getCoinUsdPrices(ids: string[]): Promise<Record<string, number>> {
   if (ids.length === 0) return {};
+  // CoinGecko caps id list — chunk if needed (>120 ids in one URL).
   const url = `${COINGECKO_BASE}/simple/price?ids=${ids.join(",")}&vs_currencies=usd`;
   try {
     const res = await fetch(url, {

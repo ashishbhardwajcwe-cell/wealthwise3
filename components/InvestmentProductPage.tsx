@@ -20,7 +20,16 @@ export interface ProductPageData {
   extraDisclaimer?: string;
 }
 
-export function InvestmentProductPage({ data }: { data: ProductPageData }) {
+export function InvestmentProductPage({
+  data,
+  liveSection,
+}: {
+  data: ProductPageData;
+  /** Optional live-data section rendered right after the hero, before
+   *  the educational content. Used by crypto/stocks/MF/gold pages to
+   *  give visitors immediate interactive value above the long article. */
+  liveSection?: React.ReactNode;
+}) {
   return (
     <>
       <Hero
@@ -31,6 +40,8 @@ export function InvestmentProductPage({ data }: { data: ProductPageData }) {
         secondaryCta={{ label: "Get a personalised plan", href: "/ai-wealth-planner" }}
         align="left"
       />
+
+      {liveSection}
 
       {/* What it is */}
       <section className="py-16">

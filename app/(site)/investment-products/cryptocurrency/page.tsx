@@ -14,15 +14,15 @@ export const metadata: Metadata = {
 export const revalidate = 300; // 5 min — matches the upstream cache window
 
 export default async function Page() {
-  const coins = await getTopCryptoInINR(10);
+  const coins = await getTopCryptoInINR(100);
   const usdPrices = coins.length > 0
     ? await getCoinUsdPrices(coins.map((c) => c.id))
     : {};
 
   return (
-    <>
-      <InvestmentProductPage data={{ ...cryptoData, graphic: <CryptoGraph /> }} />
-      <CryptoLiveTable coins={coins} usdPrices={usdPrices} />
-    </>
+    <InvestmentProductPage
+      data={{ ...cryptoData, graphic: <CryptoGraph /> }}
+      liveSection={<CryptoLiveTable coins={coins} usdPrices={usdPrices} />}
+    />
   );
 }
