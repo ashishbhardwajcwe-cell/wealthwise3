@@ -221,7 +221,7 @@ Retiring officers are heavily targeted by frauds dressed as "ex-servicemen schem
 
 The 12-point framework above is generic. Your specific situation — service category, current corpus, dependents, second-career prospects — drives the priorities. We build personalised transition plans for officers in their last 18 months of service.
 
-[Talk to Ashish →](/contact)
+[Book a call →](/contact)
     `,
   },
   {

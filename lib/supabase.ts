@@ -1,12 +1,14 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { sharedCookieStorage } from "./shared-cookie-storage";
 
 /**
  * Supabase client for the marketing site. Uses the SAME project as the
- * WealthWise app (app.auriswealth.co), so a user account created here also
- * works in the app. Auth UI on the marketing site is optional — the site
- * stays fully open and crawlable.
+ * WealthWise app (app.auriswealth.co) AND the SAME cookie-based storage
+ * scoped to `.auriswealth.co`, so a session created on the marketing
+ * site is automatically visible to the app and vice-versa (single
+ * sign-on across both subdomains).
  *
  * Env vars (add to Netlify):
  *   NEXT_PUBLIC_SUPABASE_URL       e.g. https://hbddsvwghboftjsgtate.supabase.co
@@ -28,6 +30,7 @@ export function getSupabase(): SupabaseClient | null {
   if (!_client) {
     _client = createClient(url!, anonKey!, {
       auth: {
+        storage: sharedCookieStorage,
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,

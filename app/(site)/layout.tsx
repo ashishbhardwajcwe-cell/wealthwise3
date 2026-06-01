@@ -6,6 +6,7 @@ import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { Analytics } from "@/components/Analytics";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 import { siteConfig } from "@/lib/site-config";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +18,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <DisclaimerBanner />
       <Footer />
       <ConsentBanner />
+      <WhatsAppFloat />
 
       {/* Google Analytics — fires only after consent */}
       <Analytics gaId={process.env.NEXT_PUBLIC_GA_ID ?? ""} />

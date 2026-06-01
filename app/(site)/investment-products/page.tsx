@@ -32,7 +32,7 @@ export default function InvestmentProductsPage() {
         title="Not sure which products fit your situation?"
         subtitle="The free AI Wealth Planner takes three numbers and suggests where each rupee should go."
         primaryCta={{ label: "Try the AI Wealth Planner", href: "/ai-wealth-planner" }}
-        secondaryCta={{ label: "Talk to Ashish", href: "/contact" }}
+        secondaryCta={{ label: "Book a call", href: "/contact" }}
       />
     </>
   );

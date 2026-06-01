@@ -9,6 +9,8 @@ export const siteConfig = {
   appUrl: "https://app.auriswealth.co",
   signupUrl: "https://app.auriswealth.co/?signup",
   topmateUrl: "https://topmate.io/auris8",
+  whatsappNumber: "916009096178",
+  whatsappUrl: "https://wa.me/916009096178?text=Hi%20Auris%20Wealth%2C%20I%27d%20like%20to%20know%20more%20about%20your%20services.",
   social: {
     linkedin: "https://www.linkedin.com/company/auris-wealth",
     youtube: "https://www.youtube.com/@auriswealth",
