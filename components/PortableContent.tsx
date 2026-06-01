@@ -6,6 +6,7 @@ import { urlFor } from "@/sanity/client";
 import { slugifyHeading } from "@/lib/slugify";
 import { TradingViewChart } from "./TradingViewChart";
 import { YouTubeEmbed } from "./YouTubeEmbed";
+import { SymbolInfo } from "./markets/SymbolInfo";
 
 function extractText(children: React.ReactNode): string {
   if (children == null) return "";
@@ -92,6 +93,7 @@ const components: PortableTextComponents = {
         caption={value.caption}
       />
     ),
+    stockQuote: ({ value }) => <SymbolInfo symbol={value.symbol} />,
   },
 };
 

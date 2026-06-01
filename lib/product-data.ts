@@ -641,11 +641,12 @@ export const realEstateData: ProductPageData = {
 };
 
 export const goldData: ProductPageData = {
-  name: "Gold",
-  oneLine: "Portfolio insurance, not a growth engine. 5–10% allocation is the sensible middle — and SGB beats every other form of buying gold.",
+  name: "Gold & Silver",
+  oneLine: "Portfolio insurance, not a growth engine. 5–10% gold + 2–5% silver is the sensible middle — and SGB beats every other form of buying gold.",
   whatItIs: [
-    "Gold has been an Indian household savings instrument for centuries — first as jewellery, more recently as coins, ETFs, and Sovereign Gold Bonds (SGBs). Its job in a modern portfolio isn't to make you rich; it's to provide ballast during equity crashes, currency depreciation, and high-inflation episodes.",
+    "Gold has been an Indian household savings instrument for centuries — first as jewellery, more recently as coins, ETFs, and Sovereign Gold Bonds (SGBs). Its job in a modern portfolio isn't to make you rich; it's to provide ballast during equity crashes, currency depreciation, and high-inflation episodes. Silver plays a similar role but with sharper swings — it's both a precious metal and an industrial commodity, so it benefits from both store-of-value flows and solar / EV demand.",
     "There are five practical ways to own gold in India: (1) Physical (jewellery, coins, bars) — most expensive due to making charges and storage; (2) Digital gold (PhonePe, MMTC) — convenient but storage charges and counter-party risk; (3) Gold ETFs (HDFC Gold ETF, Nippon India Gold BeES) — liquid, low cost, but no interest; (4) Gold mutual funds — fund-of-fund layer over ETFs, slightly higher cost; (5) Sovereign Gold Bonds (SGBs) — government-issued, 2.5% annual interest plus gold price appreciation, LTCG-exempt if held to maturity.",
+    "For silver, the cleanest options are Silver ETFs (ICICI Pru Silver ETF, Nippon India Silver BeES) introduced in 2022 — liquid, low cost, no making charges. Silver Funds (FoFs over silver ETFs) are slightly more expensive but easier for SIPs. There is currently no Sovereign Silver Bond, so physical silver remains a parallel option with the same making-charge drawbacks as physical gold.",
     "For long-term portfolio allocation, SGB is mathematically superior to every other form of gold ownership: zero making charges, 2.5% interest on top of gold price, no storage risk, tax-free at maturity. The downside: 8-year lock-in (with early exit windows from year 5), and primary issuance has been paused at times. Gold ETFs are the next best — liquid, low-cost, no lock-in.",
   ],
   keyFacts: [
