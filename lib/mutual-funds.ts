@@ -111,6 +111,8 @@ export interface MFLiveRow {
   return1y: number | null;
   return3y: number | null;
   return5y: number | null;
+  /** Last ~30 days of NAVs in chronological order (oldest first). */
+  sparkline30d: number[];
   found: boolean;
 }
 
@@ -134,6 +136,7 @@ export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Pr
       return1y: ret?.return1y ?? null,
       return3y: ret?.return3y ?? null,
       return5y: ret?.return5y ?? null,
+      sparkline30d: ret?.sparkline30d ?? [],
       found: !!(navHit || ret),
     };
   });
@@ -173,6 +176,8 @@ interface SchemeReturns {
   return1y: number | null;
   return3y: number | null;
   return5y: number | null;
+  /** Oldest-first NAV history, ~30 points. */
+  sparkline30d: number[];
 }
 
 async function fetchReturnsMap(codes: string[]): Promise<Map<string, SchemeReturns>> {
@@ -213,10 +218,25 @@ async function fetchSchemeReturns(schemeCode: string): Promise<SchemeReturns | n
       return1y: computeCAGR(body.data, currentTs, currentNav, 365),
       return3y: computeCAGR(body.data, currentTs, currentNav, 3 * 365),
       return5y: computeCAGR(body.data, currentTs, currentNav, 5 * 365),
+      sparkline30d: extractSparkline(body.data, 30),
     };
   } catch {
     return null;
   }
+}
+
+/** Take the first `n` MFAPI rows (newest-first) and return their NAVs
+ *  in oldest-first chronological order so the sparkline reads left-to-right. */
+function extractSparkline(
+  data: Array<{ date: string; nav: string }>,
+  n: number,
+): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < Math.min(n, data.length); i++) {
+    const v = parseFloat(data[i].nav);
+    if (!Number.isNaN(v) && v > 0) out.push(v);
+  }
+  return out.reverse();
 }
 
 /** MFAPI returns dates as "DD-MM-YYYY". Return epoch ms or null. */

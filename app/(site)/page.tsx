@@ -5,6 +5,7 @@ import { FeatureGrid } from "@/components/FeatureGrid";
 import { CTASection } from "@/components/CTASection";
 import { ProductCard } from "@/components/ProductCard";
 import { BlogCard } from "@/components/BlogCard";
+import { HomeMarketsTeaser } from "@/components/markets/HomeMarketsTeaser";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
 import { FounderPortrait, UnifiedPlanDiagram } from "@/components/Illustrations";
 
@@ -33,6 +34,9 @@ export default function HomePage() {
         }))}
         columns={3}
       />
+
+      {/* Live markets teaser */}
+      <HomeMarketsTeaser />
 
       {/* Three planning depths */}
       <section className="bg-[var(--color-parchment)]">

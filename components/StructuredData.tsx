@@ -45,3 +45,50 @@ export function articleSchema(opts: {
     url: opts.url,
   };
 }
+
+export function breadcrumbSchema(items: { name: string; url: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
+export function collectionPageSchema(opts: {
+  name: string;
+  description: string;
+  url: string;
+  datasets: { name: string; description: string }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: opts.name,
+    description: opts.description,
+    url: opts.url,
+    isPartOf: {
+      "@type": "WebSite",
+      name: "Auris Wealth",
+      url: "https://auriswealth.co",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: "https://auriswealth.co/markets?q={search_term_string}",
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+    mainEntity: opts.datasets.map((d) => ({
+      "@type": "Dataset",
+      name: d.name,
+      description: d.description,
+      creator: { "@type": "Organization", name: "Auris Wealth" },
+    })),
+  };
+}

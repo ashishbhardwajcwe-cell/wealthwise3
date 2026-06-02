@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown, ArrowDown, ArrowUp, Search } from "lucide-react";
+import { ArrowUpDown, ArrowDown, ArrowUp, Search, Download } from "lucide-react";
 import type { MFLiveRow } from "@/lib/mutual-funds";
 import { MF_CATEGORIES } from "@/lib/mutual-funds";
+import { Sparkline } from "./Sparkline";
+import { InfoTip } from "@/components/InfoTip";
+import { downloadCsv } from "@/lib/csv-export";
 
 type SortKey = "name" | "amc" | "category" | "nav" | "return1y" | "return3y" | "return5y";
 
@@ -76,6 +79,24 @@ export function MFLiveTable({
     return MF_CATEGORIES.filter((c) => set.has(c.slug));
   }, [rows]);
 
+  function exportCsv() {
+    const headers = ["Fund", "AMC", "Category", "NAV (INR)", "1Y CAGR %", "3Y CAGR %", "5Y CAGR %", "As of", "Scheme code"];
+    downloadCsv(`auris-mutual-funds-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
+      switch (h) {
+        case "Fund":        return r.name;
+        case "AMC":         return r.amc;
+        case "Category":    return categoryName(r.category);
+        case "NAV (INR)":   return r.nav?.toFixed(4) ?? "";
+        case "1Y CAGR %":   return r.return1y?.toFixed(2) ?? "";
+        case "3Y CAGR %":   return r.return3y?.toFixed(2) ?? "";
+        case "5Y CAGR %":   return r.return5y?.toFixed(2) ?? "";
+        case "As of":       return r.asOf ?? "";
+        case "Scheme code": return r.schemeCode;
+        default:            return "";
+      }
+    });
+  }
+
   return (
     <section className="py-12 md:py-16 bg-white border-y border-[var(--color-silver)]/30">
       <div className="container-wide">
@@ -111,7 +132,7 @@ export function MFLiveTable({
             />
           </div>
           {showCategoryFilter && (
-            <div className="flex gap-1 flex-wrap ml-auto">
+            <div className="flex gap-1 flex-wrap">
               <button onClick={() => setFilter("all")} className={pillBtn(filter === "all")}>All</button>
               {usedCategories.map((c) => (
                 <button key={c.slug} onClick={() => setFilter(c.slug)} className={pillBtn(filter === c.slug)}>
@@ -120,6 +141,14 @@ export function MFLiveTable({
               ))}
             </div>
           )}
+          <button
+            onClick={exportCsv}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-silver)]/40 text-[var(--color-navy)] bg-white hover:border-[var(--color-gold)] transition-colors"
+            title="Download current view as CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            CSV
+          </button>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-[var(--color-silver)]/40">
@@ -127,36 +156,49 @@ export function MFLiveTable({
             <thead className="bg-[var(--color-parchment)] sticky top-0 z-10">
               <tr>
                 <Th label="Fund"     k="name"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="AMC"      k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
+                <Th label="AMC"      k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left"  tip="Asset Management Company — the firm that runs the fund (e.g. SBI, HDFC, ICICI Prudential)." />
                 <Th label="Category" k="category" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="NAV (₹)"  k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="1Y CAGR"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="3Y CAGR"  k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="5Y CAGR"  k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <Th label="NAV (₹)"  k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Net Asset Value — the per-unit price of the fund as published daily by AMFI." />
+                <Th label="1Y CAGR"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Compound Annual Growth Rate over the trailing 1 year. Annualised return as if it compounded smoothly." />
+                <Th label="3Y CAGR"  k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 3 years — a more honest read than 1Y." />
+                <Th label="5Y CAGR"  k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 5 years — the timeframe SEBI suggests for equity funds." />
+                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1">30d <InfoTip text="Sparkline of the last 30 NAV points from MFAPI, oldest left, newest right." /></span>
+                </th>
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">As of</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-[var(--color-slate)]">No funds match the filter.</td></tr>
-              ) : filtered.map((r) => (
-                <tr key={r.schemeCode + r.name} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
-                  <td className="px-4 py-3 font-semibold text-[var(--color-navy)]">{r.name}</td>
-                  <td className="px-4 py-3 text-[var(--color-slate)] text-xs">{r.amc}</td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className="px-2 py-0.5 rounded-full bg-[var(--color-sand)]/60 text-[var(--color-slate)] font-semibold">
-                      {categoryName(r.category)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-[var(--color-navy)]">
-                    {r.nav != null ? r.nav.toFixed(2) : <span className="text-[var(--color-slate)]/60">—</span>}
-                  </td>
-                  <ReturnCell value={r.return1y} />
-                  <ReturnCell value={r.return3y} />
-                  <ReturnCell value={r.return5y} />
-                  <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums">{r.asOf ?? "—"}</td>
-                </tr>
-              ))}
+                <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--color-slate)]">No funds match the filter.</td></tr>
+              ) : filtered.map((r) => {
+                const sparklineUp =
+                  r.sparkline30d.length >= 2 &&
+                  r.sparkline30d[r.sparkline30d.length - 1] >= r.sparkline30d[0];
+                return (
+                  <tr key={r.schemeCode + r.name} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
+                    <td className="px-4 py-3 font-semibold text-[var(--color-navy)]">{r.name}</td>
+                    <td className="px-4 py-3 text-[var(--color-slate)] text-xs">{r.amc}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <span className="px-2 py-0.5 rounded-full bg-[var(--color-sand)]/60 text-[var(--color-slate)] font-semibold">
+                        {categoryName(r.category)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-[var(--color-navy)]">
+                      {r.nav != null ? r.nav.toFixed(2) : <span className="text-[var(--color-slate)]/60">—</span>}
+                    </td>
+                    <ReturnCell value={r.return1y} />
+                    <ReturnCell value={r.return3y} />
+                    <ReturnCell value={r.return5y} />
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center">
+                        <Sparkline points={r.sparkline30d} positive={sparklineUp} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums">{r.asOf ?? "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -191,24 +233,28 @@ function getValue(r: MFLiveRow, key: SortKey): string | number | null {
   }
 }
 
-function Th({ label, k, sortBy, sortDir, onSort, align = "left" }: {
+function Th({ label, k, sortBy, sortDir, onSort, align = "left", tip }: {
   label: string; k: SortKey;
   sortBy: SortKey; sortDir: "asc" | "desc";
   onSort: (k: SortKey) => void; align?: "left" | "right";
+  tip?: string;
 }) {
   const active = sortBy === k;
   const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
   return (
     <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}>
-      <button
-        onClick={() => onSort(k)}
-        className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
-          active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)] font-semibold"
-        }`}
-      >
-        {label}
-        <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
-      </button>
+      <span className={`inline-flex items-center gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
+        <button
+          onClick={() => onSort(k)}
+          className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
+            active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)] font-semibold"
+          }`}
+        >
+          {label}
+          <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
+        </button>
+        {tip && <InfoTip text={tip} />}
+      </span>
     </th>
   );
 }
