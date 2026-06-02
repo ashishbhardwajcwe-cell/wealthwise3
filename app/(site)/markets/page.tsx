@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { Hero } from "@/components/Hero";
 import { CTASection } from "@/components/CTASection";
 import { MarketsNav } from "@/components/markets/MarketsNav";
+import { MarketsTopMovers } from "@/components/markets/MarketsTopMovers";
 import { LiveMarketsSection } from "@/components/markets/LiveMarketsSection";
 import { LiveMetalsSection } from "@/components/markets/LiveMetalsSection";
 import { CryptoLiveTable } from "@/components/crypto-tracker/CryptoLiveTable";
 import { MFLiveTable } from "@/components/markets/MFLiveTable";
 import { GoldSilverETFTable } from "@/components/markets/GoldSilverETFTable";
+import { StructuredData, breadcrumbSchema, collectionPageSchema } from "@/components/StructuredData";
 import { getTopCryptoInINR, getCoinUsdPrices } from "@/lib/crypto";
 import { getTrackedMFNAVs, TRACKED_METAL_ETFS } from "@/lib/mutual-funds";
 
@@ -14,6 +16,14 @@ export const metadata: Metadata = {
   title: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
   description:
     "Auris Wealth's consolidated live markets hub: sortable screeners for cryptocurrencies, Indian & US stocks, Indian mutual funds, and gold/silver ETFs — all in one place.",
+  alternates: { canonical: "https://auriswealth.co/markets" },
+  openGraph: {
+    title: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
+    description:
+      "Sortable, searchable screeners for every asset class we track. Indian & US stocks, 100 cryptos, hand-picked mutual funds, gold & silver ETFs — one page.",
+    url: "https://auriswealth.co/markets",
+    type: "website",
+  },
 };
 
 // All four data sources self-revalidate, but cap the page at 5 min so the
@@ -32,6 +42,40 @@ export default async function Page() {
     ? await getCoinUsdPrices(coins.map((c) => c.id))
     : {};
 
+  const pageSchema = collectionPageSchema({
+    name: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
+    description:
+      "Live screeners for Indian & US stocks, 100 cryptocurrencies, hand-picked mutual funds, and gold/silver ETFs.",
+    url: "https://auriswealth.co/markets",
+    datasets: [
+      {
+        name: "Indian & US Stock Screener",
+        description:
+          "Sortable screener for NSE/BSE and NYSE/NASDAQ stocks via TradingView. Covers market cap, P/E, dividend yield, performance and technicals.",
+      },
+      {
+        name: "Cryptocurrency Screener (Top 100)",
+        description:
+          "Live INR + USD prices, 24h/7d changes, volume, market cap, sparkline charts and distance from ATH for the top 100 cryptocurrencies by market cap.",
+      },
+      {
+        name: "Indian Mutual Funds Screener",
+        description:
+          "Hand-picked Indian mutual funds across large cap, flexi cap, mid cap, small cap, ELSS, hybrid and debt categories — with live NAV from AMFI and 1Y/3Y/5Y CAGR from historical NAVs.",
+      },
+      {
+        name: "Gold & Silver ETF Screener",
+        description:
+          "Live NAVs and 1Y/3Y/5Y returns for every major Indian gold and silver ETF, priced in INR. Includes spot prices and the USD/INR rate for international conversion.",
+      },
+    ],
+  });
+
+  const breadcrumb = breadcrumbSchema([
+    { name: "Home", url: "https://auriswealth.co/" },
+    { name: "Markets", url: "https://auriswealth.co/markets" },
+  ]);
+
   return (
     <>
       <Hero
@@ -42,6 +86,8 @@ export default async function Page() {
         secondaryCta={{ label: "Talk to our expert", href: "/contact" }}
         align="left"
       />
+
+      <MarketsTopMovers coins={coins} mfRows={mfRows} etfRows={etfRows} />
 
       <MarketsNav />
 
@@ -68,6 +114,9 @@ export default async function Page() {
         primaryCta={{ label: "Run my snapshot", href: "/ai-wealth-planner" }}
         secondaryCta={{ label: "Book a call", href: "/contact" }}
       />
+
+      <StructuredData data={pageSchema} />
+      <StructuredData data={breadcrumb} />
     </>
   );
 }
