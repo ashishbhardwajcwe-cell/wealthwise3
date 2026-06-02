@@ -107,7 +107,10 @@ export interface MFLiveRow {
   name: string;
   nav: number | null;
   asOf: string | null;
-  /** Annualised CAGR in percent. Null if data missing. */
+  /** Trailing-period return. For 6M this is a simple percent change
+   *  (not annualised — the period is shorter than a year). For 1Y/3Y/5Y
+   *  it's annualised CAGR. Null if data missing. */
+  return6m: number | null;
   return1y: number | null;
   return3y: number | null;
   return5y: number | null;
@@ -133,6 +136,7 @@ export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Pr
       name: f.name,
       nav: navHit?.nav ?? ret?.currentNav ?? null,
       asOf: navHit?.asOf ?? ret?.currentDate ?? null,
+      return6m: ret?.return6m ?? null,
       return1y: ret?.return1y ?? null,
       return3y: ret?.return3y ?? null,
       return5y: ret?.return5y ?? null,
@@ -173,6 +177,7 @@ async function fetchAMFINavMap(): Promise<Map<string, { nav: number; asOf: strin
 interface SchemeReturns {
   currentNav: number;
   currentDate: string;
+  return6m: number | null;
   return1y: number | null;
   return3y: number | null;
   return5y: number | null;
@@ -215,6 +220,7 @@ async function fetchSchemeReturns(schemeCode: string): Promise<SchemeReturns | n
     return {
       currentNav,
       currentDate: latest.date,
+      return6m: computeSimpleReturn(body.data, currentTs, currentNav, 183),
       return1y: computeCAGR(body.data, currentTs, currentNav, 365),
       return3y: computeCAGR(body.data, currentTs, currentNav, 3 * 365),
       return5y: computeCAGR(body.data, currentTs, currentNav, 5 * 365),
@@ -247,32 +253,45 @@ function parseMFAPIDate(s: string): number | null {
   return Number.isNaN(d.getTime()) ? null : d.getTime();
 }
 
-/** Walk the (newest-first) NAV array and find the closest entry to `daysBack` ago,
- *  then compute annualised CAGR. */
+/** Walk the (newest-first) NAV array and find the closest entry to `daysBack` ago. */
+function findPastNav(
+  data: Array<{ date: string; nav: string }>,
+  targetTs: number,
+): { nav: number; ts: number } | null {
+  for (const row of data) {
+    const ts = parseMFAPIDate(row.date);
+    if (!ts) continue;
+    if (ts <= targetTs) {
+      const nav = parseFloat(row.nav);
+      if (!Number.isNaN(nav) && nav > 0) return { nav, ts };
+      // keep walking — the first valid one wins
+    }
+  }
+  return null;
+}
+
+/** Annualised CAGR over `daysBack` days. */
 function computeCAGR(
   data: Array<{ date: string; nav: string }>,
   currentTs: number,
   currentNav: number,
   daysBack: number,
 ): number | null {
-  const targetTs = currentTs - daysBack * 24 * 60 * 60 * 1000;
-  // Find closest entry whose ts is <= targetTs
-  let pastNav: number | null = null;
-  let pastTs: number | null = null;
-  for (const row of data) {
-    const ts = parseMFAPIDate(row.date);
-    if (!ts) continue;
-    if (ts <= targetTs) {
-      const nav = parseFloat(row.nav);
-      if (!Number.isNaN(nav) && nav > 0) {
-        pastNav = nav;
-        pastTs = ts;
-      }
-      break; // data is newest-first; first ts <= target is closest
-    }
-  }
-  if (pastNav == null || pastTs == null) return null;
-  const years = (currentTs - pastTs) / (365.25 * 24 * 60 * 60 * 1000);
+  const past = findPastNav(data, currentTs - daysBack * 24 * 60 * 60 * 1000);
+  if (!past) return null;
+  const years = (currentTs - past.ts) / (365.25 * 24 * 60 * 60 * 1000);
   if (years <= 0.1) return null;
-  return (Math.pow(currentNav / pastNav, 1 / years) - 1) * 100;
+  return (Math.pow(currentNav / past.nav, 1 / years) - 1) * 100;
+}
+
+/** Simple (non-annualised) percent change over a sub-year window. */
+function computeSimpleReturn(
+  data: Array<{ date: string; nav: string }>,
+  currentTs: number,
+  currentNav: number,
+  daysBack: number,
+): number | null {
+  const past = findPastNav(data, currentTs - daysBack * 24 * 60 * 60 * 1000);
+  if (!past) return null;
+  return (currentNav / past.nav - 1) * 100;
 }

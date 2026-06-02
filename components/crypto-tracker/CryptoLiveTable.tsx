@@ -4,8 +4,11 @@ import { useMemo, useState } from "react";
 import { ArrowUpDown, ArrowDown, ArrowUp, Search, TrendingUp, TrendingDown, Minus, Download } from "lucide-react";
 import type { CoinMarketRow } from "@/lib/crypto";
 import { Sparkline } from "@/components/markets/Sparkline";
+import { StarButton } from "@/components/markets/StarButton";
 import { InfoTip } from "@/components/InfoTip";
+import { FilterStatus } from "@/components/markets/MFLiveTable";
 import { downloadCsv } from "@/lib/csv-export";
+import { useWatchlist } from "@/lib/use-watchlist";
 
 type SortKey =
   | "rank" | "name" | "priceInr"
@@ -24,10 +27,13 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [watchOnly, setWatchOnly] = useState(false);
+  const watchlist = useWatchlist();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let rows = coins.slice(0, topN);
+    if (watchOnly) rows = rows.filter((c) => watchlist.has(`crypto:${c.id}`));
     if (q) {
       rows = rows.filter((c) =>
         c.name.toLowerCase().includes(q) ||
@@ -46,7 +52,15 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
       if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
       return (an - bn) * dir;
     });
-  }, [coins, topN, search, sortBy, sortDir]);
+  }, [coins, topN, search, sortBy, sortDir, watchOnly, watchlist]);
+
+  const filtersActive = search.trim() !== "" || topN !== 50 || watchOnly;
+
+  function resetFilters() {
+    setSearch("");
+    setTopN(50);
+    setWatchOnly(false);
+  }
 
   function toggleSort(key: SortKey) {
     if (sortBy === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -92,7 +106,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3 mb-2">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-slate)]" />
             <input
@@ -118,6 +132,17 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setWatchOnly((v) => !v)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              watchOnly
+                ? "bg-[var(--color-navy)] text-[var(--color-cream)] border-[var(--color-navy)]"
+                : "bg-white text-[var(--color-navy)] border-[var(--color-silver)]/40 hover:border-[var(--color-gold)]"
+            }`}
+            title={watchOnly ? "Show all" : "Show only starred"}
+          >
+            ★ Watchlist{watchlist.count > 0 && <span className="ml-1 opacity-70">({watchlist.count})</span>}
+          </button>
           <button
             onClick={() => {
               const headers = ["Rank", "Coin", "Symbol", "Price (INR)", "Price (USD)", "24h %", "7d %", "24h Volume (INR)", "Market Cap (INR)", "From ATH %"];
@@ -145,10 +170,18 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
           </button>
         </div>
 
+        <FilterStatus
+          active={filtersActive}
+          shown={filtered.length}
+          total={Math.min(topN, coins.length)}
+          onReset={resetFilters}
+        />
+
         <div className="overflow-x-auto rounded-xl border border-[var(--color-silver)]/40">
           <table className="w-full text-sm">
             <thead className="bg-[var(--color-parchment)] sticky top-0 z-10">
               <tr>
+                <th className="px-2 py-3 w-8"></th>
                 <Th label="#"           k="rank"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left"  tip="Rank by market capitalisation (largest first), per CoinGecko." />
                 <Th label="Coin"        k="name"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="Price (INR)" k="priceInr"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Last traded price in Indian Rupees, derived from CoinGecko's INR feed." />
@@ -165,9 +198,12 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-12 text-center text-[var(--color-slate)]">No coins match &ldquo;{search}&rdquo;.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-12 text-center text-[var(--color-slate)]">No coins match the filter.</td></tr>
               ) : filtered.map((c) => (
                 <tr key={c.id} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
+                  <td className="px-2 py-3 text-center">
+                    <StarButton id={`crypto:${c.id}`} starred={watchlist.has(`crypto:${c.id}`)} onToggle={watchlist.toggle} />
+                  </td>
                   <td className="px-4 py-3 text-xs tabular-nums text-[var(--color-slate)]">{c.rank}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
