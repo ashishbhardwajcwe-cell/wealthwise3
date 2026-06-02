@@ -3,32 +3,28 @@
 import { useMemo, useState } from "react";
 import { ArrowUpDown, ArrowDown, ArrowUp, Search } from "lucide-react";
 import type { MFLiveRow } from "@/lib/mutual-funds";
-import { MF_CATEGORIES } from "@/lib/mutual-funds";
 
 type SortKey = "name" | "amc" | "category" | "nav" | "return1y" | "return3y" | "return5y";
 
+const CATEGORY_LABEL: Record<string, string> = {
+  "gold-etf": "Gold ETF",
+  "silver-etf": "Silver ETF",
+};
+
+const CATEGORY_PILLS: Array<{ slug: string; label: string }> = [
+  { slug: "all", label: "All" },
+  { slug: "gold-etf", label: "Gold" },
+  { slug: "silver-etf", label: "Silver" },
+];
+
 interface Props {
   rows: MFLiveRow[];
-  /** Heading for the section. Defaults to "Mutual funds we track". */
-  title?: string;
-  /** Subtitle. */
-  subtitle?: string;
-  /** Eyebrow label. */
-  eyebrow?: string;
-  /** Whether to show the category filter pills. */
-  showCategoryFilter?: boolean;
 }
 
-export function MFLiveTable({
-  rows,
-  title = "Mutual funds we track",
-  subtitle,
-  eyebrow = "Live tracker",
-  showCategoryFilter = true,
-}: Props) {
+export function GoldSilverETFTable({ rows }: Props) {
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortKey>("return3y");
+  const [sortBy, setSortBy] = useState<SortKey>("return1y");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const filtered = useMemo(() => {
@@ -59,21 +55,12 @@ export function MFLiveTable({
 
   function toggleSort(key: SortKey) {
     if (sortBy === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else {
-      setSortBy(key);
-      setSortDir(key === "name" || key === "amc" || key === "category" ? "asc" : "desc");
-    }
+    else { setSortBy(key); setSortDir(key === "name" || key === "amc" ? "asc" : "desc"); }
   }
 
   const latestAsOf = useMemo(() => {
     const dates = rows.map((r) => r.asOf).filter(Boolean) as string[];
     return dates.length > 0 ? dates[0] : null;
-  }, [rows]);
-
-  const categoryName = (slug: string) => MF_CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
-  const usedCategories = useMemo(() => {
-    const set = new Set(rows.map((r) => r.category));
-    return MF_CATEGORIES.filter((c) => set.has(c.slug));
   }, [rows]);
 
   return (
@@ -85,20 +72,15 @@ export function MFLiveTable({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-emerald)] opacity-60" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-emerald)]" />
             </span>
-            {eyebrow}
+            Indian gold &amp; silver ETFs
           </span>
-          <h2 className="mt-2">{title}</h2>
+          <h2 className="mt-2">ETF NAVs &amp; returns</h2>
           <p className="text-sm text-[var(--color-slate)] mt-2">
-            {subtitle ?? (
-              <>
-                {rows.length} hand-picked funds across {usedCategories.length} categories. NAVs from AMFI India daily feed; returns from MFAPI historical NAVs.
-                {latestAsOf && <span> NAV as of {latestAsOf}. Click any column to sort.</span>}
-              </>
-            )}
+            Live NAVs of every major Indian gold &amp; silver ETF, priced in INR. From AMFI&apos;s daily feed; returns annualised from MFAPI historical data.
+            {latestAsOf && <span> NAV as of {latestAsOf}. Click any column to sort.</span>}
           </p>
         </div>
 
-        {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-slate)]" />
@@ -106,46 +88,49 @@ export function MFLiveTable({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search fund name or AMC..."
+              placeholder="Search ETF or AMC..."
               className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--color-silver)]/50 rounded-lg focus:outline-none focus:border-[var(--color-gold)] bg-white"
             />
           </div>
-          {showCategoryFilter && (
-            <div className="flex gap-1 flex-wrap ml-auto">
-              <button onClick={() => setFilter("all")} className={pillBtn(filter === "all")}>All</button>
-              {usedCategories.map((c) => (
-                <button key={c.slug} onClick={() => setFilter(c.slug)} className={pillBtn(filter === c.slug)}>
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="flex gap-1 ml-auto">
+            {CATEGORY_PILLS.map((p) => (
+              <button key={p.slug} onClick={() => setFilter(p.slug)} className={pillBtn(filter === p.slug)}>
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-[var(--color-silver)]/40">
           <table className="w-full text-sm">
             <thead className="bg-[var(--color-parchment)] sticky top-0 z-10">
               <tr>
-                <Th label="Fund"     k="name"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="AMC"      k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="Category" k="category" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="NAV (₹)"  k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="1Y CAGR"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="3Y CAGR"  k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="5Y CAGR"  k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <Th label="ETF"     k="name"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
+                <Th label="AMC"     k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
+                <Th label="Metal"   k="category" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
+                <Th label="NAV (₹)" k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <Th label="1Y CAGR" k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <Th label="3Y CAGR" k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <Th label="5Y CAGR" k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">As of</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-[var(--color-slate)]">No funds match the filter.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-[var(--color-slate)]">No ETFs match the filter.</td></tr>
               ) : filtered.map((r) => (
                 <tr key={r.schemeCode + r.name} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
                   <td className="px-4 py-3 font-semibold text-[var(--color-navy)]">{r.name}</td>
                   <td className="px-4 py-3 text-[var(--color-slate)] text-xs">{r.amc}</td>
                   <td className="px-4 py-3 text-xs">
-                    <span className="px-2 py-0.5 rounded-full bg-[var(--color-sand)]/60 text-[var(--color-slate)] font-semibold">
-                      {categoryName(r.category)}
+                    <span
+                      className="px-2 py-0.5 rounded-full font-semibold"
+                      style={{
+                        background: r.category === "silver-etf" ? "rgba(196,205,213,0.4)" : "rgba(201,168,76,0.18)",
+                        color: r.category === "silver-etf" ? "#5A6B80" : "#A08030",
+                      }}
+                    >
+                      {CATEGORY_LABEL[r.category] ?? r.category}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums font-semibold text-[var(--color-navy)]">
@@ -162,9 +147,9 @@ export function MFLiveTable({
         </div>
 
         <p className="text-[11px] text-[var(--color-slate)] mt-4 italic leading-relaxed">
-          NAVs from AMFI India&apos;s daily feed (~10 PM IST). Returns computed as annualised CAGR using historical NAVs from MFAPI.
-          All schemes shown are Direct/Growth plans. Past performance is not indicative of future returns. This list is editorial,
-          not a recommendation. Read scheme-related documents carefully before investing.
+          Indian gold ETFs typically charge 0.3–0.7% expense ratio and track 24K gold prices. Silver ETFs launched in
+          2022 — fewer products, shorter histories. Both trade on NSE/BSE during market hours; the NAV here is the daily-published value.
+          Not a recommendation. Past performance does not guarantee future returns.
         </p>
       </div>
     </section>
