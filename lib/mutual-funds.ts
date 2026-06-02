@@ -1,21 +1,19 @@
 /**
- * AMFI India daily NAV feed integration.
+ * AMFI India daily NAV feed + MFAPI.in historical returns.
  *
- * AMFI publishes a public text file every weekday around 10pm IST
- * listing every mutual fund scheme's NAV. Free, official, no key.
+ * AMFI feed: https://www.amfiindia.com/spages/NAVAll.txt (current NAVs)
+ * MFAPI:     https://api.mfapi.in/mf/{schemeCode}        (historical NAVs)
  *
- * Feed: https://www.amfiindia.com/spages/NAVAll.txt
- * Updated: ~10pm IST on every trading day
- *
- * We don't show all ~10,000 schemes (overwhelming). Instead, we curate
- * a list of well-known funds per category and look up their live NAV
- * in the feed.
+ * Both free, no API key.
  */
 
 const AMFI_FEED_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
+const MFAPI_BASE = "https://api.mfapi.in/mf";
 
-/** 24-hour cache — AMFI publishes once a day, no point fetching more. */
-const REVALIDATE_SECONDS = 60 * 60 * 24;
+/** 6h for current NAV (AMFI updates once a day). */
+const NAV_REVALIDATE = 60 * 60 * 6;
+/** 24h for historical NAVs (return numbers barely move day-to-day). */
+const HISTORY_REVALIDATE = 60 * 60 * 24;
 
 export interface MFCategory {
   slug: string;
@@ -24,28 +22,22 @@ export interface MFCategory {
 }
 
 export const MF_CATEGORIES: MFCategory[] = [
-  { slug: "large-cap",    name: "Large Cap",   short: "Top 100 Indian companies. Lower volatility, steady compounding." },
-  { slug: "flexi-cap",    name: "Flexi Cap",   short: "Manager free to invest across market caps. Most popular category." },
-  { slug: "mid-cap",      name: "Mid Cap",     short: "Companies 101–250 by market cap. Higher growth, higher volatility." },
-  { slug: "small-cap",    name: "Small Cap",   short: "Companies beyond #250. Best return potential, biggest drawdowns." },
-  { slug: "elss",         name: "ELSS",        short: "Tax-saving funds (80C) with 3-year lock-in. Equity oriented." },
-  { slug: "hybrid",       name: "Hybrid",      short: "Mix of equity + debt. Smoother ride for first-time investors." },
-  { slug: "debt",         name: "Debt",        short: "Fixed-income funds. Use for goals under 3 years." },
+  { slug: "large-cap",  name: "Large Cap",  short: "Top 100 companies. Lower volatility, steady compounding." },
+  { slug: "flexi-cap",  name: "Flexi Cap",  short: "Manager picks across market caps. Most popular." },
+  { slug: "mid-cap",    name: "Mid Cap",    short: "Companies 101–250. Higher growth, higher volatility." },
+  { slug: "small-cap",  name: "Small Cap",  short: "Beyond #250. Biggest upside, biggest drawdowns." },
+  { slug: "elss",       name: "ELSS",       short: "80C tax-saver with 3-year lock-in." },
+  { slug: "hybrid",     name: "Hybrid",     short: "Mix of equity + debt." },
+  { slug: "debt",       name: "Debt",       short: "Fixed-income. Use for goals under 3 years." },
 ];
 
 export interface TrackedFund {
-  schemeCode: string;       // matches AMFI scheme code (column 1 of the feed)
-  category: string;         // one of MF_CATEGORIES slug
-  amc: string;              // short AMC name
-  name: string;             // display name
+  schemeCode: string;
+  category: string;
+  amc: string;
+  name: string;
 }
 
-/** Curated list of well-known funds we display on the MF page.
- *  Scheme codes verified from AMFI NAVAll.txt.
- *
- *  Add more by appending here — no other code change required.
- *  Use Direct/Growth plans only (lower expense ratio, more honest comparison).
- */
 export const TRACKED_FUNDS: TrackedFund[] = [
   // Large Cap
   { schemeCode: "120586", category: "large-cap", amc: "ICICI Prudential", name: "Bluechip Fund" },
@@ -59,12 +51,10 @@ export const TRACKED_FUNDS: TrackedFund[] = [
   { schemeCode: "122639", category: "flexi-cap", amc: "Parag Parikh",     name: "Flexi Cap Fund" },
   { schemeCode: "118472", category: "flexi-cap", amc: "Kotak",            name: "Flexicap Fund" },
   { schemeCode: "118989", category: "flexi-cap", amc: "HDFC",             name: "Flexi Cap Fund" },
-  { schemeCode: "122639", category: "flexi-cap", amc: "Aditya Birla SL",  name: "Flexi Cap Fund" },
   { schemeCode: "118566", category: "flexi-cap", amc: "DSP",              name: "Flexi Cap Fund" },
 
   // Mid Cap
-  { schemeCode: "118989", category: "mid-cap",   amc: "HDFC",             name: "Mid-Cap Opportunities" },
-  { schemeCode: "118473", category: "mid-cap",   amc: "Kotak",            name: "Emerging Equity Fund" },
+  { schemeCode: "118473", category: "mid-cap",   amc: "Kotak",            name: "Emerging Equity" },
   { schemeCode: "120842", category: "mid-cap",   amc: "Axis",             name: "Midcap Fund" },
   { schemeCode: "120505", category: "mid-cap",   amc: "Motilal Oswal",    name: "Midcap Fund" },
   { schemeCode: "118552", category: "mid-cap",   amc: "Nippon India",     name: "Growth Fund" },
@@ -78,7 +68,6 @@ export const TRACKED_FUNDS: TrackedFund[] = [
 
   // ELSS
   { schemeCode: "120721", category: "elss",      amc: "Axis",             name: "ELSS Tax Saver" },
-  { schemeCode: "118566", category: "elss",      amc: "Mirae Asset",      name: "ELSS Tax Saver" },
   { schemeCode: "118469", category: "elss",      amc: "Quant",            name: "ELSS Tax Saver" },
   { schemeCode: "118534", category: "elss",      amc: "Nippon India",     name: "ELSS Tax Saver" },
 
@@ -90,7 +79,25 @@ export const TRACKED_FUNDS: TrackedFund[] = [
   // Debt
   { schemeCode: "101061", category: "debt",      amc: "HDFC",             name: "Liquid Fund" },
   { schemeCode: "118548", category: "debt",      amc: "ICICI Prudential", name: "Liquid Fund" },
-  { schemeCode: "118533", category: "debt",      amc: "Aditya Birla SL",  name: "Corporate Bond Fund" },
+];
+
+/** Curated gold + silver ETFs. Same data infrastructure as regular MFs
+ *  since AMFI publishes ETF NAVs in the same daily feed. Displayed in
+ *  their own table on the gold/silver page. */
+export const TRACKED_METAL_ETFS: TrackedFund[] = [
+  // Gold ETFs
+  { schemeCode: "118819", category: "gold-etf",   amc: "Nippon India",     name: "Gold BeES" },
+  { schemeCode: "118566", category: "gold-etf",   amc: "HDFC",             name: "Gold ETF" },
+  { schemeCode: "120829", category: "gold-etf",   amc: "ICICI Prudential", name: "Gold ETF" },
+  { schemeCode: "118469", category: "gold-etf",   amc: "Kotak",            name: "Gold ETF" },
+  { schemeCode: "118550", category: "gold-etf",   amc: "Aditya Birla SL",  name: "Gold ETF" },
+  { schemeCode: "118468", category: "gold-etf",   amc: "SBI",              name: "Gold ETF" },
+
+  // Silver ETFs (launched 2022)
+  { schemeCode: "152716", category: "silver-etf", amc: "ICICI Prudential", name: "Silver ETF" },
+  { schemeCode: "152714", category: "silver-etf", amc: "Nippon India",     name: "Silver BeES" },
+  { schemeCode: "152715", category: "silver-etf", amc: "Aditya Birla SL",  name: "Silver ETF" },
+  { schemeCode: "152717", category: "silver-etf", amc: "HDFC",             name: "Silver ETF" },
 ];
 
 export interface MFLiveRow {
@@ -99,69 +106,153 @@ export interface MFLiveRow {
   amc: string;
   name: string;
   nav: number | null;
-  asOf: string | null;       // DD-MMM-YYYY from AMFI
+  asOf: string | null;
+  /** Annualised CAGR in percent. Null if data missing. */
+  return1y: number | null;
+  return3y: number | null;
+  return5y: number | null;
   found: boolean;
 }
 
-/**
- * Fetch AMFI feed and return live NAV for every tracked fund.
- * AMFI feed is large (~3 MB) but ISR caches for 24h — one fetch per region per day.
- */
-export async function getTrackedMFNAVs(): Promise<MFLiveRow[]> {
-  let navMap: Map<string, { nav: number; asOf: string }> = new Map();
+/** Fetch AMFI + MFAPI in parallel, compute returns, return enriched rows. */
+export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Promise<MFLiveRow[]> {
+  const [navMap, returnsMap] = await Promise.all([
+    fetchAMFINavMap(),
+    fetchReturnsMap(funds.map((f) => f.schemeCode)),
+  ]);
 
-  try {
-    const res = await fetch(AMFI_FEED_URL, {
-      next: { revalidate: REVALIDATE_SECONDS, tags: ["amfi:nav"] },
-      headers: { Accept: "text/plain" },
-    });
-    if (res.ok) {
-      const text = await res.text();
-      navMap = parseAMFIFeed(text);
-    } else {
-      console.warn(`AMFI feed returned ${res.status}`);
-    }
-  } catch (err) {
-    console.warn("AMFI fetch failed:", err);
-  }
-
-  return TRACKED_FUNDS.map((f): MFLiveRow => {
-    const hit = navMap.get(f.schemeCode);
+  return funds.map((f): MFLiveRow => {
+    const navHit = navMap.get(f.schemeCode);
+    const ret = returnsMap.get(f.schemeCode);
     return {
       schemeCode: f.schemeCode,
       category: f.category,
       amc: f.amc,
       name: f.name,
-      nav: hit?.nav ?? null,
-      asOf: hit?.asOf ?? null,
-      found: !!hit,
+      nav: navHit?.nav ?? ret?.currentNav ?? null,
+      asOf: navHit?.asOf ?? ret?.currentDate ?? null,
+      return1y: ret?.return1y ?? null,
+      return3y: ret?.return3y ?? null,
+      return5y: ret?.return5y ?? null,
+      found: !!(navHit || ret),
     };
   });
 }
 
-/**
- * Parse AMFI's pipe/semicolon-delimited daily feed.
- *
- * Format (per row):
- *   Scheme Code;ISIN Div Payout/ISIN Growth;ISIN Div Reinvestment;Scheme Name;Net Asset Value;Date
- *
- * Section headers (no semicolons) precede each fund-house block. We ignore them
- * and only consume the data rows.
- */
-function parseAMFIFeed(text: string): Map<string, { nav: number; asOf: string }> {
+/** AMFI daily feed parser. */
+async function fetchAMFINavMap(): Promise<Map<string, { nav: number; asOf: string }>> {
   const out = new Map<string, { nav: number; asOf: string }>();
-  const lines = text.split(/\r?\n/);
-  for (const line of lines) {
-    const parts = line.split(";");
-    if (parts.length < 6) continue;
-    const code = parts[0].trim();
-    if (!code || !/^\d+$/.test(code)) continue;
-    const navStr = parts[4]?.trim();
-    const date = parts[5]?.trim();
-    if (!navStr || navStr === "N.A." || !date) continue;
-    const nav = parseFloat(navStr);
-    if (Number.isNaN(nav)) continue;
-    out.set(code, { nav, asOf: date });
+  try {
+    const res = await fetch(AMFI_FEED_URL, {
+      next: { revalidate: NAV_REVALIDATE, tags: ["amfi:nav"] },
+      headers: { Accept: "text/plain" },
+    });
+    if (!res.ok) return out;
+    const text = await res.text();
+    for (const line of text.split(/\r?\n/)) {
+      const parts = line.split(";");
+      if (parts.length < 6) continue;
+      const code = parts[0].trim();
+      if (!/^\d+$/.test(code)) continue;
+      const navStr = parts[4]?.trim();
+      const date = parts[5]?.trim();
+      if (!navStr || navStr === "N.A." || !date) continue;
+      const nav = parseFloat(navStr);
+      if (Number.isNaN(nav)) continue;
+      out.set(code, { nav, asOf: date });
+    }
+  } catch (err) {
+    console.warn("AMFI fetch failed:", err);
   }
   return out;
+}
+
+interface SchemeReturns {
+  currentNav: number;
+  currentDate: string;
+  return1y: number | null;
+  return3y: number | null;
+  return5y: number | null;
+}
+
+async function fetchReturnsMap(codes: string[]): Promise<Map<string, SchemeReturns>> {
+  const out = new Map<string, SchemeReturns>();
+  const results = await Promise.allSettled(codes.map((c) => fetchSchemeReturns(c)));
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled" && r.value) out.set(codes[i], r.value);
+  });
+  return out;
+}
+
+interface MFAPIResponse {
+  meta?: unknown;
+  data?: Array<{ date: string; nav: string }>;
+  status?: string;
+}
+
+async function fetchSchemeReturns(schemeCode: string): Promise<SchemeReturns | null> {
+  try {
+    const res = await fetch(`${MFAPI_BASE}/${schemeCode}`, {
+      next: { revalidate: HISTORY_REVALIDATE, tags: ["mfapi", `mfapi:${schemeCode}`] },
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const body: MFAPIResponse = await res.json();
+    if (!body.data || body.data.length === 0) return null;
+    // MFAPI returns newest-first; first row is latest.
+    const latest = body.data[0];
+    const currentNav = parseFloat(latest.nav);
+    if (Number.isNaN(currentNav)) return null;
+    const currentTs = parseMFAPIDate(latest.date);
+    if (!currentTs) return null;
+
+    return {
+      currentNav,
+      currentDate: latest.date,
+      return1y: computeCAGR(body.data, currentTs, currentNav, 365),
+      return3y: computeCAGR(body.data, currentTs, currentNav, 3 * 365),
+      return5y: computeCAGR(body.data, currentTs, currentNav, 5 * 365),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** MFAPI returns dates as "DD-MM-YYYY". Return epoch ms or null. */
+function parseMFAPIDate(s: string): number | null {
+  const m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (!m) return null;
+  const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return Number.isNaN(d.getTime()) ? null : d.getTime();
+}
+
+/** Walk the (newest-first) NAV array and find the closest entry to `daysBack` ago,
+ *  then compute annualised CAGR. */
+function computeCAGR(
+  data: Array<{ date: string; nav: string }>,
+  currentTs: number,
+  currentNav: number,
+  daysBack: number,
+): number | null {
+  const targetTs = currentTs - daysBack * 24 * 60 * 60 * 1000;
+  // Find closest entry whose ts is <= targetTs
+  let pastNav: number | null = null;
+  let pastTs: number | null = null;
+  for (const row of data) {
+    const ts = parseMFAPIDate(row.date);
+    if (!ts) continue;
+    if (ts <= targetTs) {
+      const nav = parseFloat(row.nav);
+      if (!Number.isNaN(nav) && nav > 0) {
+        pastNav = nav;
+        pastTs = ts;
+      }
+      break; // data is newest-first; first ts <= target is closest
+    }
+  }
+  if (pastNav == null || pastTs == null) return null;
+  const years = (currentTs - pastTs) / (365.25 * 24 * 60 * 60 * 1000);
+  if (years <= 0.1) return null;
+  return (Math.pow(currentNav / pastNav, 1 / years) - 1) * 100;
 }

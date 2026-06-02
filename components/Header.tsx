@@ -76,6 +76,7 @@ export function Header() {
             items={planningMenu}
             width="w-[24rem]"
           />
+          <NavLink href="/markets">Markets</NavLink>
           <NavLink href="/equity/analysis">Research</NavLink>
           <DropdownNavItem
             label="For"
@@ -130,6 +131,7 @@ export function Header() {
             >
               Full Analysis (app) <ExternalLink className="w-3.5 h-3.5" />
             </a>
+            <MobileLink href="/markets">Markets</MobileLink>
             <MobileLink href="/equity/analysis">Research</MobileLink>
             <MobileLink href="/for/professionals">For You</MobileLink>
             <MobileLink href="/blog">Blog</MobileLink>
