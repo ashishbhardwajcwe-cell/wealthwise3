@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
-import { ArrowUpDown, ArrowDown, ArrowUp, Search, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowUpDown, ArrowDown, ArrowUp, Search, TrendingUp, TrendingDown, Minus, Download } from "lucide-react";
 import type { CoinMarketRow } from "@/lib/crypto";
+import { Sparkline } from "@/components/markets/Sparkline";
+import { InfoTip } from "@/components/InfoTip";
+import { downloadCsv } from "@/lib/csv-export";
 
 type SortKey =
   | "rank" | "name" | "priceInr"
@@ -101,7 +103,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
               className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--color-silver)]/50 rounded-lg focus:outline-none focus:border-[var(--color-gold)] bg-white"
             />
           </div>
-          <div className="flex gap-1 ml-auto">
+          <div className="flex gap-1">
             {TOP_FILTERS.map((n) => (
               <button
                 key={n}
@@ -116,22 +118,49 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => {
+              const headers = ["Rank", "Coin", "Symbol", "Price (INR)", "Price (USD)", "24h %", "7d %", "24h Volume (INR)", "Market Cap (INR)", "From ATH %"];
+              downloadCsv(`auris-crypto-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (c, h) => {
+                switch (h) {
+                  case "Rank":              return c.rank;
+                  case "Coin":              return c.name;
+                  case "Symbol":            return c.symbol.toUpperCase();
+                  case "Price (INR)":       return c.priceInr.toFixed(4);
+                  case "Price (USD)":       return usdPrices[c.id]?.toFixed(4) ?? "";
+                  case "24h %":             return c.change24hPct?.toFixed(2) ?? "";
+                  case "7d %":              return c.change7dPct?.toFixed(2) ?? "";
+                  case "24h Volume (INR)":  return c.volume24hInr;
+                  case "Market Cap (INR)":  return c.marketCapInr;
+                  case "From ATH %":        return c.athChangePct?.toFixed(2) ?? "";
+                  default:                  return "";
+                }
+              });
+            }}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-silver)]/40 text-[var(--color-navy)] bg-white hover:border-[var(--color-gold)] transition-colors"
+            title="Download current view as CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            CSV
+          </button>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-[var(--color-silver)]/40">
           <table className="w-full text-sm">
             <thead className="bg-[var(--color-parchment)] sticky top-0 z-10">
               <tr>
-                <Th label="#"           k="rank"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
+                <Th label="#"           k="rank"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left"  tip="Rank by market capitalisation (largest first), per CoinGecko." />
                 <Th label="Coin"        k="name"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="Price (INR)" k="priceInr"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <Th label="Price (INR)" k="priceInr"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Last traded price in Indian Rupees, derived from CoinGecko's INR feed." />
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">USD</th>
-                <Th label="24h %"       k="change24h"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="7d %"        k="change7d"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="24h Volume"  k="volume"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="Market Cap"  k="marketCap"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="From ATH"    k="athChange"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">7d chart</th>
+                <Th label="24h %"       k="change24h"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 24 hours." />
+                <Th label="7d %"        k="change7d"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 7 days." />
+                <Th label="24h Volume"  k="volume"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total INR value traded across exchanges in the last 24 hours. High volume = better liquidity." />
+                <Th label="Market Cap"  k="marketCap"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Circulating supply × current price. The total market value of the coin." />
+                <Th label="From ATH"    k="athChange"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Distance from the All-Time High. -40% means the coin is 40% below its peak ever." />
+                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1 justify-center">7d chart <InfoTip text="Hourly price sparkline for the past 7 days." /></span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -193,24 +222,28 @@ function getValue(c: CoinMarketRow, k: SortKey): string | number | null {
   }
 }
 
-function Th({ label, k, sortBy, sortDir, onSort, align = "left" }: {
+function Th({ label, k, sortBy, sortDir, onSort, align = "left", tip }: {
   label: string; k: SortKey;
   sortBy: SortKey; sortDir: "asc" | "desc";
   onSort: (k: SortKey) => void; align?: "left" | "right";
+  tip?: string;
 }) {
   const active = sortBy === k;
   const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
   return (
     <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"} font-semibold`}>
-      <button
-        onClick={() => onSort(k)}
-        className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
-          active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)]"
-        }`}
-      >
-        {label}
-        <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
-      </button>
+      <span className={`inline-flex items-center gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
+        <button
+          onClick={() => onSort(k)}
+          className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
+            active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)]"
+          }`}
+        >
+          {label}
+          <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
+        </button>
+        {tip && <InfoTip text={tip} />}
+      </span>
     </th>
   );
 }
@@ -234,30 +267,6 @@ function ChangeCell({ value, muted }: { value: number | null; muted?: boolean })
         {positive && !muted ? "+" : ""}{value.toFixed(2)}%
       </span>
     </td>
-  );
-}
-
-function Sparkline({ points, positive }: { points: number[]; positive: boolean }) {
-  if (points.length === 0) return <span className="text-xs text-[var(--color-slate)]/40">—</span>;
-  const w = 88;
-  const h = 28;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  const stepX = w / (points.length - 1 || 1);
-  const path = points.map((p, i) => {
-    const x = i * stepX;
-    const y = h - ((p - min) / range) * h;
-    return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-  }).join(" ");
-  const stroke = positive ? "var(--color-emerald)" : "var(--color-ruby)";
-  const fill = positive ? "rgba(16,185,129,0.10)" : "rgba(239,68,68,0.10)";
-  const areaPath = `${path} L${w},${h} L0,${h} Z`;
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
-      <path d={areaPath} fill={fill} />
-      <path d={path} fill="none" stroke={stroke} strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }
 

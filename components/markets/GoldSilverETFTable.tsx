@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown, ArrowDown, ArrowUp, Search } from "lucide-react";
+import { ArrowUpDown, ArrowDown, ArrowUp, Search, Download } from "lucide-react";
 import type { MFLiveRow } from "@/lib/mutual-funds";
+import { Sparkline } from "./Sparkline";
+import { InfoTip } from "@/components/InfoTip";
+import { downloadCsv } from "@/lib/csv-export";
 
 type SortKey = "name" | "amc" | "category" | "nav" | "return1y" | "return3y" | "return5y";
 
@@ -63,6 +66,24 @@ export function GoldSilverETFTable({ rows }: Props) {
     return dates.length > 0 ? dates[0] : null;
   }, [rows]);
 
+  function exportCsv() {
+    const headers = ["ETF", "AMC", "Metal", "NAV (INR)", "1Y CAGR %", "3Y CAGR %", "5Y CAGR %", "As of", "Scheme code"];
+    downloadCsv(`auris-gold-silver-etfs-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
+      switch (h) {
+        case "ETF":         return r.name;
+        case "AMC":         return r.amc;
+        case "Metal":       return CATEGORY_LABEL[r.category] ?? r.category;
+        case "NAV (INR)":   return r.nav?.toFixed(4) ?? "";
+        case "1Y CAGR %":   return r.return1y?.toFixed(2) ?? "";
+        case "3Y CAGR %":   return r.return3y?.toFixed(2) ?? "";
+        case "5Y CAGR %":   return r.return5y?.toFixed(2) ?? "";
+        case "As of":       return r.asOf ?? "";
+        case "Scheme code": return r.schemeCode;
+        default:            return "";
+      }
+    });
+  }
+
   return (
     <section className="py-12 md:py-16 bg-white border-y border-[var(--color-silver)]/30">
       <div className="container-wide">
@@ -92,13 +113,21 @@ export function GoldSilverETFTable({ rows }: Props) {
               className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--color-silver)]/50 rounded-lg focus:outline-none focus:border-[var(--color-gold)] bg-white"
             />
           </div>
-          <div className="flex gap-1 ml-auto">
+          <div className="flex gap-1">
             {CATEGORY_PILLS.map((p) => (
               <button key={p.slug} onClick={() => setFilter(p.slug)} className={pillBtn(filter === p.slug)}>
                 {p.label}
               </button>
             ))}
           </div>
+          <button
+            onClick={exportCsv}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-silver)]/40 text-[var(--color-navy)] bg-white hover:border-[var(--color-gold)] transition-colors"
+            title="Download current view as CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            CSV
+          </button>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-[var(--color-silver)]/40">
@@ -106,42 +135,55 @@ export function GoldSilverETFTable({ rows }: Props) {
             <thead className="bg-[var(--color-parchment)] sticky top-0 z-10">
               <tr>
                 <Th label="ETF"     k="name"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="AMC"     k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
+                <Th label="AMC"     k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left"  tip="Asset Management Company that issues the ETF." />
                 <Th label="Metal"   k="category" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="NAV (₹)" k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="1Y CAGR" k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="3Y CAGR" k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <Th label="5Y CAGR" k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <Th label="NAV (₹)" k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Net Asset Value per ETF unit, published daily by AMFI." />
+                <Th label="1Y CAGR" k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 1 year." />
+                <Th label="3Y CAGR" k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 3 years." />
+                <Th label="5Y CAGR" k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 5 years. Silver ETFs only launched in 2022, so most show no 5Y." />
+                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1">30d <InfoTip text="Sparkline of the last 30 NAV points, oldest left, newest right." /></span>
+                </th>
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">As of</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-[var(--color-slate)]">No ETFs match the filter.</td></tr>
-              ) : filtered.map((r) => (
-                <tr key={r.schemeCode + r.name} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
-                  <td className="px-4 py-3 font-semibold text-[var(--color-navy)]">{r.name}</td>
-                  <td className="px-4 py-3 text-[var(--color-slate)] text-xs">{r.amc}</td>
-                  <td className="px-4 py-3 text-xs">
-                    <span
-                      className="px-2 py-0.5 rounded-full font-semibold"
-                      style={{
-                        background: r.category === "silver-etf" ? "rgba(196,205,213,0.4)" : "rgba(201,168,76,0.18)",
-                        color: r.category === "silver-etf" ? "#5A6B80" : "#A08030",
-                      }}
-                    >
-                      {CATEGORY_LABEL[r.category] ?? r.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-[var(--color-navy)]">
-                    {r.nav != null ? r.nav.toFixed(2) : <span className="text-[var(--color-slate)]/60">—</span>}
-                  </td>
-                  <ReturnCell value={r.return1y} />
-                  <ReturnCell value={r.return3y} />
-                  <ReturnCell value={r.return5y} />
-                  <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums">{r.asOf ?? "—"}</td>
-                </tr>
-              ))}
+                <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--color-slate)]">No ETFs match the filter.</td></tr>
+              ) : filtered.map((r) => {
+                const sparklineUp =
+                  r.sparkline30d.length >= 2 &&
+                  r.sparkline30d[r.sparkline30d.length - 1] >= r.sparkline30d[0];
+                return (
+                  <tr key={r.schemeCode + r.name} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
+                    <td className="px-4 py-3 font-semibold text-[var(--color-navy)]">{r.name}</td>
+                    <td className="px-4 py-3 text-[var(--color-slate)] text-xs">{r.amc}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <span
+                        className="px-2 py-0.5 rounded-full font-semibold"
+                        style={{
+                          background: r.category === "silver-etf" ? "rgba(196,205,213,0.4)" : "rgba(201,168,76,0.18)",
+                          color: r.category === "silver-etf" ? "#5A6B80" : "#A08030",
+                        }}
+                      >
+                        {CATEGORY_LABEL[r.category] ?? r.category}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-[var(--color-navy)]">
+                      {r.nav != null ? r.nav.toFixed(2) : <span className="text-[var(--color-slate)]/60">—</span>}
+                    </td>
+                    <ReturnCell value={r.return1y} />
+                    <ReturnCell value={r.return3y} />
+                    <ReturnCell value={r.return5y} />
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center">
+                        <Sparkline points={r.sparkline30d} positive={sparklineUp} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums">{r.asOf ?? "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -176,24 +218,28 @@ function getValue(r: MFLiveRow, key: SortKey): string | number | null {
   }
 }
 
-function Th({ label, k, sortBy, sortDir, onSort, align = "left" }: {
+function Th({ label, k, sortBy, sortDir, onSort, align = "left", tip }: {
   label: string; k: SortKey;
   sortBy: SortKey; sortDir: "asc" | "desc";
   onSort: (k: SortKey) => void; align?: "left" | "right";
+  tip?: string;
 }) {
   const active = sortBy === k;
   const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
   return (
     <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}>
-      <button
-        onClick={() => onSort(k)}
-        className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
-          active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)] font-semibold"
-        }`}
-      >
-        {label}
-        <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
-      </button>
+      <span className={`inline-flex items-center gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
+        <button
+          onClick={() => onSort(k)}
+          className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
+            active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)] font-semibold"
+          }`}
+        >
+          {label}
+          <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
+        </button>
+        {tip && <InfoTip text={tip} />}
+      </span>
     </th>
   );
 }
