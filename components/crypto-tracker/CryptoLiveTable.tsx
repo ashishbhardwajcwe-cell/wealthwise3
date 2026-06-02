@@ -12,8 +12,11 @@ import { useWatchlist } from "@/lib/use-watchlist";
 
 type SortKey =
   | "rank" | "name" | "priceInr"
-  | "change24h" | "change7d"
+  | "change24h" | "change7d" | "change30d"
+  | "change1y" | "change3y" | "change5y" | "change10y"
   | "volume" | "marketCap" | "athChange";
+
+type Period = "short" | "long";
 
 interface Props {
   coins: CoinMarketRow[];
@@ -28,6 +31,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
   const [sortBy, setSortBy] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [watchOnly, setWatchOnly] = useState(false);
+  const [period, setPeriod] = useState<Period>("short");
   const watchlist = useWatchlist();
 
   const filtered = useMemo(() => {
@@ -132,6 +136,26 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
               </button>
             ))}
           </div>
+          <div className="flex gap-1 p-0.5 bg-[var(--color-sand)]/40 rounded-lg border border-[var(--color-silver)]/40">
+            <button
+              onClick={() => { setPeriod("short"); if (["change1y","change3y","change5y","change10y"].includes(sortBy)) { setSortBy("change24h"); setSortDir("desc"); } }}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                period === "short" ? "bg-white text-[var(--color-navy)] shadow-sm" : "text-[var(--color-slate)] hover:text-[var(--color-navy)]"
+              }`}
+              title="Show 24h / 7d / 30d returns"
+            >
+              Short
+            </button>
+            <button
+              onClick={() => { setPeriod("long"); if (["change24h","change7d","change30d"].includes(sortBy)) { setSortBy("change1y"); setSortDir("desc"); } }}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                period === "long" ? "bg-white text-[var(--color-navy)] shadow-sm" : "text-[var(--color-slate)] hover:text-[var(--color-navy)]"
+              }`}
+              title="Show 1Y / 3Y / 5Y / 10Y returns"
+            >
+              Long
+            </button>
+          </div>
           <button
             onClick={() => setWatchOnly((v) => !v)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
@@ -145,7 +169,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
           </button>
           <button
             onClick={() => {
-              const headers = ["Rank", "Coin", "Symbol", "Price (INR)", "Price (USD)", "24h %", "7d %", "24h Volume (INR)", "Market Cap (INR)", "From ATH %"];
+              const headers = ["Rank", "Coin", "Symbol", "Price (INR)", "Price (USD)", "24h %", "7d %", "30d %", "1Y %", "3Y %", "5Y %", "10Y %", "24h Volume (INR)", "Market Cap (INR)", "From ATH %"];
               downloadCsv(`auris-crypto-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (c, h) => {
                 switch (h) {
                   case "Rank":              return c.rank;
@@ -155,6 +179,11 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
                   case "Price (USD)":       return usdPrices[c.id]?.toFixed(4) ?? "";
                   case "24h %":             return c.change24hPct?.toFixed(2) ?? "";
                   case "7d %":              return c.change7dPct?.toFixed(2) ?? "";
+                  case "30d %":             return c.change30dPct?.toFixed(2) ?? "";
+                  case "1Y %":              return c.change1yPct?.toFixed(2) ?? "";
+                  case "3Y %":              return c.change3yPct?.toFixed(2) ?? "";
+                  case "5Y %":              return c.change5yPct?.toFixed(2) ?? "";
+                  case "10Y %":             return c.change10yPct?.toFixed(2) ?? "";
                   case "24h Volume (INR)":  return c.volume24hInr;
                   case "Market Cap (INR)":  return c.marketCapInr;
                   case "From ATH %":        return c.athChangePct?.toFixed(2) ?? "";
@@ -186,8 +215,20 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
                 <Th label="Coin"        k="name"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="Price (INR)" k="priceInr"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Last traded price in Indian Rupees, derived from CoinGecko's INR feed." />
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">USD</th>
-                <Th label="24h %"       k="change24h"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 24 hours." />
-                <Th label="7d %"        k="change7d"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 7 days." />
+                {period === "short" ? (
+                  <>
+                    <Th label="24h %"       k="change24h"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 24 hours." />
+                    <Th label="7d %"        k="change7d"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 7 days." />
+                    <Th label="30d %"       k="change30d"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 30 days." />
+                  </>
+                ) : (
+                  <>
+                    <Th label="1Y"  k="change1y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the trailing 1 year. From CoinGecko's live feed." />
+                    <Th label="3Y"  k="change3y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 3 years (not annualised — crypto convention). Available for the top 30 coins by market cap." />
+                    <Th label="5Y"  k="change5y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 5 years. Many coins didn't exist that long — shown as ‘—’ where data is missing." />
+                    <Th label="10Y" k="change10y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 10 years. Mostly meaningful for BTC, LTC, XRP, ETH — others didn't exist." />
+                  </>
+                )}
                 <Th label="24h Volume"  k="volume"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total INR value traded across exchanges in the last 24 hours. High volume = better liquidity." />
                 <Th label="Market Cap"  k="marketCap"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Circulating supply × current price. The total market value of the coin." />
                 <Th label="From ATH"    k="athChange"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Distance from the All-Time High. -40% means the coin is 40% below its peak ever." />
@@ -198,7 +239,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-12 text-center text-[var(--color-slate)]">No coins match the filter.</td></tr>
+                <tr><td colSpan={12} className="px-4 py-12 text-center text-[var(--color-slate)]">No coins match the filter.</td></tr>
               ) : filtered.map((c) => (
                 <tr key={c.id} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
                   <td className="px-2 py-3 text-center">
@@ -219,8 +260,20 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
                   <td className="px-4 py-3 text-right tabular-nums text-xs text-[var(--color-slate)]">
                     {usdPrices[c.id] != null ? fmtPriceUSD(usdPrices[c.id]) : "—"}
                   </td>
-                  <ChangeCell value={c.change24hPct} />
-                  <ChangeCell value={c.change7dPct} />
+                  {period === "short" ? (
+                    <>
+                      <ChangeCell value={c.change24hPct} />
+                      <ChangeCell value={c.change7dPct} />
+                      <ChangeCell value={c.change30dPct} />
+                    </>
+                  ) : (
+                    <>
+                      <ChangeCell value={c.change1yPct} big />
+                      <ChangeCell value={c.change3yPct} big />
+                      <ChangeCell value={c.change5yPct} big />
+                      <ChangeCell value={c.change10yPct} big />
+                    </>
+                  )}
                   <td className="px-4 py-3 text-right tabular-nums text-xs text-[var(--color-slate)]">{fmtMarketCap(c.volume24hInr)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-xs text-[var(--color-slate)]">{fmtMarketCap(c.marketCapInr)}</td>
                   <ChangeCell value={c.athChangePct} muted />
@@ -252,6 +305,11 @@ function getValue(c: CoinMarketRow, k: SortKey): string | number | null {
     case "priceInr":   return c.priceInr;
     case "change24h":  return c.change24hPct;
     case "change7d":   return c.change7dPct;
+    case "change30d":  return c.change30dPct;
+    case "change1y":   return c.change1yPct;
+    case "change3y":   return c.change3yPct;
+    case "change5y":   return c.change5yPct;
+    case "change10y":  return c.change10yPct;
     case "volume":     return c.volume24hInr;
     case "marketCap":  return c.marketCapInr;
     case "athChange":  return c.athChangePct;
@@ -284,8 +342,8 @@ function Th({ label, k, sortBy, sortDir, onSort, align = "left", tip }: {
   );
 }
 
-function ChangeCell({ value, muted }: { value: number | null; muted?: boolean }) {
-  if (value == null) return <td className="px-4 py-3 text-right text-[var(--color-slate)]">—</td>;
+function ChangeCell({ value, muted, big }: { value: number | null; muted?: boolean; big?: boolean }) {
+  if (value == null) return <td className="px-4 py-3 text-right text-[var(--color-slate)]/50 tabular-nums">—</td>;
   const positive = value > 0;
   const flat = Math.abs(value) < 0.01;
   const color = muted
@@ -296,14 +354,28 @@ function ChangeCell({ value, muted }: { value: number | null; muted?: boolean })
     ? "text-[var(--color-emerald)]"
     : "text-[var(--color-ruby)]";
   const Icon = flat ? Minus : positive ? TrendingUp : TrendingDown;
+  // Long-period returns can run into the thousands of percent for early
+  // crypto holders. Switch to compact "12.4×" / "3,400%" formatting
+  // when the magnitude crosses 1,000% so the table stays readable.
+  const formatted = big
+    ? fmtBigPct(value)
+    : `${positive && !muted ? "+" : ""}${value.toFixed(2)}%`;
   return (
     <td className={`px-4 py-3 text-right tabular-nums font-semibold ${color}`}>
       <span className="inline-flex items-center gap-1 justify-end">
         {!muted && <Icon className="w-3 h-3" />}
-        {positive && !muted ? "+" : ""}{value.toFixed(2)}%
+        {formatted}
       </span>
     </td>
   );
+}
+
+function fmtBigPct(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 100_000) return `${value > 0 ? "+" : "−"}${(abs / 100).toFixed(0)}×`;
+  if (abs >= 10_000)  return `${value > 0 ? "+" : "−"}${(abs / 100).toFixed(1)}×`;
+  if (abs >= 1_000)   return `${value > 0 ? "+" : ""}${value.toFixed(0)}%`;
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 }
 
 // ─── Formatters ─────────────────────────────────────────────

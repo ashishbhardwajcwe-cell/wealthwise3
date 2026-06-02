@@ -3,7 +3,7 @@ import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { cryptoData } from "@/lib/product-data";
 import { CryptoGraph } from "@/components/ProductGraphs";
 import { CryptoLiveTable } from "@/components/crypto-tracker/CryptoLiveTable";
-import { getTopCryptoInINR, getCoinUsdPrices } from "@/lib/crypto";
+import { getTopCryptoInINR, getCoinUsdPrices, getCoinLongTermReturns } from "@/lib/crypto";
 
 export const metadata: Metadata = {
   title: "Cryptocurrency in India — Tax, Exchanges, Allocation, Custody",
@@ -15,14 +15,22 @@ export const revalidate = 300; // 5 min — matches the upstream cache window
 
 export default async function Page() {
   const coins = await getTopCryptoInINR(100);
-  const usdPrices = coins.length > 0
-    ? await getCoinUsdPrices(coins.map((c) => c.id))
-    : {};
+  const ids = coins.map((c) => c.id);
+  const [usdPrices, longTerm] = await Promise.all([
+    ids.length > 0 ? getCoinUsdPrices(ids) : Promise.resolve({}),
+    // 3Y/5Y/10Y for the top 30 — sufficient coverage without hammering CoinGecko.
+    getCoinLongTermReturns(ids, 30),
+  ]);
+
+  const enriched = coins.map((c) => {
+    const lt = longTerm.get(c.id);
+    return lt ? { ...c, ...lt } : c;
+  });
 
   return (
     <InvestmentProductPage
       data={{ ...cryptoData, graphic: <CryptoGraph /> }}
-      liveSection={<CryptoLiveTable coins={coins} usdPrices={usdPrices} />}
+      liveSection={<CryptoLiveTable coins={enriched} usdPrices={usdPrices} />}
     />
   );
 }

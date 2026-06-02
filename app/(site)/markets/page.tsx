@@ -9,7 +9,7 @@ import { CryptoLiveTable } from "@/components/crypto-tracker/CryptoLiveTable";
 import { MFLiveTable } from "@/components/markets/MFLiveTable";
 import { GoldSilverETFTable } from "@/components/markets/GoldSilverETFTable";
 import { StructuredData, breadcrumbSchema, collectionPageSchema } from "@/components/StructuredData";
-import { getTopCryptoInINR, getCoinUsdPrices } from "@/lib/crypto";
+import { getTopCryptoInINR, getCoinUsdPrices, getCoinLongTermReturns } from "@/lib/crypto";
 import { getTrackedMFNAVs, TRACKED_METAL_ETFS } from "@/lib/mutual-funds";
 
 export const metadata: Metadata = {
@@ -38,9 +38,16 @@ export default async function Page() {
     getTrackedMFNAVs(TRACKED_METAL_ETFS),
   ]);
 
-  const usdPrices = coins.length > 0
-    ? await getCoinUsdPrices(coins.map((c) => c.id))
-    : {};
+  const ids = coins.map((c) => c.id);
+  const [usdPrices, longTerm] = await Promise.all([
+    ids.length > 0 ? getCoinUsdPrices(ids) : Promise.resolve({}),
+    getCoinLongTermReturns(ids, 30),
+  ]);
+
+  const enrichedCoins = coins.map((c) => {
+    const lt = longTerm.get(c.id);
+    return lt ? { ...c, ...lt } : c;
+  });
 
   const pageSchema = collectionPageSchema({
     name: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
@@ -87,7 +94,7 @@ export default async function Page() {
         align="left"
       />
 
-      <MarketsTopMovers coins={coins} mfRows={mfRows} etfRows={etfRows} />
+      <MarketsTopMovers coins={enrichedCoins} mfRows={mfRows} etfRows={etfRows} />
 
       <MarketsNav />
 
@@ -96,7 +103,7 @@ export default async function Page() {
       </section>
 
       <section id="crypto" className="scroll-mt-32">
-        <CryptoLiveTable coins={coins} usdPrices={usdPrices} />
+        <CryptoLiveTable coins={enrichedCoins} usdPrices={usdPrices} />
       </section>
 
       <section id="mutual-funds" className="scroll-mt-32">
