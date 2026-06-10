@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ExternalLink, ArrowRight } from "lucide-react";
 import { AIPlannerForm } from "@/components/AIPlannerForm";
+import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "AI Wealth Planner — Free Personalised Financial Snapshot",
@@ -19,6 +22,21 @@ export default function AIWealthPlannerPage() {
           <p className="mt-5 max-w-2xl mx-auto text-lg text-[var(--color-slate)]">
             Four quick steps. Country-aware (India, US, UK, UAE, Singapore). The output is a calm, honest read on where you stand,
             where you&apos;re headed, and the three things that would change your outcome the most.
+          </p>
+          <p className="mt-6 text-sm text-[var(--color-slate)]">
+            Looking for the full app instead?{" "}
+            <a
+              href={siteConfig.appUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1 hover:text-[var(--color-navy)]"
+            >
+              Open WealthWise <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+            {" · "}or{" "}
+            <Link href="/plan" className="font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1 hover:text-[var(--color-navy)]">
+              compare all three planners <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </p>
         </div>
       </section>

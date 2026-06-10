@@ -16,7 +16,7 @@ export default function HomePage() {
       <Hero
         title="Wealth that compounds. Plans that hold under fire."
         subtitle="AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity."
-        primaryCta={{ label: "Get my AI Snapshot", href: "/ai-wealth-planner" }}
+        primaryCta={{ label: "Open the Wealth Planner", href: "/plan" }}
         secondaryCta={{ label: "Book a call", href: siteConfig.topmateUrl }}
         trustLine={`Run by ${siteConfig.legalName} (CIN: ${siteConfig.cin}) · NISM-certified · DPDP compliant`}
       />
@@ -243,8 +243,8 @@ export default function HomePage() {
       {/* Final CTA */}
       <CTASection
         title="Ready to build your wealth plan?"
-        subtitle="Start with the free AI snapshot. Graduate to the Guided Plan when you have ten minutes. Open the full app when you're ready to commit."
-        primaryCta={{ label: "Get my AI Snapshot", href: "/ai-wealth-planner" }}
+        subtitle="Start with the free AI snapshot, the 10-minute Guided Plan, or open the full app — all from one hub."
+        primaryCta={{ label: "Open the Wealth Planner", href: "/plan" }}
         secondaryCta={{ label: "Book a call", href: siteConfig.topmateUrl }}
       />
     </>
