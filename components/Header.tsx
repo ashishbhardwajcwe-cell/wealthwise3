@@ -16,9 +16,28 @@ interface NavMenuItem {
   external?: boolean;
 }
 
+const plannersMenu: NavMenuItem[] = [
+  {
+    href: "/plan",
+    label: "All planners — overview",
+    desc: "Compare snapshot, guided plan and the full app side-by-side",
+  },
+  {
+    href: "/ai-wealth-planner",
+    label: "AI Snapshot",
+    desc: "60-second personalised snapshot · No signup",
+  },
+  {
+    href: "/guided",
+    label: "Guided Plan",
+    desc: "10-minute YNAB-style Q&A · No signup",
+  },
+];
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState(false);
+  const [planners, setPlanners] = useState(false);
   const [forMenu, setForMenu] = useState(false);
 
   return (
@@ -49,7 +68,13 @@ export function Header() {
               desc: p.short,
             }))}
           />
-          <NavLink href="/plan">Wealth Planner</NavLink>
+          <DropdownNavItem
+            label="Wealth Planners"
+            open={planners}
+            setOpen={setPlanners}
+            items={plannersMenu}
+            width="w-[26rem]"
+          />
           <NavLink href="/markets">Markets</NavLink>
           <NavLink href="/equity/analysis">Research</NavLink>
           <DropdownNavItem
@@ -72,12 +97,13 @@ export function Header() {
           <CurrencySwitcher />
           <AccountButton />
           <a
-            href={siteConfig.appUrl}
+            href={siteConfig.appDeepLink}
             target="_blank"
             rel="noreferrer"
             className="btn-primary text-sm py-2 px-4"
+            title="Open the AI Wealth Planner — skips the marketing landing and goes straight to data entry"
           >
-            Open the app <ExternalLink className="w-3.5 h-3.5" />
+            AI Wealth Planner <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
 
@@ -94,14 +120,17 @@ export function Header() {
         <div className="lg:hidden border-t border-[var(--color-silver)]/40 bg-white">
           <div className="container-wide py-4 flex flex-col gap-1">
             <MobileLink href="/investment-products/mutual-funds">Investment Products</MobileLink>
-            <MobileLink href="/plan">Wealth Planner</MobileLink>
+            <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Wealth Planners</div>
+            <MobileLink href="/plan">All planners — overview</MobileLink>
+            <MobileLink href="/ai-wealth-planner">AI Snapshot · 60 sec</MobileLink>
+            <MobileLink href="/guided">Guided Plan · 10 min</MobileLink>
             <a
-              href={siteConfig.appUrl}
+              href={siteConfig.appDeepLink}
               target="_blank"
               rel="noreferrer"
-              className="px-2 py-3 text-base font-medium text-[var(--color-navy)] border-b border-[var(--color-silver)]/30 inline-flex items-center gap-1.5"
+              className="px-2 py-3 text-base font-semibold text-[var(--color-gold-dim)] border-b border-[var(--color-silver)]/30 inline-flex items-center gap-1.5"
             >
-              Open the app <ExternalLink className="w-3.5 h-3.5" />
+              AI Wealth Planner (app) <ExternalLink className="w-3.5 h-3.5" />
             </a>
             <MobileLink href="/markets">Markets</MobileLink>
             <MobileLink href="/equity/analysis">Research</MobileLink>
@@ -112,13 +141,13 @@ export function Header() {
             <MobileLink href="/pricing">Pricing</MobileLink>
             <AccountButton variant="mobile" />
             <a
-              href={siteConfig.appUrl}
+              href={siteConfig.appDeepLink}
               target="_blank"
               rel="noreferrer"
               className="btn-primary text-sm mt-3"
               onClick={() => setOpen(false)}
             >
-              Open the app
+              Open the AI Wealth Planner
             </a>
           </div>
         </div>

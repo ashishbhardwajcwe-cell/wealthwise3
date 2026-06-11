@@ -48,7 +48,7 @@ export function AccountButton({ variant = "desktop" }: { variant?: "desktop" | "
     return (
       <div className="border-b border-[var(--color-silver)]/30 py-3">
         <div className="px-2 text-sm font-semibold text-[var(--color-navy)] mb-2">{displayName}</div>
-        <a href={siteConfig.appUrl} target="_blank" rel="noreferrer" className="block px-2 py-2 text-sm text-[var(--color-slate)]">
+        <a href={siteConfig.appDeepLink} target="_blank" rel="noreferrer" className="block px-2 py-2 text-sm text-[var(--color-slate)]">
           Open the app →
         </a>
         <SignOutButton className="px-2 py-2 text-sm text-[var(--color-ruby)] text-left w-full" />
@@ -79,7 +79,7 @@ export function AccountButton({ variant = "desktop" }: { variant?: "desktop" | "
               <div className="text-xs text-[var(--color-slate)] truncate">{user.email}</div>
             </div>
             <a
-              href={siteConfig.appUrl}
+              href={siteConfig.appDeepLink}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--color-sand)]/60 text-sm text-[var(--color-navy)]"

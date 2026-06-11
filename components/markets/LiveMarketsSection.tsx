@@ -9,27 +9,33 @@ import { TradingViewScreener } from "./TradingViewScreener";
 
 type Market = "india" | "us";
 
+// TradingView's free embed widgets do NOT have a licence for NSE
+// real-time data ("This symbol is only available on TradingView"
+// notification). BSE quotes are open. Every Indian large-cap is dual-
+// listed, so we use BSE:<TICKER> across the board and BSE:SENSEX
+// as the headline index instead of NSE:NIFTY. BSE-only indices
+// (BANKEX, MIDCAP, SMLCAP) cover banking / mid-cap / small-cap.
 const INDIA_TICKERS = [
   { proName: "BSE:SENSEX",      title: "Sensex" },
-  { proName: "NSE:NIFTY",       title: "Nifty 50" },
-  { proName: "NSE:BANKNIFTY",   title: "Bank Nifty" },
-  { proName: "NSE:RELIANCE",    title: "Reliance" },
-  { proName: "NSE:TCS",         title: "TCS" },
-  { proName: "NSE:HDFCBANK",    title: "HDFC Bank" },
-  { proName: "NSE:INFY",        title: "Infosys" },
-  { proName: "NSE:ICICIBANK",   title: "ICICI Bank" },
-  { proName: "NSE:HINDUNILVR",  title: "HUL" },
-  { proName: "NSE:ITC",         title: "ITC" },
-  { proName: "NSE:LT",          title: "L&T" },
-  { proName: "NSE:SBIN",        title: "SBI" },
-  { proName: "NSE:BHARTIARTL",  title: "Bharti Airtel" },
-  { proName: "NSE:KOTAKBANK",   title: "Kotak Bank" },
-  { proName: "NSE:ASIANPAINT",  title: "Asian Paints" },
-  { proName: "NSE:MARUTI",      title: "Maruti" },
-  { proName: "NSE:TITAN",       title: "Titan" },
-  { proName: "NSE:WIPRO",       title: "Wipro" },
-  { proName: "NSE:AXISBANK",    title: "Axis Bank" },
-  { proName: "NSE:ULTRACEMCO",  title: "UltraTech" },
+  { proName: "BSE:BSE500",      title: "BSE 500" },
+  { proName: "BSE:BANKEX",      title: "Bankex" },
+  { proName: "BSE:RELIANCE",    title: "Reliance" },
+  { proName: "BSE:TCS",         title: "TCS" },
+  { proName: "BSE:HDFCBANK",    title: "HDFC Bank" },
+  { proName: "BSE:INFY",        title: "Infosys" },
+  { proName: "BSE:ICICIBANK",   title: "ICICI Bank" },
+  { proName: "BSE:HINDUNILVR",  title: "HUL" },
+  { proName: "BSE:ITC",         title: "ITC" },
+  { proName: "BSE:LT",          title: "L&T" },
+  { proName: "BSE:SBIN",        title: "SBI" },
+  { proName: "BSE:BHARTIARTL",  title: "Bharti Airtel" },
+  { proName: "BSE:KOTAKBANK",   title: "Kotak Bank" },
+  { proName: "BSE:ASIANPAINT",  title: "Asian Paints" },
+  { proName: "BSE:MARUTI",      title: "Maruti" },
+  { proName: "BSE:TITAN",       title: "Titan" },
+  { proName: "BSE:WIPRO",       title: "Wipro" },
+  { proName: "BSE:AXISBANK",    title: "Axis Bank" },
+  { proName: "BSE:ULTRACEMCO",  title: "UltraTech" },
 ];
 
 const US_TICKERS = [
@@ -67,14 +73,14 @@ const US_TOP_STOCKS = [
 ];
 
 const INDIA_TOP_STOCKS = [
-  { symbol: "NSE:RELIANCE",   name: "Reliance Industries", ticker: "RELIANCE" },
-  { symbol: "NSE:TCS",        name: "Tata Consultancy",    ticker: "TCS" },
-  { symbol: "NSE:HDFCBANK",   name: "HDFC Bank",           ticker: "HDFCBANK" },
-  { symbol: "NSE:INFY",       name: "Infosys",             ticker: "INFY" },
-  { symbol: "NSE:ICICIBANK",  name: "ICICI Bank",          ticker: "ICICIBANK" },
-  { symbol: "NSE:HINDUNILVR", name: "Hindustan Unilever",  ticker: "HINDUNILVR" },
-  { symbol: "NSE:ITC",        name: "ITC",                 ticker: "ITC" },
-  { symbol: "NSE:LT",         name: "Larsen & Toubro",     ticker: "LT" },
+  { symbol: "BSE:RELIANCE",   name: "Reliance Industries", ticker: "RELIANCE" },
+  { symbol: "BSE:TCS",        name: "Tata Consultancy",    ticker: "TCS" },
+  { symbol: "BSE:HDFCBANK",   name: "HDFC Bank",           ticker: "HDFCBANK" },
+  { symbol: "BSE:INFY",       name: "Infosys",             ticker: "INFY" },
+  { symbol: "BSE:ICICIBANK",  name: "ICICI Bank",          ticker: "ICICIBANK" },
+  { symbol: "BSE:HINDUNILVR", name: "Hindustan Unilever",  ticker: "HINDUNILVR" },
+  { symbol: "BSE:ITC",        name: "ITC",                 ticker: "ITC" },
+  { symbol: "BSE:LT",         name: "Larsen & Toubro",     ticker: "LT" },
 ];
 
 export function LiveMarketsSection() {
@@ -123,14 +129,14 @@ export function LiveMarketsSection() {
         {/* Block 1 — primary indices */}
         <Block
           eyebrow="Headline indices"
-          title={isIndia ? "Nifty 50 & Sensex" : "S&P 500 & Nasdaq 100"}
+          title={isIndia ? "Sensex & BSE 500" : "S&P 500 & Nasdaq 100"}
           subtitle="One-year view. Click any chart to expand on TradingView."
         >
           <div className="grid lg:grid-cols-2 gap-5">
             {isIndia ? (
               <>
-                <ChartCard label="Nifty 50" symbol="NSE:NIFTY" />
                 <ChartCard label="Sensex" symbol="BSE:SENSEX" />
+                <ChartCard label="BSE 500" symbol="BSE:BSE500" />
               </>
             ) : (
               <>
@@ -144,17 +150,17 @@ export function LiveMarketsSection() {
         {/* Block 2 — secondary indices */}
         <Block
           eyebrow="Across the curve"
-          title={isIndia ? "Bank Nifty, Midcap & Smallcap" : "Dow, Russell & VIX"}
+          title={isIndia ? "Bankex, Midcap & Smallcap" : "Dow, Russell & VIX"}
           subtitle={isIndia
-            ? "Banking, mid-caps and small-caps — where the rotations show up first."
+            ? "Banking, mid-caps and small-caps — where the rotations show up first. BSE indices since NSE data requires a paid TradingView subscription."
             : "Broad-market and volatility context."}
         >
           <div className="grid md:grid-cols-3 gap-5">
             {isIndia ? (
               <>
-                <MiniCard label="Bank Nifty" symbol="NSE:BANKNIFTY" />
-                <MiniCard label="Nifty Midcap 150" symbol="NSE:NIFTYMIDCAP150" />
-                <MiniCard label="Nifty Smallcap 250" symbol="NSE:NIFTYSMLCAP250" />
+                <MiniCard label="S&P BSE Bankex" symbol="BSE:BANKEX" />
+                <MiniCard label="S&P BSE Midcap" symbol="BSE:MIDCAP" />
+                <MiniCard label="S&P BSE Smallcap" symbol="BSE:SMLCAP" />
               </>
             ) : (
               <>
