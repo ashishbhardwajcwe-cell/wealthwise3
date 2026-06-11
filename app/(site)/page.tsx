@@ -16,7 +16,7 @@ export default function HomePage() {
       <Hero
         title="Wealth that compounds. Plans that hold under fire."
         subtitle="AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity."
-        primaryCta={{ label: "Open the Wealth Planner", href: "/plan" }}
+        primaryCta={{ label: "Open the AI Wealth Planner", href: siteConfig.appDeepLink }}
         secondaryCta={{ label: "Book a call", href: siteConfig.topmateUrl }}
         trustLine={`Run by ${siteConfig.legalName} (CIN: ${siteConfig.cin}) · NISM-certified · DPDP compliant`}
       />

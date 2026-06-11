@@ -7,6 +7,11 @@ export const siteConfig = {
   description:
     "AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity.",
   appUrl: "https://app.auriswealth.co",
+  /** Deep-link that skips wealthwise2's marketing landing and goes
+   *  straight to the auth modal / dashboard. Use this for "Open the
+   *  AI Wealth Planner" / "Open the app" gold CTAs so the user lands
+   *  on data entry in one click. */
+  appDeepLink: "https://app.auriswealth.co/?app=1",
   signupUrl: "https://app.auriswealth.co/?signup",
   topmateUrl: "https://topmate.io/auris8",
   whatsappNumber: "916009096178",

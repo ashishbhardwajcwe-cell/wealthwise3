@@ -78,7 +78,7 @@ export default async function StockAnalysisPage({ params }: Props) {
           {/* Live price card — auto-derives the TradingView symbol from the ticker */}
           {a.ticker && (
             <div className="mt-8">
-              <SymbolInfo symbol={`NSE:${a.ticker}`} />
+              <SymbolInfo symbol={`BSE:${a.ticker}`} />
             </div>
           )}
 

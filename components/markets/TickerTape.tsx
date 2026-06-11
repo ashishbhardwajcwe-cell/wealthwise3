@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 interface TickerSymbol {
-  proName: string;        // e.g. "BSE:SENSEX", "NSE:NIFTY", "NSE:RELIANCE"
+  proName: string;        // e.g. "BSE:SENSEX", "BSE:RELIANCE", "NASDAQ:AAPL"
   title: string;          // display label
 }
 
@@ -11,27 +11,29 @@ interface Props {
   symbols?: TickerSymbol[];
 }
 
+// BSE: prefix throughout — NSE data is paid on the free TradingView
+// embed widget and renders "This symbol is only available on TradingView".
 const DEFAULT_SYMBOLS: TickerSymbol[] = [
   { proName: "BSE:SENSEX",      title: "Sensex" },
-  { proName: "NSE:NIFTY",       title: "Nifty 50" },
-  { proName: "NSE:BANKNIFTY",   title: "Bank Nifty" },
-  { proName: "NSE:RELIANCE",    title: "Reliance" },
-  { proName: "NSE:TCS",         title: "TCS" },
-  { proName: "NSE:HDFCBANK",    title: "HDFC Bank" },
-  { proName: "NSE:INFY",        title: "Infosys" },
-  { proName: "NSE:ICICIBANK",   title: "ICICI Bank" },
-  { proName: "NSE:HINDUNILVR",  title: "HUL" },
-  { proName: "NSE:ITC",         title: "ITC" },
-  { proName: "NSE:LT",          title: "L&T" },
-  { proName: "NSE:SBIN",        title: "SBI" },
-  { proName: "NSE:BHARTIARTL",  title: "Bharti Airtel" },
-  { proName: "NSE:KOTAKBANK",   title: "Kotak Bank" },
-  { proName: "NSE:ASIANPAINT",  title: "Asian Paints" },
-  { proName: "NSE:MARUTI",      title: "Maruti Suzuki" },
-  { proName: "NSE:TITAN",       title: "Titan" },
-  { proName: "NSE:WIPRO",       title: "Wipro" },
-  { proName: "NSE:AXISBANK",    title: "Axis Bank" },
-  { proName: "NSE:ULTRACEMCO",  title: "UltraTech" },
+  { proName: "BSE:BSE500",      title: "BSE 500" },
+  { proName: "BSE:BANKEX",      title: "Bankex" },
+  { proName: "BSE:RELIANCE",    title: "Reliance" },
+  { proName: "BSE:TCS",         title: "TCS" },
+  { proName: "BSE:HDFCBANK",    title: "HDFC Bank" },
+  { proName: "BSE:INFY",        title: "Infosys" },
+  { proName: "BSE:ICICIBANK",   title: "ICICI Bank" },
+  { proName: "BSE:HINDUNILVR",  title: "HUL" },
+  { proName: "BSE:ITC",         title: "ITC" },
+  { proName: "BSE:LT",          title: "L&T" },
+  { proName: "BSE:SBIN",        title: "SBI" },
+  { proName: "BSE:BHARTIARTL",  title: "Bharti Airtel" },
+  { proName: "BSE:KOTAKBANK",   title: "Kotak Bank" },
+  { proName: "BSE:ASIANPAINT",  title: "Asian Paints" },
+  { proName: "BSE:MARUTI",      title: "Maruti Suzuki" },
+  { proName: "BSE:TITAN",       title: "Titan" },
+  { proName: "BSE:WIPRO",       title: "Wipro" },
+  { proName: "BSE:AXISBANK",    title: "Axis Bank" },
+  { proName: "BSE:ULTRACEMCO",  title: "UltraTech" },
 ];
 
 /**

@@ -68,7 +68,7 @@ const CARDS: PlannerCard[] = [
       "Tax-loss + LTCG harvesting alerts",
       "Stress-test scenarios + PDF export",
     ],
-    cta: { label: "Open the app", href: siteConfig.appUrl, external: true },
+    cta: { label: "Open the app", href: siteConfig.appDeepLink, external: true },
   },
 ];
 
@@ -79,7 +79,7 @@ export default function Page() {
         eyebrow="Wealth planning"
         title="Three planners. One place."
         subtitle="Pick the depth that matches the moment — a 60-second snapshot, a 10-minute guided plan, or the full WealthWise app. All three are free to try. The first two run in your browser. The full app saves your plan and tracks it over time."
-        primaryCta={{ label: "Open the full app", href: siteConfig.appUrl }}
+        primaryCta={{ label: "Open the full app", href: siteConfig.appDeepLink }}
         secondaryCta={{ label: "Try the 60-second snapshot", href: "/ai-wealth-planner" }}
         align="left"
       />
@@ -138,7 +138,7 @@ export default function Page() {
       <CTASection
         title="Ready to plan?"
         subtitle="Start anywhere — the 60-second snapshot, the 10-minute guided plan, or open the full app. They all fit together."
-        primaryCta={{ label: "Open the full app", href: siteConfig.appUrl }}
+        primaryCta={{ label: "Open the full app", href: siteConfig.appDeepLink }}
         secondaryCta={{ label: "Book a 30-min call", href: "/contact" }}
       />
     </>
