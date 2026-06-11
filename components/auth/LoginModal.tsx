@@ -9,7 +9,7 @@ import { useAuth } from "./AuthProvider";
 type Mode = "register" | "signin";
 
 export function LoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, authError, clearAuthError } = useAuth();
   const [mode, setMode] = useState<Mode>("register");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -48,6 +48,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
 
   async function handleGoogle() {
     setError(null);
+    clearAuthError();
     setLoading("google");
     try {
       await signInWithGoogle();
@@ -61,6 +62,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    clearAuthError();
 
     if (mode === "register") {
       if (!name.trim()) return setError("Full name is required");
@@ -176,8 +178,8 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
                 </Field>
               </div>
 
-              {error && (
-                <p className="text-xs text-center mt-2" style={{ color: "#ff6b6b" }}>{error}</p>
+              {(error ?? authError) && (
+                <p className="text-xs text-center mt-2" style={{ color: "#ff6b6b" }}>{error ?? authError}</p>
               )}
 
               {/* Primary CTA — gold gradient */}
