@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Check, X, AlertTriangle, ArrowRight } from "lucide-react";
+import { Check, X, AlertTriangle, ArrowRight, ExternalLink } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { CTASection } from "@/components/CTASection";
 import { StructuredData, faqSchema } from "@/components/StructuredData";
+import { siteConfig } from "@/lib/site-config";
 
 export interface ProductPageData {
   name: string;
@@ -37,7 +38,7 @@ export function InvestmentProductPage({
         title={data.name}
         subtitle={data.oneLine}
         primaryCta={{ label: "Is it right for you?", href: "#fit" }}
-        secondaryCta={{ label: "Get a personalised plan", href: "/ai-wealth-planner" }}
+        secondaryCta={{ label: "Get a personalised plan", href: "/plan" }}
         align="left"
       />
 
@@ -152,12 +153,12 @@ export function InvestmentProductPage({
           <h2 className="mt-3 mb-6">Auris + this product</h2>
           <p className="text-lg text-[var(--color-slate)] leading-relaxed">{data.howAurisHelps}</p>
           <div className="mt-8 flex gap-3 flex-wrap">
-            <Link href="/ai-wealth-planner" className="btn-primary">
-              Get a personalised plan
+            <Link href="/plan" className="btn-primary">
+              Open the Wealth Planner
             </Link>
-            <Link href="/wealthwise" className="btn-outline">
-              Try WealthWise free
-            </Link>
+            <a href={siteConfig.appUrl} target="_blank" rel="noreferrer" className="btn-outline inline-flex items-center gap-1.5">
+              Open WealthWise <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
         </div>
       </section>

@@ -82,7 +82,7 @@ export default function AboutPage() {
         title="Want to work together?"
         subtitle="The fastest way to evaluate fit is a free 30-minute call. Book a slot or run the AI Wealth Planner first."
         primaryCta={{ label: "Book a call", href: "/contact" }}
-        secondaryCta={{ label: "Try AI Planner", href: "/ai-wealth-planner" }}
+        secondaryCta={{ label: "Open the Wealth Planner", href: "/plan" }}
       />
     </>
   );

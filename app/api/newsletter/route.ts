@@ -61,11 +61,12 @@ const WELCOME_HTML = `
         Each Friday you'll get a 5-minute read on something specific — usually a case study, a tax
         nuance, or a question one of you asked.
       </p>
-      <p>While you're here, two free tools you may not have seen:</p>
+      <p>While you're here, here's where every Auris wealth planner lives:</p>
       <ul>
-        <li><a href="https://auriswealth.co/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot</li>
-        <li><a href="https://auriswealth.co/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive financial plan</li>
-        <li><a href="https://app.auriswealth.co" style="color: #A08030;">Full Analysis</a> — login required, complete planner with all sections</li>
+        <li><a href="https://auriswealth.co/plan" style="color: #A08030;">Wealth Planner hub</a> — pick a Snapshot, Guided Plan, or the full app</li>
+        <li><a href="https://auriswealth.co/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot, no signup</li>
+        <li><a href="https://auriswealth.co/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive plan, no signup</li>
+        <li><a href="https://app.auriswealth.co" style="color: #A08030;">Full WealthWise app</a> — complete planner, 14-day trial, login required</li>
       </ul>
       <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, Auris Wealth</span></p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
@@ -87,9 +88,11 @@ compounds (planning, tax efficiency, boring discipline) and what doesn't
 
 Each Friday you'll get a 5-minute read on something specific.
 
-Two free tools you may not have seen:
-- AI Wealth Planner: https://auriswealth.co/ai-wealth-planner
-- Guided Plan: https://auriswealth.co/guided
+Where every Auris wealth planner lives:
+- Wealth Planner hub: https://auriswealth.co/plan
+- AI Snapshot (60 sec): https://auriswealth.co/ai-wealth-planner
+- Guided Plan (10 min): https://auriswealth.co/guided
+- Full app: https://app.auriswealth.co
 
 — Col Ashish Bhardwaj
 Founder, Auris Wealth

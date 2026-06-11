@@ -24,8 +24,8 @@ export function CalculatorWrapper({ title, subtitle, children, notes }: Calculat
         <div className="mt-10 p-6 bg-[var(--color-parchment)] rounded-xl border border-[var(--color-gold)]/20">
           <p className="text-sm text-[var(--color-slate)] leading-relaxed">
             Want this analysis applied to your actual portfolio with real numbers?{" "}
-            <Link href="/ai-wealth-planner" className="font-semibold text-[var(--color-gold-dim)]">
-              Try the AI Wealth Planner →
+            <Link href="/plan" className="font-semibold text-[var(--color-gold-dim)]">
+              Open the Wealth Planner →
             </Link>
           </p>
         </div>

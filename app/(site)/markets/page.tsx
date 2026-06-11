@@ -89,7 +89,7 @@ export default async function Page() {
         eyebrow="Live markets"
         title="Markets hub"
         subtitle="Sortable, searchable screeners for every asset class we track — crypto, Indian & US stocks, mutual funds, and gold/silver ETFs. Updated multiple times daily."
-        primaryCta={{ label: "Build my plan", href: "/ai-wealth-planner" }}
+        primaryCta={{ label: "Build my plan", href: "/plan" }}
         secondaryCta={{ label: "Talk to our expert", href: "/contact" }}
         align="left"
       />
