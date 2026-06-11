@@ -14,11 +14,16 @@
  * a per-origin cookie with no Domain attribute, so local development still
  * works without breaking session isolation between local projects.
  *
- * IMPORTANT: cookies have a 4KB size limit. The Supabase session JWT +
- * refresh token + user object is typically 1.5–3 KB. If you pile a lot
- * into user_metadata, you may exceed the limit. Watch for this if you
- * start storing large objects on the user.
+ * CHUNKING: browsers silently drop cookies over ~4KB. Google OAuth sessions
+ * (JWT + provider token + profile) routinely exceed that, while smaller
+ * email/password sessions fit — which made Google sign-in appear broken
+ * while email worked. Values are therefore split into <=3180-byte chunks
+ * stored as `key.0`, `key.1`, ... (same convention as @supabase/ssr).
+ * The WealthWise app repo (wealthwise2) uses the identical scheme, so the
+ * two sites can read each other's cookies — keep them in sync.
  */
+
+const COOKIE_CHUNK_SIZE = 3180;
 
 /** Returns "auriswealth.co" for any *.auriswealth.co host, else undefined. */
 function getSharedCookieDomain(): string | undefined {
@@ -31,38 +36,58 @@ function getSharedCookieDomain(): string | undefined {
   return undefined;
 }
 
+function readRawCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));
+  return match ? match[1] : null;
+}
+
+function writeRawCookie(name: string, value: string, maxAge: number): void {
+  if (typeof document === "undefined") return;
+  const domain = getSharedCookieDomain();
+  const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+  const parts = [`${name}=${value}`, "Path=/", `Max-Age=${maxAge}`, "SameSite=Lax"];
+  if (isHttps) parts.push("Secure");
+  if (domain) parts.push(`Domain=${domain}`);
+  document.cookie = parts.join("; ");
+}
+
 export const sharedCookieStorage = {
   getItem(key: string): string | null {
-    if (typeof document === "undefined") return null;
-    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));
-    return match ? decodeURIComponent(match[1]) : null;
+    const single = readRawCookie(key);
+    if (single !== null) return decodeURIComponent(single);
+    let joined = "";
+    for (let i = 0; ; i++) {
+      const part = readRawCookie(`${key}.${i}`);
+      if (part === null) return i > 0 ? decodeURIComponent(joined) : null;
+      joined += part;
+    }
   },
 
   setItem(key: string, value: string): void {
     if (typeof document === "undefined") return;
-    const domain = getSharedCookieDomain();
-    const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
-    const parts = [
-      `${key}=${encodeURIComponent(value)}`,
-      "Path=/",
-      `Max-Age=${60 * 60 * 24 * 365}`, // 1 year
-      "SameSite=Lax",
-    ];
-    if (isHttps) parts.push("Secure");
-    if (domain) parts.push(`Domain=${domain}`);
-    document.cookie = parts.join("; ");
+    this.removeItem(key); // clear any stale single/chunked cookies first
+    const encoded = encodeURIComponent(value);
+    const yearSecs = 60 * 60 * 24 * 365;
+    if (encoded.length <= COOKIE_CHUNK_SIZE) {
+      writeRawCookie(key, encoded, yearSecs);
+      return;
+    }
+    for (let i = 0; i * COOKIE_CHUNK_SIZE < encoded.length; i++) {
+      writeRawCookie(
+        `${key}.${i}`,
+        encoded.slice(i * COOKIE_CHUNK_SIZE, (i + 1) * COOKIE_CHUNK_SIZE),
+        yearSecs,
+      );
+    }
   },
 
   removeItem(key: string): void {
     if (typeof document === "undefined") return;
-    const domain = getSharedCookieDomain();
-    const parts = [
-      `${key}=`,
-      "Path=/",
-      "Max-Age=0",
-    ];
-    if (domain) parts.push(`Domain=${domain}`);
-    document.cookie = parts.join("; ");
+    writeRawCookie(key, "", 0);
+    for (let i = 0; readRawCookie(`${key}.${i}`) !== null; i++) {
+      writeRawCookie(`${key}.${i}`, "", 0);
+    }
   },
 };
