@@ -60,7 +60,8 @@ export function Footer() {
               <li><Link href="/resources/glossary" className="text-[var(--color-silver)] hover:text-white">Glossary</Link></li>
               <li><Link href="/resources/downloads" className="text-[var(--color-silver)] hover:text-white">Free PDFs</Link></li>
               <li><Link href="/blog" className="text-[var(--color-silver)] hover:text-white">Blog</Link></li>
-              <li><Link href="/ai-wealth-planner" className="text-[var(--color-silver)] hover:text-white">AI Planner</Link></li>
+              <li><Link href="/plan" className="text-[var(--color-silver)] hover:text-white">Wealth Planner</Link></li>
+              <li><Link href="/ai-wealth-planner" className="text-[var(--color-silver)] hover:text-white">AI Snapshot</Link></li>
               <li><Link href="/guided" className="text-[var(--color-silver)] hover:text-white">Guided Plan</Link></li>
             </ul>
           </div>

@@ -16,29 +16,9 @@ interface NavMenuItem {
   external?: boolean;
 }
 
-const planningMenu: NavMenuItem[] = [
-  {
-    href: "/ai-wealth-planner",
-    label: "AI Snapshot",
-    desc: "60-second personalised view · No signup",
-  },
-  {
-    href: "/guided",
-    label: "Guided Plan",
-    desc: "10-minute interactive Q&A · No signup",
-  },
-  {
-    href: siteConfig.appUrl,
-    label: "Full Analysis",
-    desc: "Complete planner with all sections · Free trial",
-    external: true,
-  },
-];
-
 export function Header() {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState(false);
-  const [planning, setPlanning] = useState(false);
   const [forMenu, setForMenu] = useState(false);
 
   return (
@@ -69,13 +49,7 @@ export function Header() {
               desc: p.short,
             }))}
           />
-          <DropdownNavItem
-            label="Plan"
-            open={planning}
-            setOpen={setPlanning}
-            items={planningMenu}
-            width="w-[24rem]"
-          />
+          <NavLink href="/plan">Wealth Planner</NavLink>
           <NavLink href="/markets">Markets</NavLink>
           <NavLink href="/equity/analysis">Research</NavLink>
           <DropdownNavItem
@@ -120,16 +94,14 @@ export function Header() {
         <div className="lg:hidden border-t border-[var(--color-silver)]/40 bg-white">
           <div className="container-wide py-4 flex flex-col gap-1">
             <MobileLink href="/investment-products/mutual-funds">Investment Products</MobileLink>
-            <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Plan</div>
-            <MobileLink href="/ai-wealth-planner">AI Snapshot · 60 sec</MobileLink>
-            <MobileLink href="/guided">Guided Plan · 10 min</MobileLink>
+            <MobileLink href="/plan">Wealth Planner</MobileLink>
             <a
               href={siteConfig.appUrl}
               target="_blank"
               rel="noreferrer"
               className="px-2 py-3 text-base font-medium text-[var(--color-navy)] border-b border-[var(--color-silver)]/30 inline-flex items-center gap-1.5"
             >
-              Full Analysis (app) <ExternalLink className="w-3.5 h-3.5" />
+              Open the app <ExternalLink className="w-3.5 h-3.5" />
             </a>
             <MobileLink href="/markets">Markets</MobileLink>
             <MobileLink href="/equity/analysis">Research</MobileLink>

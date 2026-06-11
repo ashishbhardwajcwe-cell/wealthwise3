@@ -4,6 +4,7 @@
 // falls back to the global priority/changefreq below.
 const HIGH_PRIORITY_PATHS = {
   "/":                 { priority: 1.0,  changefreq: "weekly" },
+  "/plan":             { priority: 0.95, changefreq: "weekly" },
   "/markets":          { priority: 0.95, changefreq: "hourly" },
   "/ai-wealth-planner":{ priority: 0.9,  changefreq: "weekly" },
   "/guided":           { priority: 0.9,  changefreq: "weekly" },

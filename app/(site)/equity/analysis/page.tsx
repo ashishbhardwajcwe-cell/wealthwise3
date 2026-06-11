@@ -88,7 +88,7 @@ export default async function StockAnalysisIndexPage() {
       <CTASection
         title="Want our take on a specific stock?"
         subtitle="Subscribe to the newsletter — we publish 1-2 stock analyses per month."
-        primaryCta={{ label: "Try the AI Planner", href: "/ai-wealth-planner" }}
+        primaryCta={{ label: "Try the AI Planner", href: "/plan" }}
         secondaryCta={{ label: "Read the blog", href: "/blog" }}
       />
     </>

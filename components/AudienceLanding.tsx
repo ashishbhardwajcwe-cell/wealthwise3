@@ -19,7 +19,7 @@ export function AudienceLanding({ content }: { content: AudienceContent }) {
         eyebrow={content.eyebrow}
         title={content.title}
         subtitle={content.subtitle}
-        primaryCta={{ label: "Try the AI Wealth Planner", href: "/ai-wealth-planner" }}
+        primaryCta={{ label: "Open the Wealth Planner", href: "/plan" }}
         secondaryCta={{ label: "Book a call", href: "/contact" }}
       />
 

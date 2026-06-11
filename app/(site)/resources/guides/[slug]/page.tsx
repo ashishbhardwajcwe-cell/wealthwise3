@@ -112,7 +112,7 @@ export default async function GuidePage({ params }: Props) {
               The Auris Wealth Planner turns this framework into a personalised plan in 60 seconds. Or book a free 30-minute call with Ashish.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/ai-wealth-planner" className="btn-primary justify-center">Run the AI Planner</Link>
+              <Link href="/plan" className="btn-primary justify-center">Open the Wealth Planner</Link>
               <Link href="/contact" className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg border border-white/40 text-white font-semibold text-sm hover:bg-white/10 transition-colors">
                 Book a call
               </Link>
