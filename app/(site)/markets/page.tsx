@@ -15,13 +15,13 @@ import { getTrackedMFNAVs, TRACKED_METAL_ETFS } from "@/lib/mutual-funds";
 export const metadata: Metadata = {
   title: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
   description:
-    "Auris Wealth's consolidated live markets hub: sortable screeners for cryptocurrencies, Indian & US stocks, Indian mutual funds, and gold/silver ETFs — all in one place.",
-  alternates: { canonical: "https://auriswealth.co/markets" },
+    "Auris Cashflow's consolidated live markets hub: sortable screeners for cryptocurrencies, Indian & US stocks, Indian mutual funds, and gold/silver ETFs — all in one place.",
+  alternates: { canonical: "https://auriscashflow.com/markets" },
   openGraph: {
     title: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
     description:
       "Sortable, searchable screeners for every asset class we track. Indian & US stocks, 100 cryptos, hand-picked mutual funds, gold & silver ETFs — one page.",
-    url: "https://auriswealth.co/markets",
+    url: "https://auriscashflow.com/markets",
     type: "website",
   },
 };
@@ -53,7 +53,7 @@ export default async function Page() {
     name: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
     description:
       "Live screeners for Indian & US stocks, 100 cryptocurrencies, hand-picked mutual funds, and gold/silver ETFs.",
-    url: "https://auriswealth.co/markets",
+    url: "https://auriscashflow.com/markets",
     datasets: [
       {
         name: "Indian & US Stock Screener",
@@ -79,8 +79,8 @@ export default async function Page() {
   });
 
   const breadcrumb = breadcrumbSchema([
-    { name: "Home", url: "https://auriswealth.co/" },
-    { name: "Markets", url: "https://auriswealth.co/markets" },
+    { name: "Home", url: "https://auriscashflow.com/" },
+    { name: "Markets", url: "https://auriscashflow.com/markets" },
   ]);
 
   return (

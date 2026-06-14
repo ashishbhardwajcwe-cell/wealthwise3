@@ -109,7 +109,7 @@ export default async function GuidePage({ params }: Props) {
           <div className="mt-12 p-6 md:p-8 bg-[var(--color-navy)] text-[var(--color-cream)] rounded-2xl">
             <h3 className="text-xl font-semibold text-[var(--color-cream)] mb-3">Ready to apply this to your situation?</h3>
             <p className="text-[var(--color-silver)] mb-6 leading-relaxed">
-              The Auris Wealth Planner turns this framework into a personalised plan in 60 seconds. Or book a free 30-minute call with Ashish.
+              The Auris Cashflow Planner turns this framework into a personalised plan in 60 seconds. Or book a free 30-minute call with Ashish.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link href="/plan" className="btn-primary justify-center">Open the Wealth Planner</Link>
@@ -123,7 +123,7 @@ export default async function GuidePage({ params }: Props) {
           <div className="mt-12 p-6 bg-white border border-[var(--color-silver)]/40 rounded-xl">
             <h4 className="font-semibold text-[var(--color-navy)]">Col Ashish Bhardwaj</h4>
             <p className="text-sm text-[var(--color-slate)] mt-1 leading-relaxed">
-              Founder of Auris Wealth. Ex-Indian Army (20 years). NISM-certified Investment Adviser.
+              Founder of Auris Cashflow. Ex-Indian Army (20 years). NISM-certified Investment Adviser.
               Writes guides like this one for Indian and global investors who want clarity, not products.
             </p>
           </div>

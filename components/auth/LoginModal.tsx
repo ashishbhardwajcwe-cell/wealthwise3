@@ -119,9 +119,9 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
 
         {/* Brand */}
         <div className="flex items-center justify-center gap-2.5 mb-3">
-          <Image src="/auris-logo.png" alt="Auris Wealth" width={36} height={36} className="rounded-md" />
+          <Image src="/auris-logo.png" alt="Auris Cashflow" width={36} height={36} className="rounded-md" />
           <span className="text-xl font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
-            Auris<span style={{ color: "var(--color-gold)" }}>Wealth</span>
+            Auris<span style={{ color: "var(--color-gold)" }}>Cashflow</span>
           </span>
         </div>
 
@@ -153,7 +153,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
               <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
                 {mode === "register"
                   ? "Sign up to save & access your financial plan"
-                  : "Sign in to continue to AurisWealth"}
+                  : "Sign in to continue to Auris Cashflow"}
               </p>
             </div>
 

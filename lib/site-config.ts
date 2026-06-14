@@ -1,21 +1,21 @@
 export const siteConfig = {
-  name: "Auris Wealth",
+  name: "Auris Cashflow",
   legalName: "Auris Pvt Ltd",
   cin: "U70200HR2026PTC141922",
-  email: "hello@auriswealth.co",
-  url: "https://auriswealth.co",
+  email: "hello@auriscashflow.com",
+  url: "https://auriscashflow.com",
   description:
     "AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity.",
-  appUrl: "https://app.auriswealth.co",
+  appUrl: "https://app.auriscashflow.com",
   /** Deep-link that skips wealthwise2's marketing landing and goes
    *  straight to the auth modal / dashboard. Use this for "Open the
    *  AI Wealth Planner" / "Open the app" gold CTAs so the user lands
    *  on data entry in one click. */
-  appDeepLink: "https://app.auriswealth.co/?app=1",
-  signupUrl: "https://app.auriswealth.co/?signup",
+  appDeepLink: "https://app.auriscashflow.com/?app=1",
+  signupUrl: "https://app.auriscashflow.com/?signup",
   topmateUrl: "https://topmate.io/auris8",
   whatsappNumber: "916009096178",
-  whatsappUrl: "https://wa.me/916009096178?text=Hi%20Auris%20Wealth%2C%20I%27d%20like%20to%20know%20more%20about%20your%20services.",
+  whatsappUrl: "https://wa.me/916009096178?text=Hi%20Auris%20Cashflow%2C%20I%27d%20like%20to%20know%20more%20about%20your%20services.",
   social: {
     linkedin: "https://www.linkedin.com/company/auris-wealth",
     youtube: "https://www.youtube.com/@auriswealth",

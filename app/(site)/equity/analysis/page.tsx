@@ -6,7 +6,7 @@ import { CTASection } from "@/components/CTASection";
 import { getStockAnalyses } from "@/lib/investment-data";
 
 export const metadata: Metadata = {
-  title: "Stock Analyses — Auris Wealth Research",
+  title: "Stock Analyses — Auris Cashflow Research",
   description:
     "In-depth stock research notes by Col Ashish Bhardwaj. Thesis, key metrics, strengths, risks, and conclusion for each analysis.",
 };

@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "SEBI Compliance",
-  description: "Regulatory disclosures and SEBI-mandated information for Auris Wealth.",
+  description: "Regulatory disclosures and SEBI-mandated information for Auris Cashflow.",
 };
 
 export default function SEBICompliancePage() {
@@ -17,7 +17,7 @@ export default function SEBICompliancePage() {
         {
           heading: "Current regulatory status",
           content: [
-            `${siteConfig.legalName} (CIN: ${siteConfig.cin}) operates the Auris Wealth brand. Our current regulatory standing:`,
+            `${siteConfig.legalName} (CIN: ${siteConfig.cin}) operates the Auris Cashflow brand. Our current regulatory standing:`,
             "**SEBI Registered Investment Adviser (RIA):** Application under processing. Until granted, we do not provide specific investment recommendations.",
             "**NISM Investment Adviser Levels I and II:** Certified (relevant team members).",
             "**AMFI Mutual Fund Distributor:** ARN application in process.",
@@ -69,7 +69,7 @@ export default function SEBICompliancePage() {
         {
           heading: "Reporting concerns",
           content: [
-            "If you believe Auris Wealth has acted inconsistently with these disclosures or any SEBI requirement, please email compliance@auriswealth.co.",
+            "If you believe Auris Cashflow has acted inconsistently with these disclosures or any SEBI requirement, please email compliance@auriscashflow.com.",
             "You may also report concerns directly to SEBI via the SCORES portal at https://scores.sebi.gov.in.",
           ],
         },

@@ -1,6 +1,6 @@
-# Auris Wealth — Marketing Site (wealthwise3)
+# Auris Cashflow — Marketing Site (wealthwise3)
 
-The marketing site for [Auris Wealth](https://auriswealth.co) — built with Next.js 15, TypeScript, and Tailwind CSS v4.
+The marketing site for [Auris Cashflow](https://auriscashflow.com) — built with Next.js 15, TypeScript, and Tailwind CSS v4.
 
 ## Stack
 

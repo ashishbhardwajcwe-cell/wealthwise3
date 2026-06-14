@@ -43,17 +43,17 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--color-offwhite)]/85 border-b border-[var(--color-silver)]/40">
       <div className="container-wide flex items-center justify-between h-16">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="Auris Wealth — Home">
+        <Link href="/" className="flex items-center gap-2.5" aria-label="Auris Cashflow — Home">
           <Image
             src="/auris-logo.png"
-            alt="Auris Wealth"
+            alt="Auris Cashflow"
             width={36}
             height={36}
             priority
             className="rounded-md"
           />
           <span className="text-lg font-semibold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-            Auris<span className="text-[var(--color-gold-dim)]">Wealth</span>
+            Auris<span className="text-[var(--color-gold-dim)]">Cashflow</span>
           </span>
         </Link>
 

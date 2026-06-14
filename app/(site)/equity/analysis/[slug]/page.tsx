@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const a = await getStockAnalysis(slug);
   if (!a) return { title: "Analysis not found" };
   return {
-    title: `${a.title} — Auris Wealth Research`,
+    title: `${a.title} — Auris Cashflow Research`,
     description: a.thesis ?? `${a.company} stock analysis by Col Ashish Bhardwaj`,
   };
 }

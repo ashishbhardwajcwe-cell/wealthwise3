@@ -18,7 +18,7 @@ export default function WealthWiseAppPage() {
         eyebrow="The Product"
         title="The wealth platform that thinks alongside you"
         subtitle="See everything you own, know what you should do next, plan for any future. WealthWise turns 30 spreadsheets and apps into one coherent picture."
-        primaryCta={{ label: "Start 14-day free trial", href: "https://app.auriswealth.co/?signup" }}
+        primaryCta={{ label: "Start 14-day free trial", href: "https://app.auriscashflow.com/?signup" }}
         secondaryCta={{ label: "See pricing", href: "/pricing" }}
       />
 
@@ -125,7 +125,7 @@ export default function WealthWiseAppPage() {
       <CTASection
         title="Start your 14-day free trial"
         subtitle="No credit card required. Cancel anytime in one click. Your data stays private — encrypted in transit and at rest."
-        primaryCta={{ label: "Try WealthWise free", href: "https://app.auriswealth.co/?signup" }}
+        primaryCta={{ label: "Try WealthWise free", href: "https://app.auriscashflow.com/?signup" }}
         secondaryCta={{ label: "See pricing", href: "/pricing" }}
       />
     </>

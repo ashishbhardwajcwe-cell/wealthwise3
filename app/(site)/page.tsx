@@ -197,7 +197,7 @@ export default function HomePage() {
               From 20 years in olive greens to building a wealth firm.
             </h2>
             <p className="mt-6 text-[var(--color-silver)] leading-relaxed">
-              Col Ashish Bhardwaj spent two decades in the Indian Army before leaving to build Auris Wealth.
+              Col Ashish Bhardwaj spent two decades in the Indian Army before leaving to build Auris Cashflow.
               The mission is simple: bring the rigour, calm, and discipline of military planning to financial planning —
               for officers, professionals, NRIs, and families who deserve more than another sales pitch.
             </p>
