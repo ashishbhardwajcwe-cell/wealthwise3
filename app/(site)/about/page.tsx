@@ -4,9 +4,9 @@ import { CTASection } from "@/components/CTASection";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "About Auris Wealth — Founder Story, Team, Mission",
+  title: "About Auris Cashflow — Founder Story, Team, Mission",
   description:
-    "Auris Wealth was founded by Col Ashish Bhardwaj after 20 years in the Indian Army. Read the story, meet the team, and understand the mission.",
+    "Auris Cashflow was founded by Col Ashish Bhardwaj after 20 years in the Indian Army. Read the story, meet the team, and understand the mission.",
 };
 
 export default function AboutPage() {
@@ -15,7 +15,7 @@ export default function AboutPage() {
       <Hero
         eyebrow="About"
         title="From 20 years in olive greens to building a wealth firm."
-        subtitle="Auris Wealth was founded in 2026 by Col Ashish Bhardwaj after two decades in the Indian Army. The mission is simple: bring the rigour, calm, and discipline of military planning to financial planning."
+        subtitle="Auris Cashflow was founded in 2026 by Col Ashish Bhardwaj after two decades in the Indian Army. The mission is simple: bring the rigour, calm, and discipline of military planning to financial planning."
       />
 
       <section className="py-20">
@@ -31,7 +31,7 @@ export default function AboutPage() {
             because the institutional financial advice available to defence officers was either commission-driven or generic.
           </p>
           <p>
-            After completing his NISM certifications and applying for SEBI RIA registration, he left the Army in 2026 to build Auris Wealth — a firm explicitly designed
+            After completing his NISM certifications and applying for SEBI RIA registration, he left the Army in 2026 to build Auris Cashflow — a firm explicitly designed
             for the kind of advice he wanted when he was in uniform: clear, honest, mathematical, and free of product-pushing.
           </p>
 
@@ -42,7 +42,7 @@ export default function AboutPage() {
             with complex situations are left to figure it out alone.
           </p>
           <p>
-            Auris Wealth is building a different kind of firm — one where the planning tools (WealthWise app), the educational content (this site), and the
+            Auris Cashflow is building a different kind of firm — one where the planning tools (WealthWise app), the educational content (this site), and the
             advisory layer (1:1 sessions, full plans) are aligned with the investor&apos;s interests, not the distributor&apos;s.
           </p>
 
@@ -72,7 +72,7 @@ export default function AboutPage() {
 
           <h2>Press &amp; media</h2>
           <p>
-            For interviews, comments, or media requests, please email <a href="mailto:press@auriswealth.co">press@auriswealth.co</a>.
+            For interviews, comments, or media requests, please email <a href="mailto:press@auriscashflow.com">press@auriscashflow.com</a>.
             A press kit (logos, founder photos, company facts) is available on request.
           </p>
         </div>

@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Disclaimers",
-  description: "Investment, tax, and regulatory disclaimers for Auris Wealth.",
+  description: "Investment, tax, and regulatory disclaimers for Auris Cashflow.",
 };
 
 export default function DisclaimersPage() {
@@ -19,7 +19,7 @@ export default function DisclaimersPage() {
           content: [
             `${siteConfig.name} is a brand of ${siteConfig.legalName} (CIN: ${siteConfig.cin}), a private limited company registered in India. The content on this site is for educational purposes only and does not constitute investment, legal, or tax advice.`,
             "Investments in mutual funds, PMS, AIF, equities, cryptocurrencies, real estate, gold, and other financial instruments are subject to market risks. Past performance is not indicative of future returns. Please read all scheme-related documents carefully and consult a SEBI-registered investment adviser, chartered accountant, and tax professional in your jurisdiction before making investment decisions.",
-            "Auris Wealth, its directors, employees, and contractors do not guarantee any returns and are not liable for any losses arising from decisions based on the content of this site.",
+            "Auris Cashflow, its directors, employees, and contractors do not guarantee any returns and are not liable for any losses arising from decisions based on the content of this site.",
           ],
         },
         {

@@ -73,13 +73,13 @@ export function collectionPageSchema(opts: {
     url: opts.url,
     isPartOf: {
       "@type": "WebSite",
-      name: "Auris Wealth",
-      url: "https://auriswealth.co",
+      name: "Auris Cashflow",
+      url: "https://auriscashflow.com",
       potentialAction: {
         "@type": "SearchAction",
         target: {
           "@type": "EntryPoint",
-          urlTemplate: "https://auriswealth.co/markets?q={search_term_string}",
+          urlTemplate: "https://auriscashflow.com/markets?q={search_term_string}",
         },
         "query-input": "required name=search_term_string",
       },
@@ -88,7 +88,7 @@ export function collectionPageSchema(opts: {
       "@type": "Dataset",
       name: d.name,
       description: d.description,
-      creator: { "@type": "Organization", name: "Auris Wealth" },
+      creator: { "@type": "Organization", name: "Auris Cashflow" },
     })),
   };
 }

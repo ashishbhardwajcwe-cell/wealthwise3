@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       from: FROM_ADDRESS,
       to: email,
       replyTo: REPLY_TO,
-      subject: "Welcome to the Auris Wealth weekly note",
+      subject: "Welcome to the Auris Cashflow weekly note",
       html: WELCOME_HTML,
       text: WELCOME_TEXT,
     });
@@ -50,7 +50,7 @@ const WELCOME_HTML = `
   <body style="font-family: -apple-system, system-ui, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; color: #0A1628; line-height: 1.6;">
     <div style="border-top: 4px solid #C9A84C; padding-top: 24px;">
       <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 28px; margin: 0 0 16px; letter-spacing: -0.5px;">
-        Welcome to <span style="color: #C9A84C;">Auris Wealth</span>
+        Welcome to <span style="color: #C9A84C;">Auris Cashflow</span>
       </h1>
       <p>One short note a week. No noise.</p>
       <p>
@@ -63,12 +63,12 @@ const WELCOME_HTML = `
       </p>
       <p>While you're here, here's where every Auris wealth planner lives:</p>
       <ul>
-        <li><a href="https://auriswealth.co/plan" style="color: #A08030;">Wealth Planner hub</a> — pick a Snapshot, Guided Plan, or the full app</li>
-        <li><a href="https://auriswealth.co/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot, no signup</li>
-        <li><a href="https://auriswealth.co/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive plan, no signup</li>
-        <li><a href="https://app.auriswealth.co" style="color: #A08030;">Full WealthWise app</a> — complete planner, 14-day trial, login required</li>
+        <li><a href="https://auriscashflow.com/plan" style="color: #A08030;">Wealth Planner hub</a> — pick a Snapshot, Guided Plan, or the full app</li>
+        <li><a href="https://auriscashflow.com/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot, no signup</li>
+        <li><a href="https://auriscashflow.com/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive plan, no signup</li>
+        <li><a href="https://app.auriscashflow.com" style="color: #A08030;">Full WealthWise app</a> — complete planner, 14-day trial, login required</li>
       </ul>
-      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, Auris Wealth</span></p>
+      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, Auris Cashflow</span></p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
       <p style="font-size: 12px; color: #5A6B80;">
         Auris Pvt Ltd (CIN: U70200HR2026PTC141922). Educational content only. Not investment advice.
@@ -78,7 +78,7 @@ const WELCOME_HTML = `
   </body>
 </html>`;
 
-const WELCOME_TEXT = `Welcome to Auris Wealth.
+const WELCOME_TEXT = `Welcome to Auris Cashflow.
 
 One short note a week. No noise.
 
@@ -89,13 +89,13 @@ compounds (planning, tax efficiency, boring discipline) and what doesn't
 Each Friday you'll get a 5-minute read on something specific.
 
 Where every Auris wealth planner lives:
-- Wealth Planner hub: https://auriswealth.co/plan
-- AI Snapshot (60 sec): https://auriswealth.co/ai-wealth-planner
-- Guided Plan (10 min): https://auriswealth.co/guided
-- Full app: https://app.auriswealth.co
+- Wealth Planner hub: https://auriscashflow.com/plan
+- AI Snapshot (60 sec): https://auriscashflow.com/ai-wealth-planner
+- Guided Plan (10 min): https://auriscashflow.com/guided
+- Full app: https://app.auriscashflow.com
 
 — Col Ashish Bhardwaj
-Founder, Auris Wealth
+Founder, Auris Cashflow
 
 ---
 Auris Pvt Ltd (CIN: U70200HR2026PTC141922).

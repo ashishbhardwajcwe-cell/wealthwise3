@@ -146,7 +146,7 @@ export function GuidedPlanWizard() {
             The full WealthWise app saves your plan, tracks your portfolio across all accounts, runs tax-loss harvesting, and updates your trajectory monthly.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.auriswealth.co/?signup" className="btn-primary">Open the full app</a>
+            <a href="https://app.auriscashflow.com/?signup" className="btn-primary">Open the full app</a>
             <a href="/ai-wealth-planner" className="btn-outline">Try AI Snapshot</a>
           </div>
         </div>

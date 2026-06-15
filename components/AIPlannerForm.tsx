@@ -426,7 +426,7 @@ function SnapshotResults({ result, currency, onReset }: { result: SnapshotResult
           Try it free for 14 days — no card required.
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
-          <a href="https://app.auriswealth.co/?signup" className="btn-primary">Start free trial</a>
+          <a href="https://app.auriscashflow.com/?signup" className="btn-primary">Start free trial</a>
           <button onClick={onReset} className="btn-outline">Run another snapshot</button>
         </div>
       </div>

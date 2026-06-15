@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AudienceLanding } from "@/components/AudienceLanding";
 
 export const metadata: Metadata = {
-  title: "Financial Planning for Defence Officers — Auris Wealth",
+  title: "Financial Planning for Defence Officers — Auris Cashflow",
   description:
     "Built by a Colonel. Specialised financial planning for serving and veteran defence officers: pension optimisation, AGIF, DSOP, post-retirement transition.",
 };
@@ -16,7 +16,7 @@ export default function Page() {
         subtitle: "Pension maths, AGIF, DSOP, second career planning, NPS, and the financial discipline that fits a uniformed life.",
         intro: [
           "Most financial advice in India is written for salaried civilians or salaried HNIs. Almost none of it accounts for the realities of defence service — frequent postings, late promotion to financial peak, mandatory funds (DSOP, AGIF), the pension structure, the canteen-and-CSD ecosystem, or the brutal financial cliff that hits at superannuation.",
-          "Auris Wealth was founded by Col Ashish Bhardwaj after 20 years in the Army. We understand the gap between what you’ve been told (mostly by LIC agents in the unit canteen) and what actually helps over 30 years.",
+          "Auris Cashflow was founded by Col Ashish Bhardwaj after 20 years in the Army. We understand the gap between what you’ve been told (mostly by LIC agents in the unit canteen) and what actually helps over 30 years.",
         ],
         whatYouGet: [
           "Specific pension optimisation: commutation vs no-commutation, DR vs basic split, Cat-1 OROP impact on your category",

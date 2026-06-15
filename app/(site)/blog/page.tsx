@@ -6,7 +6,7 @@ import { BlogCard } from "@/components/BlogCard";
 import { getAllBlogCards, getFeaturedOrLatest, BLOG_CATEGORIES } from "@/lib/blog";
 
 export const metadata: Metadata = {
-  title: "Blog — Auris Wealth",
+  title: "Blog — Auris Cashflow",
   description:
     "In-depth essays on wealth management, taxation, financial planning, defence officer transition, and NRI investing — by Col Ashish Bhardwaj.",
 };
@@ -29,7 +29,7 @@ export default async function BlogIndexPage() {
         <div className="container-wide py-10 md:py-14">
           <div className="flex items-end justify-between gap-6 flex-wrap">
             <div>
-              <span className="eyebrow">Auris Wealth Journal</span>
+              <span className="eyebrow">Auris Cashflow Journal</span>
               <h1 className="mt-2 text-balance" style={{ fontSize: "clamp(2rem, 4.5vw, 3.25rem)" }}>
                 Notes on wealth, written for the long view.
               </h1>

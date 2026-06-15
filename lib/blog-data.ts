@@ -89,7 +89,7 @@ After looking at hundreds of HNI portfolios, the same mistakes show up repeatedl
 
 PMS is a legitimate tool for ₹50L+ equity investors who want personalisation, direct stock ownership, and the chance for alpha. It's not magic — most PMSs underperform their benchmark net of fees over 7+ year periods, so manager selection matters enormously.
 
-If you're considering your first PMS, start with the **Auris Wealth AI Wealth Planner** — it'll tell you whether PMS makes sense in your situation, or whether you're better off optimising mutual fund selection first.
+If you're considering your first PMS, start with the **Auris Cashflow AI Wealth Planner** — it'll tell you whether PMS makes sense in your situation, or whether you're better off optimising mutual fund selection first.
 
 [Try the AI Wealth Planner →](/ai-wealth-planner)
     `,

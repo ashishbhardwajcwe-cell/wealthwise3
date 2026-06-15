@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms of service for Auris Wealth website and WealthWise application.",
+  description: "Terms of service for Auris Cashflow website and WealthWise application.",
 };
 
 export default function TermsPage() {

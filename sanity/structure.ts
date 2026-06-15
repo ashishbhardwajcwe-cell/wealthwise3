@@ -2,7 +2,7 @@ import type { StructureResolver } from "sanity/structure";
 
 export const deskStructure: StructureResolver = (S) =>
   S.list()
-    .title("Auris Wealth Content")
+    .title("Auris Cashflow Content")
     .items([
       S.listItem()
         .title("Editorial")

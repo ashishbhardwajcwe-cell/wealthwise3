@@ -3,14 +3,14 @@
  *
  * Supabase stores its session under a key like `sb-{project-ref}-auth-token`.
  * By default it uses `localStorage`, which is scoped per-origin — so a session
- * on auriswealth.co is invisible to app.auriswealth.co.
+ * on auriscashflow.com is invisible to app.auriscashflow.com.
  *
- * This adapter writes to a cookie scoped to `.auriswealth.co` (note the
+ * This adapter writes to a cookie scoped to `.auriscashflow.com` (note the
  * leading dot). The browser automatically includes the cookie on requests
- * to ANY subdomain of auriswealth.co, so both the marketing site and the
+ * to ANY subdomain of auriscashflow.com, so both the marketing site and the
  * WealthWise app see the same session.
  *
- * On localhost (and any host that isn't *.auriswealth.co), we fall back to
+ * On localhost (and any host that isn't *.auriscashflow.com), we fall back to
  * a per-origin cookie with no Domain attribute, so local development still
  * works without breaking session isolation between local projects.
  *
@@ -25,13 +25,13 @@
 
 const COOKIE_CHUNK_SIZE = 3180;
 
-/** Returns "auriswealth.co" for any *.auriswealth.co host, else undefined. */
+/** Returns "auriscashflow.com" for any *.auriscashflow.com host, else undefined. */
 function getSharedCookieDomain(): string | undefined {
   if (typeof window === "undefined") return undefined;
   const host = window.location.hostname;
   if (!host || host === "localhost" || host === "127.0.0.1") return undefined;
-  if (host === "auriswealth.co" || host.endsWith(".auriswealth.co")) {
-    return "auriswealth.co"; // browser treats this as ".auriswealth.co" — shared
+  if (host === "auriscashflow.com" || host.endsWith(".auriscashflow.com")) {
+    return "auriscashflow.com"; // browser treats this as ".auriscashflow.com" — shared
   }
   return undefined;
 }

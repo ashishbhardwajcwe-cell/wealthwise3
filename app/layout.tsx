@@ -18,8 +18,8 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: "Auris Wealth — Wealth that compounds. Plans that hold under fire.",
-    template: "%s | Auris Wealth",
+    default: "Auris Cashflow — Wealth that compounds. Plans that hold under fire.",
+    template: "%s | Auris Cashflow",
   },
   description: siteConfig.description,
   keywords: [
@@ -40,19 +40,19 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: "Auris Wealth — Wealth that compounds. Plans that hold under fire.",
+    title: "Auris Cashflow — Wealth that compounds. Plans that hold under fire.",
     description: siteConfig.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Auris Wealth",
+    title: "Auris Cashflow",
     description: siteConfig.description,
   },
   robots: { index: true, follow: true },
   alternates: {
     canonical: siteConfig.url,
     types: {
-      "application/rss+xml": [{ url: "/rss.xml", title: "Auris Wealth Blog" }],
+      "application/rss+xml": [{ url: "/rss.xml", title: "Auris Cashflow Blog" }],
     },
   },
 };

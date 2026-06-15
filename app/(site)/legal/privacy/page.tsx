@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Privacy policy for Auris Wealth — DPDP-compliant. How we collect, use, and protect your personal data.",
+  description: "Privacy policy for Auris Cashflow — DPDP-compliant. How we collect, use, and protect your personal data.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -18,7 +18,7 @@ export default function PrivacyPolicyPage() {
           heading: "1. Who we are",
           content: [
             `${siteConfig.legalName} (CIN: ${siteConfig.cin}), trading as ${siteConfig.name}, with registered office in Gurugram, Haryana, India, operates this website ${siteConfig.url} and the WealthWise application available at ${siteConfig.appUrl}.`,
-            `For privacy-related questions, contact us at privacy@auriswealth.co.`,
+            `For privacy-related questions, contact us at privacy@auriscashflow.com.`,
           ],
         },
         {
@@ -63,7 +63,7 @@ export default function PrivacyPolicyPage() {
             "Right to erasure — request deletion of your account and personal data.",
             "Right to data portability — export your WealthWise data in machine-readable format.",
             "Right to nominate — designate someone to manage your data after death or incapacitation.",
-            "To exercise any of these rights, email privacy@auriswealth.co. We respond within 30 days.",
+            "To exercise any of these rights, email privacy@auriscashflow.com. We respond within 30 days.",
           ],
         },
         {
