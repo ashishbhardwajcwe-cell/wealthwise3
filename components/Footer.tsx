@@ -12,13 +12,13 @@ export function Footer() {
             <div className="flex items-center gap-3 mb-3">
               <Image
                 src="/auris-logo.png"
-                alt="Auris Cashflow"
+                alt="PlanMyCashflows"
                 width={44}
                 height={44}
                 className="rounded-md"
               />
               <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                Auris<span className="text-[var(--color-gold)]">Cashflow</span>
+                PlanMy<span className="text-[var(--color-gold)]">Cashflows</span>
               </div>
             </div>
             <p className="text-sm text-[var(--color-silver)] max-w-xs mb-6">
@@ -74,7 +74,7 @@ export function Footer() {
               <li><Link href="/about" className="text-[var(--color-silver)] hover:text-white">About</Link></li>
               <li><Link href="/contact" className="text-[var(--color-silver)] hover:text-white">Contact</Link></li>
               <li><Link href="/pricing" className="text-[var(--color-silver)] hover:text-white">Pricing</Link></li>
-              <li><Link href="/wealthwise" className="text-[var(--color-silver)] hover:text-white">WealthWise App</Link></li>
+              <li><Link href="/wealthwise" className="text-[var(--color-silver)] hover:text-white">CashFlow Planner App</Link></li>
             </ul>
           </div>
 

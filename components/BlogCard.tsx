@@ -49,7 +49,7 @@ export function BlogCard({
         </div>
       ) : (
         <div className="aspect-[16/10] rounded-xl bg-gradient-to-br from-[var(--color-sand)] to-[var(--color-parchment)] mb-4 flex items-center justify-center">
-          <span className="text-3xl text-[var(--color-gold-dim)]/40" style={{ fontFamily: "var(--font-display)" }}>Auris</span>
+          <span className="text-3xl text-[var(--color-gold-dim)]/40" style={{ fontFamily: "var(--font-display)" }}>PlanMyCashflows</span>
         </div>
       )}
       <Meta category={category} date={date} readTime={readTime} />

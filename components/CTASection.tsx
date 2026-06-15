@@ -11,7 +11,7 @@ interface CTASectionProps {
 export function CTASection({ title, subtitle, primaryCta, secondaryCta, dark = true }: CTASectionProps) {
   return (
     <section className={dark ? "gradient-navy text-[var(--color-cream)]" : "bg-[var(--color-parchment)]"}>
-      <div className="container-wide py-20 md:py-24 text-center">
+      <div className="container-wide py-20 md:py-24 text-center reveal">
         <h2 className={dark ? "text-[var(--color-cream)] max-w-3xl mx-auto text-balance" : "text-balance max-w-3xl mx-auto"}>
           {title}
         </h2>

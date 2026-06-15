@@ -41,7 +41,7 @@ export default function HomePage() {
       {/* Three planning depths */}
       <section className="bg-[var(--color-parchment)]">
         <div className="container-wide py-20 md:py-28">
-          <div className="max-w-3xl mx-auto text-center mb-12 md:mb-16">
+          <div className="max-w-3xl mx-auto text-center mb-12 md:mb-16 reveal">
             <span className="eyebrow">Three ways to plan</span>
             <h2 className="mt-3 text-balance">Pick the depth that matches the moment.</h2>
             <p className="mt-4 text-lg text-[var(--color-slate)] leading-relaxed">
@@ -49,7 +49,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-5 lg:gap-6">
+          <div className="grid md:grid-cols-3 gap-5 lg:gap-6 reveal">
             <PlanningCard
               icon={<Sparkles className="w-5 h-5" />}
               eyebrow="60 seconds"
@@ -72,7 +72,7 @@ export default function HomePage() {
             <PlanningCard
               icon={<Layers className="w-5 h-5" />}
               eyebrow="The full picture"
-              title="Full WealthWise Analysis"
+              title="Full CashFlow Planner Analysis"
               copy="The complete planner: SWOT, retirement scenarios, tax harvesting, insurance gap, asset allocation drift, 5-year cashflow. PDF export."
               time="~30 minutes"
               gate="Free trial · Login required"
@@ -82,7 +82,7 @@ export default function HomePage() {
 
           <p className="text-xs text-[var(--color-slate)] text-center mt-8 italic max-w-2xl mx-auto">
             All three are free to try. The AI Snapshot and Guided Plan run in your browser with no data stored.
-            The full WealthWise app saves your plan and tracks it over time — that&apos;s why it needs an account.
+            The full CashFlow Planner app saves your plan and tracks it over time — that&apos;s why it needs an account.
           </p>
         </div>
       </section>
@@ -90,12 +90,12 @@ export default function HomePage() {
       {/* How it works */}
       <section className="py-20 md:py-28">
         <div className="container-wide">
-          <div className="max-w-3xl mx-auto text-center">
+          <div className="max-w-3xl mx-auto text-center reveal">
             <span className="eyebrow">How it works</span>
             <h2 className="mt-3">From scattered accounts to one coherent plan</h2>
             <p className="mt-4 text-lg text-[var(--color-slate)] leading-relaxed">
               Most Indian investors have a savings account, two demat accounts, three mutual funds, a PPF, an EPF, an SGB, and a parked-and-forgotten ULIP.
-              WealthWise pulls it all together — then tells you what to do next.
+              CashFlow Planner pulls it all together — then tells you what to do next.
             </p>
           </div>
 
@@ -103,7 +103,7 @@ export default function HomePage() {
             <UnifiedPlanDiagram />
           </div>
 
-          <div className="mt-12 grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="mt-12 grid md:grid-cols-3 gap-6 max-w-5xl mx-auto reveal">
             <FlowStep
               icon={<Compass className="w-5 h-5" />}
               step="01"
@@ -129,11 +129,11 @@ export default function HomePage() {
       {/* Who we serve */}
       <section className="bg-[var(--color-parchment)]">
         <div className="container-wide py-20 md:py-28">
-          <div className="max-w-3xl mb-12">
+          <div className="max-w-3xl mb-12 reveal">
             <span className="eyebrow">Who we serve</span>
             <h2 className="mt-3">Built for people with real, complex lives</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 reveal">
             {audiences.map((a) => (
               <ProductCard
                 key={a.slug}
@@ -150,7 +150,7 @@ export default function HomePage() {
       {/* Featured content */}
       <section className="py-20 md:py-28">
         <div className="container-wide">
-          <div className="flex items-end justify-between mb-12 flex-wrap gap-4">
+          <div className="flex items-end justify-between mb-12 flex-wrap gap-4 reveal">
             <div>
               <span className="eyebrow">From the blog</span>
               <h2 className="mt-3">Recent reading</h2>
@@ -159,7 +159,7 @@ export default function HomePage() {
               All articles <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid md:grid-cols-3 gap-5 reveal">
             <BlogCard
               slug="complete-guide-to-pms-india-2026"
               title="The complete guide to PMS in India for 2026"
@@ -197,7 +197,7 @@ export default function HomePage() {
               From 20 years in olive greens to building a wealth firm.
             </h2>
             <p className="mt-6 text-[var(--color-silver)] leading-relaxed">
-              Col Ashish Bhardwaj spent two decades in the Indian Army before leaving to build Auris Cashflow.
+              Col Ashish Bhardwaj spent two decades in the Indian Army before leaving to build PlanMyCashflows.
               The mission is simple: bring the rigour, calm, and discipline of military planning to financial planning —
               for officers, professionals, NRIs, and families who deserve more than another sales pitch.
             </p>
@@ -219,7 +219,7 @@ export default function HomePage() {
       {/* Trust strip */}
       <section className="py-16">
         <div className="container-wide">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 reveal">
             {[
               ["500+", "Clients guided"],
               ["₹12 Cr+", "Tax savings identified"],
@@ -253,7 +253,7 @@ export default function HomePage() {
 
 function FlowStep({ icon, step, title, copy }: { icon: React.ReactNode; step: string; title: string; copy: string }) {
   return (
-    <div className="card-soft">
+    <div className="glass-card">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 rounded-lg bg-[var(--color-navy)] text-[var(--color-gold)] flex items-center justify-center">
           {icon}

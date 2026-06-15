@@ -11,7 +11,7 @@ export const runtime = "nodejs";
  * Set this up in Sanity:
  *   manage.sanity.io → your project → API → Webhooks → Create webhook
  *
- *   URL:          https://auriscashflow.com/api/revalidate
+ *   URL:          https://planmycashflows.com/api/revalidate
  *   Dataset:      production
  *   Trigger on:   Create, Update, Delete
  *   Filter:       _type in ["blogPost","stockAnalysis","pmsStrategy",

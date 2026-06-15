@@ -146,18 +146,18 @@ export function InvestmentProductPage({
         </div>
       </section>
 
-      {/* How Auris helps */}
+      {/* How PlanMyCashflows helps */}
       <section className="py-16">
         <div className="container-narrow">
           <span className="eyebrow">How we help</span>
-          <h2 className="mt-3 mb-6">Auris + this product</h2>
+          <h2 className="mt-3 mb-6">PlanMyCashflows + this product</h2>
           <p className="text-lg text-[var(--color-slate)] leading-relaxed">{data.howAurisHelps}</p>
           <div className="mt-8 flex gap-3 flex-wrap">
             <Link href="/plan" className="btn-primary">
               Open the Wealth Planner
             </Link>
             <a href={siteConfig.appUrl} target="_blank" rel="noreferrer" className="btn-outline inline-flex items-center gap-1.5">
-              Open WealthWise <ExternalLink className="w-3.5 h-3.5" />
+              Open CashFlow Planner <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
         </div>

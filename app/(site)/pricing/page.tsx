@@ -14,7 +14,7 @@ export default function PricingPage() {
       monthly: 0,
       annual: 0,
       tagline: "Start here. Always free.",
-      cta: { label: "Get started", href: "https://app.auriscashflow.com/?signup" },
+      cta: { label: "Get started", href: "https://app.planmycashflows.com/?signup" },
       features: [
         { label: "AI Wealth Planner (3 snapshots / month)", on: true },
         { label: "Guided Plan (full)", on: true },
@@ -31,7 +31,7 @@ export default function PricingPage() {
       monthly: 499,
       annual: 4990,
       tagline: "For serious investors building wealth.",
-      cta: { label: "Start 14-day free trial", href: "https://app.auriscashflow.com/?signup&tier=premium" },
+      cta: { label: "Start 14-day free trial", href: "https://app.planmycashflows.com/?signup&tier=premium" },
       highlight: true,
       features: [
         { label: "Everything in Free", on: true },

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand palette — Auris Cashflow */
+  /* Brand palette — PlanMyCashflows */
   --color-navy: #0A1628;
   --color-midnight: #0F2035;
   --color-ocean: #142D4C;
@@ -213,6 +213,139 @@
   .gradient-hero { background: linear-gradient(180deg, var(--color-offwhite) 0%, var(--color-parchment) 100%); }
 }
 
+/* ============================================================
+   PlanMyCashflows — glass + motion system
+   Subtle glassmorphism + premium micro-interactions.
+   Surface language inspired by Apple, Stripe, Linear & Vercel.
+   ============================================================ */
+@layer components {
+  /* Frosted glass surfaces */
+  .glass {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px rgba(10, 22, 40, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(196, 205, 213, 0.45);
+    box-shadow: 0 16px 44px rgba(10, 22, 40, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  .glass-dark {
+    background: rgba(15, 32, 53, 0.55);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Header — frosted bar with a faint gold sheen */
+  .glass-nav {
+    background: linear-gradient(180deg, rgba(250, 250, 247, 0.9), rgba(250, 250, 247, 0.74));
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 24px rgba(10, 22, 40, 0.05);
+  }
+
+  /* Uniform nav "heads" — glass pills with clear hover + active states */
+  .nav-pill {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    padding: 0.5rem 0.85rem; border-radius: 0.625rem;
+    font-size: 0.875rem; font-weight: 600; line-height: 1; cursor: pointer;
+    color: var(--color-navy); background: transparent; border: 1px solid transparent;
+    transition: color .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .nav-pill:hover {
+    color: var(--color-gold-dim);
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(201, 168, 76, 0.28);
+    box-shadow: 0 4px 14px rgba(10, 22, 40, 0.06);
+  }
+  .nav-pill[data-active="true"] {
+    color: var(--color-navy);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 239, 224, 0.72));
+    border-color: rgba(201, 168, 76, 0.42);
+    box-shadow: 0 4px 16px rgba(201, 168, 76, 0.14);
+  }
+  .nav-pill::after {
+    content: ""; position: absolute; left: 0.85rem; right: 0.85rem; bottom: 0.3rem; height: 2px;
+    border-radius: 2px; background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
+    transform: scaleX(0); transform-origin: left; transition: transform .25s ease;
+  }
+  .nav-pill:hover::after, .nav-pill[data-active="true"]::after { transform: scaleX(1); }
+
+  /* Glass card — frosted variant of card-soft */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 0.875rem; padding: 1.5rem;
+    box-shadow: 0 8px 28px rgba(10, 22, 40, 0.07);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  }
+  .glass-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(201, 168, 76, 0.45);
+    box-shadow: 0 16px 40px rgba(10, 22, 40, 0.12);
+  }
+}
+
+@layer utilities {
+  /* Subtle aurora / mesh-gradient backdrop for hero areas */
+  .aurora { position: relative; isolation: isolate; overflow: hidden; }
+  .aurora::before {
+    content: ""; position: absolute; inset: -25%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(40% 50% at 15% 20%, rgba(201, 168, 76, 0.16), transparent 60%),
+      radial-gradient(35% 45% at 85% 12%, rgba(8, 145, 178, 0.12), transparent 60%),
+      radial-gradient(45% 55% at 78% 88%, rgba(201, 168, 76, 0.10), transparent 60%);
+    filter: blur(24px);
+    animation: pmc-aurora 24s ease-in-out infinite alternate;
+  }
+
+  .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  .animate-fade-up { animation: pmc-fade-up .7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-float { animation: pmc-float 6s ease-in-out infinite; }
+  .shimmer {
+    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+    background-size: 200% 100%; animation: pmc-shimmer 1.6s linear infinite;
+  }
+}
+
+/* Scroll-reveal: hidden initial state applies ONLY after JS adds .js-reveal
+   to <html>, so no-JS visitors and crawlers always see content. */
+html.js-reveal .reveal {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity .7s cubic-bezier(0.16, 1, 0.3, 1), transform .7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html.js-reveal .reveal.is-visible { opacity: 1; transform: none; }
+html.js-reveal .reveal[data-reveal-delay="1"] { transition-delay: .08s; }
+html.js-reveal .reveal[data-reveal-delay="2"] { transition-delay: .16s; }
+html.js-reveal .reveal[data-reveal-delay="3"] { transition-delay: .24s; }
+
+@keyframes pmc-fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@keyframes pmc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes pmc-shimmer { to { background-position: -200% 0; } }
+@keyframes pmc-aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2%, -2%, 0) scale(1.05); }
+  100% { transform: translate3d(-2%, 1%, 0) scale(1.02); }
+}
+
+/* Honour reduced-motion: kill all non-essential animation */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up, .animate-float, .shimmer, .aurora::before { animation: none !important; }
+  html.js-reveal .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
 /* Print styles — clean PDF export from guide pages */
 @media print {
   header, footer, nav, .no-print { display: none !important; }
@@ -221,7 +354,7 @@
   article { padding: 0 !important; }
   a { color: inherit !important; text-decoration: none !important; }
   .gradient-hero, .gradient-navy { background: white !important; }
-  .card-soft, .btn-primary, .btn-outline { display: none !important; }
+  .card-soft, .glass-card, .glass-panel, .btn-primary, .btn-outline { display: none !important; }
   h1, h2, h3, h4 { page-break-after: avoid; }
   p, ul, ol { page-break-inside: avoid; }
 }

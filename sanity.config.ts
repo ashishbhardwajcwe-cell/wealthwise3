@@ -7,8 +7,8 @@ import { deskStructure } from "./sanity/structure";
 
 export default defineConfig({
   basePath: "/studio",
-  name: "auris-wealth",
-  title: "Auris Cashflow",
+  name: "planmycashflows",
+  title: "PlanMyCashflows",
   projectId,
   dataset,
   schema: { types: schemaTypes },

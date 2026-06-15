@@ -143,10 +143,10 @@ export function GuidedPlanWizard() {
         <div className="mt-12 p-6 bg-[var(--color-parchment)] rounded-xl border border-[var(--color-gold)]/30">
           <h3 className="text-lg font-semibold mb-2">Want this saved and tracked over time?</h3>
           <p className="text-sm text-[var(--color-slate)] leading-relaxed mb-4">
-            The full WealthWise app saves your plan, tracks your portfolio across all accounts, runs tax-loss harvesting, and updates your trajectory monthly.
+            The full CashFlow Planner app saves your plan, tracks your portfolio across all accounts, runs tax-loss harvesting, and updates your trajectory monthly.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.auriscashflow.com/?signup" className="btn-primary">Open the full app</a>
+            <a href="https://app.planmycashflows.com/?signup" className="btn-primary">Open the full app</a>
             <a href="/ai-wealth-planner" className="btn-outline">Try AI Snapshot</a>
           </div>
         </div>

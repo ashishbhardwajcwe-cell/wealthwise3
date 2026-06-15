@@ -7,7 +7,7 @@ export default function NotFound() {
         <span className="eyebrow">404</span>
         <h1 className="mt-3 mb-4">This page took a detour.</h1>
         <p className="text-[var(--color-slate)] max-w-md mx-auto mb-8">
-          The URL you tried doesn&apos;t exist on Auris Cashflow. Try one of these:
+          The URL you tried doesn&apos;t exist on PlanMyCashflows. Try one of these:
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/" className="btn-primary">Home</Link>
