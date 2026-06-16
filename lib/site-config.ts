@@ -17,7 +17,7 @@ export const siteConfig = {
   social: {
     linkedin: "https://www.linkedin.com/company/planmycashflows",
     youtube: "https://www.youtube.com/@planmycashflows",
-    twitter: "https://twitter.com/planmycashflows",
+    twitter: "https://x.com/planmycashflows",
     instagram: "https://instagram.com/planmycashflows",
     facebook: "https://facebook.com/planmycashflows",
   },

@@ -107,8 +107,9 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><a href={siteConfig.social.linkedin} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">LinkedIn</a></li>
               <li><a href={siteConfig.social.youtube} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">YouTube</a></li>
-              <li><a href={siteConfig.social.twitter} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">Twitter</a></li>
+              <li><a href={siteConfig.social.twitter} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">X (Twitter)</a></li>
               <li><a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">Instagram</a></li>
+              <li><a href={siteConfig.social.facebook} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">Facebook</a></li>
               <li>
                 <a href={siteConfig.whatsappUrl} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white inline-flex items-center gap-1.5">
                   <span aria-hidden>💬</span> WhatsApp
