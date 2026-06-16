@@ -23,13 +23,17 @@ export const siteConfig = {
   },
 };
 
+// Order is deliberate: lead with the high-touch HNI products (PMS, AIF),
+// then the mass-market regulated core (Mutual Funds), then direct stocks,
+// then the long-tail alternatives. This sequence drives the Products
+// dropdown, the homepage grid and the footer.
 export const investmentProducts = [
-  { slug: "mutual-funds", name: "Mutual Funds", short: "Diversified, regulated, professionally managed.", icon: "TrendingUp", tone: "#0F766E", emoji: "📈" },
   { slug: "pms", name: "PMS", short: "Personalised portfolios for ₹50L+ investors.", icon: "Briefcase", tone: "#4F46E5", emoji: "🏛️" },
   { slug: "aif", name: "AIF", short: "Category I, II, III alternatives for HNIs.", icon: "Layers", tone: "#7C3AED", emoji: "🧬" },
+  { slug: "mutual-funds", name: "Mutual Funds", short: "Diversified, regulated, professionally managed.", icon: "TrendingUp", tone: "#0F766E", emoji: "📈" },
+  { slug: "direct-equity", name: "Direct Equity", short: "Stocks on NSE/BSE for long-term investors.", icon: "LineChart", tone: "#2563EB", emoji: "📊" },
   { slug: "unlisted-shares", name: "Unlisted Shares", short: "Pre-IPO and unlisted equity opportunities.", icon: "Sparkles", tone: "#DB2777", emoji: "🔒" },
   { slug: "cryptocurrency", name: "Cryptocurrency", short: "BTC, ETH, altcoins — with India tax context.", icon: "Bitcoin", tone: "#F7931A", emoji: "₿" },
-  { slug: "direct-equity", name: "Direct Equity", short: "Stocks on NSE/BSE for long-term investors.", icon: "LineChart", tone: "#2563EB", emoji: "📊" },
   { slug: "insurance", name: "Insurance", short: "Term, health, and what to skip.", icon: "ShieldCheck", tone: "#16A34A", emoji: "🛡️" },
   { slug: "real-estate", name: "Real Estate", short: "Residential, commercial, REITs.", icon: "Home", tone: "#C2410C", emoji: "🏡" },
   { slug: "gold", name: "Gold & Silver", short: "Physical, ETF, SGB, silver ETF — the right way.", icon: "Coins", tone: "#A16207", emoji: "🪙" },
