@@ -38,10 +38,11 @@ export const investmentProducts = [
 ] as const;
 
 export const audiences = [
-  { slug: "defence-officers", name: "Defence Officers", short: "From olive greens to financial independence." },
-  { slug: "nri", name: "NRIs & Global Indians", short: "Investing across borders, optimised for tax." },
-  { slug: "hni", name: "High-Net-Worth", short: "PMS, AIF and structured planning above ₹5 Cr." },
   { slug: "professionals", name: "Salaried Professionals", short: "Mid-career planning that actually compounds." },
+  { slug: "software-professionals", name: "Software & IT Professionals", short: "ESOPs, RSUs and high-income tax planning." },
+  { slug: "executives", name: "Corporate Executives", short: "CXOs and senior leaders with complex comp." },
+  { slug: "hni", name: "High-Net-Worth", short: "PMS, AIF and structured planning above ₹5 Cr." },
+  { slug: "nri", name: "NRIs & Global Indians", short: "Investing across borders, optimised for tax." },
 ] as const;
 
 export const calculators = [
