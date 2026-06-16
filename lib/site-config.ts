@@ -26,24 +26,24 @@ export const siteConfig = {
 };
 
 export const investmentProducts = [
-  { slug: "mutual-funds", name: "Mutual Funds", short: "Diversified, regulated, professionally managed.", icon: "TrendingUp" },
-  { slug: "pms", name: "PMS", short: "Personalised portfolios for ₹50L+ investors.", icon: "Briefcase" },
-  { slug: "aif", name: "AIF", short: "Category I, II, III alternatives for HNIs.", icon: "Layers" },
-  { slug: "unlisted-shares", name: "Unlisted Shares", short: "Pre-IPO and unlisted equity opportunities.", icon: "Sparkles" },
-  { slug: "cryptocurrency", name: "Cryptocurrency", short: "BTC, ETH, altcoins — with India tax context.", icon: "Bitcoin" },
-  { slug: "direct-equity", name: "Direct Equity", short: "Stocks on NSE/BSE for long-term investors.", icon: "LineChart" },
-  { slug: "insurance", name: "Insurance", short: "Term, health, and what to skip.", icon: "ShieldCheck" },
-  { slug: "real-estate", name: "Real Estate", short: "Residential, commercial, REITs.", icon: "Home" },
-  { slug: "gold", name: "Gold & Silver", short: "Physical, ETF, SGB, silver ETF — the right way.", icon: "Coins" },
+  { slug: "mutual-funds", name: "Mutual Funds", short: "Diversified, regulated, professionally managed.", icon: "TrendingUp", tone: "#0F766E" },
+  { slug: "pms", name: "PMS", short: "Personalised portfolios for ₹50L+ investors.", icon: "Briefcase", tone: "#4F46E5" },
+  { slug: "aif", name: "AIF", short: "Category I, II, III alternatives for HNIs.", icon: "Layers", tone: "#7C3AED" },
+  { slug: "unlisted-shares", name: "Unlisted Shares", short: "Pre-IPO and unlisted equity opportunities.", icon: "Sparkles", tone: "#DB2777" },
+  { slug: "cryptocurrency", name: "Cryptocurrency", short: "BTC, ETH, altcoins — with India tax context.", icon: "Bitcoin", tone: "#F7931A" },
+  { slug: "direct-equity", name: "Direct Equity", short: "Stocks on NSE/BSE for long-term investors.", icon: "LineChart", tone: "#2563EB" },
+  { slug: "insurance", name: "Insurance", short: "Term, health, and what to skip.", icon: "ShieldCheck", tone: "#16A34A" },
+  { slug: "real-estate", name: "Real Estate", short: "Residential, commercial, REITs.", icon: "Home", tone: "#C2410C" },
+  { slug: "gold", name: "Gold & Silver", short: "Physical, ETF, SGB, silver ETF — the right way.", icon: "Coins", tone: "#A16207" },
 ] as const;
 
 export const audiences = [
-  { slug: "defence-officers", name: "Defence Officers", short: "From olive greens to financial independence.", icon: "Shield" },
-  { slug: "professionals", name: "Salaried Professionals", short: "Mid-career planning that actually compounds.", icon: "Briefcase" },
-  { slug: "software-professionals", name: "Software & IT Professionals", short: "ESOPs, RSUs and high-income tax planning.", icon: "Cpu" },
-  { slug: "executives", name: "Corporate Executives", short: "CXOs and senior leaders with complex comp.", icon: "Building2" },
-  { slug: "hni", name: "High-Net-Worth", short: "PMS, AIF and structured planning above ₹5 Cr.", icon: "Gem" },
-  { slug: "nri", name: "NRIs & Global Indians", short: "Investing across borders, optimised for tax.", icon: "Plane" },
+  { slug: "defence-officers", name: "Defence Officers", short: "From olive greens to financial independence.", icon: "Shield", tone: "#4D7C0F" },
+  { slug: "professionals", name: "Salaried Professionals", short: "Mid-career planning that actually compounds.", icon: "Briefcase", tone: "#2563EB" },
+  { slug: "software-professionals", name: "Software & IT Professionals", short: "ESOPs, RSUs and high-income tax planning.", icon: "Cpu", tone: "#0891B2" },
+  { slug: "executives", name: "Corporate Executives", short: "CXOs and senior leaders with complex comp.", icon: "Building2", tone: "#1E3A8A" },
+  { slug: "hni", name: "High-Net-Worth", short: "PMS, AIF and structured planning above ₹5 Cr.", icon: "Gem", tone: "#9333EA" },
+  { slug: "nri", name: "NRIs & Global Indians", short: "Investing across borders, optimised for tax.", icon: "Plane", tone: "#0284C7" },
 ] as const;
 
 export const calculators = [
