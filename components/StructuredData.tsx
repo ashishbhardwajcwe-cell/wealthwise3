@@ -73,13 +73,13 @@ export function collectionPageSchema(opts: {
     url: opts.url,
     isPartOf: {
       "@type": "WebSite",
-      name: "Auris Cashflow",
-      url: "https://auriscashflow.com",
+      name: "PlanMyCashflows",
+      url: "https://planmycashflows.com",
       potentialAction: {
         "@type": "SearchAction",
         target: {
           "@type": "EntryPoint",
-          urlTemplate: "https://auriscashflow.com/markets?q={search_term_string}",
+          urlTemplate: "https://planmycashflows.com/markets?q={search_term_string}",
         },
         "query-input": "required name=search_term_string",
       },
@@ -88,7 +88,7 @@ export function collectionPageSchema(opts: {
       "@type": "Dataset",
       name: d.name,
       description: d.description,
-      creator: { "@type": "Organization", name: "Auris Cashflow" },
+      creator: { "@type": "Organization", name: "PlanMyCashflows" },
     })),
   };
 }

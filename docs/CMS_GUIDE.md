@@ -7,10 +7,10 @@ This site's content is managed through Sanity Studio, embedded at `/studio`.
 ### 1. Sanity dashboard — add CORS origins
 The Studio must be allowed to talk to your Sanity project from your live URL.
 
-1. Go to https://sanity.io/manage → your "Auris Cashflow" project → **API → CORS Origins**
+1. Go to https://sanity.io/manage → your "PlanMyCashflows" project → **API → CORS Origins**
 2. Click **Add CORS origin** and add each of:
-   - `https://auriscashflow.com` — Allow credentials: ✅
-   - `https://www.auriscashflow.com` — Allow credentials: ✅
+   - `https://planmycashflows.com` — Allow credentials: ✅
+   - `https://www.planmycashflows.com` — Allow credentials: ✅
    - `http://localhost:3000` — Allow credentials: ✅ (for local dev)
 3. Save
 
@@ -20,7 +20,7 @@ This makes published content appear on the live site within seconds.
 1. **API → Webhooks → Create webhook**
 2. Configure:
    - **Name**: Production revalidation
-   - **URL**: `https://auriscashflow.com/api/revalidate`
+   - **URL**: `https://planmycashflows.com/api/revalidate`
    - **Dataset**: `production`
    - **Trigger on**: Create, Update, Delete
    - **Filter**: `_type in ["blogPost","stockAnalysis","pmsStrategy","aifFund","unlistedShare","author","category"]`
@@ -36,11 +36,11 @@ This makes published content appear on the live site within seconds.
 - `SANITY_REVALIDATE_SECRET` — same value you set in the webhook above
 
 ### 4. Sanity Studio — invite yourself
-Visit `https://auriscashflow.com/studio` → log in with the same Sanity account you used to create the project. Studio is access-controlled by Sanity itself; it's safe to leave the URL public.
+Visit `https://planmycashflows.com/studio` → log in with the same Sanity account you used to create the project. Studio is access-controlled by Sanity itself; it's safe to leave the URL public.
 
 ## Daily use — publishing a blog post
 
-1. Go to `auriscashflow.com/studio`
+1. Go to `planmycashflows.com/studio`
 2. Sidebar → **Editorial → Blog Posts → Create new**
 3. Fill in:
    - Title

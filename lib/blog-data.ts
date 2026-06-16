@@ -89,7 +89,7 @@ After looking at hundreds of HNI portfolios, the same mistakes show up repeatedl
 
 PMS is a legitimate tool for ₹50L+ equity investors who want personalisation, direct stock ownership, and the chance for alpha. It's not magic — most PMSs underperform their benchmark net of fees over 7+ year periods, so manager selection matters enormously.
 
-If you're considering your first PMS, start with the **Auris Cashflow AI Wealth Planner** — it'll tell you whether PMS makes sense in your situation, or whether you're better off optimising mutual fund selection first.
+If you're considering your first PMS, start with the **PlanMyCashflows AI Wealth Planner** — it'll tell you whether PMS makes sense in your situation, or whether you're better off optimising mutual fund selection first.
 
 [Try the AI Wealth Planner →](/ai-wealth-planner)
     `,
@@ -301,7 +301,7 @@ Because most brokers and AMCs make money from your trading frequency, not your t
 
 A 30-minute workflow in mid-March each year can save you ₹12,500-40,000 in current-year tax. Over a 30-year investing career, that's potentially ₹15-20 lakhs of saved tax — enough to fund a small retirement bucket entirely.
 
-The WealthWise app automates this — every March it identifies which units to harvest in which order, executes via your broker, and confirms the realised gain stayed under ₹1.25L. But even without an app, this is a worthwhile 30 minutes once a year.
+The CashFlow Planner app automates this — every March it identifies which units to harvest in which order, executes via your broker, and confirms the realised gain stayed under ₹1.25L. But even without an app, this is a worthwhile 30 minutes once a year.
 
 [Run the tax harvesting calculator →](/resources/calculators/tax-harvesting)
     `,

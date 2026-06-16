@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Grievance Redressal",
-  description: "How to escalate concerns with Auris Cashflow. SEBI-required grievance redressal mechanism.",
+  description: "How to escalate concerns with PlanMyCashflows. SEBI-required grievance redressal mechanism.",
 };
 
 export default function GrievanceRedressalPage() {
@@ -27,7 +27,7 @@ export default function GrievanceRedressalPage() {
           content: [
             "If you are not satisfied with the Level 1 response, escalate to our Grievance Officer:",
             "**Grievance Officer:** Diganta Das",
-            `**Email:** grievance@auriscashflow.com`,
+            `**Email:** grievance@planmycashflows.com`,
             "**Response time:** 5 business days",
             "Please include your original message thread, the date of your initial contact, and a brief summary of why the response was unsatisfactory.",
           ],
@@ -37,7 +37,7 @@ export default function GrievanceRedressalPage() {
           content: [
             "Unresolved grievances can be escalated to the founder directly:",
             "**Founder:** Col Ashish Bhardwaj",
-            "**Email:** ashish@auriscashflow.com",
+            "**Email:** ashish@planmycashflows.com",
             "**Response time:** 5 business days",
           ],
         },

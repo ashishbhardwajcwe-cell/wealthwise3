@@ -118,7 +118,7 @@ export const GUIDES: Record<string, GuideContent> = {
       ],
     },
     closing: [
-      "This check identifies the gap. Filling it is the work. If you want a second pair of eyes on your specific situation, the Auris Cashflow Planner runs the math in 60 seconds, and a 30-minute call with Ashish is free for the first session.",
+      "This check identifies the gap. Filling it is the work. If you want a second pair of eyes on your specific situation, the PlanMyCashflows Planner runs the math in 60 seconds, and a 30-minute call with Ashish is free for the first session.",
       "The biggest mistake most people make is doing more — adding more SIPs, more apps, more accounts — when what they need is doing less, better. This check is designed to find the one thing that, fixed, changes everything else.",
     ],
   },

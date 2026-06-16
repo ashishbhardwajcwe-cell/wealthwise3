@@ -25,22 +25,33 @@ export function Hero({
   children,
 }: HeroProps) {
   return (
-    <section className={cn("gradient-hero", className)}>
+    <section className={cn("gradient-hero aurora", className)}>
       <div
         className={cn(
           "container-wide py-20 md:py-28 flex flex-col",
           align === "center" ? "items-center text-center" : "items-start text-left",
         )}
       >
-        {eyebrow && <span className="eyebrow mb-4">{eyebrow}</span>}
-        <h1 className="max-w-4xl text-balance">{title}</h1>
+        {eyebrow && <span className="eyebrow mb-4 animate-fade-up">{eyebrow}</span>}
+        <h1 className="max-w-4xl text-balance animate-fade-up" style={{ animationDelay: "0.05s" }}>
+          {title}
+        </h1>
         {subtitle && (
-          <p className="mt-6 max-w-2xl text-lg md:text-xl text-[var(--color-slate)] leading-relaxed text-balance">
+          <p
+            className="mt-6 max-w-2xl text-lg md:text-xl text-[var(--color-slate)] leading-relaxed text-balance animate-fade-up"
+            style={{ animationDelay: "0.12s" }}
+          >
             {subtitle}
           </p>
         )}
         {(primaryCta || secondaryCta) && (
-          <div className={cn("mt-8 flex flex-col sm:flex-row gap-3", align === "center" ? "items-center" : "items-start")}>
+          <div
+            className={cn(
+              "mt-8 flex flex-col sm:flex-row gap-3 animate-fade-up",
+              align === "center" ? "items-center" : "items-start",
+            )}
+            style={{ animationDelay: "0.18s" }}
+          >
             {primaryCta && (
               <Link href={primaryCta.href} className="btn-primary">
                 {primaryCta.label}
@@ -54,7 +65,12 @@ export function Hero({
           </div>
         )}
         {trustLine && (
-          <p className="mt-8 text-xs text-[var(--color-slate)] uppercase tracking-wider">{trustLine}</p>
+          <p
+            className="mt-8 text-xs text-[var(--color-slate)] uppercase tracking-wider animate-fade-up"
+            style={{ animationDelay: "0.24s" }}
+          >
+            {trustLine}
+          </p>
         )}
         {children}
       </div>

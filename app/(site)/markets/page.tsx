@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Hero } from "@/components/Hero";
 import { CTASection } from "@/components/CTASection";
 import { MarketsNav } from "@/components/markets/MarketsNav";
+import { TickerTape } from "@/components/markets/TickerTape";
 import { MarketsTopMovers } from "@/components/markets/MarketsTopMovers";
 import { LiveMarketsSection } from "@/components/markets/LiveMarketsSection";
 import { LiveMetalsSection } from "@/components/markets/LiveMetalsSection";
@@ -15,13 +16,13 @@ import { getTrackedMFNAVs, TRACKED_METAL_ETFS } from "@/lib/mutual-funds";
 export const metadata: Metadata = {
   title: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
   description:
-    "Auris Cashflow's consolidated live markets hub: sortable screeners for cryptocurrencies, Indian & US stocks, Indian mutual funds, and gold/silver ETFs — all in one place.",
-  alternates: { canonical: "https://auriscashflow.com/markets" },
+    "PlanMyCashflows's consolidated live markets hub: sortable screeners for cryptocurrencies, Indian & US stocks, Indian mutual funds, and gold/silver ETFs — all in one place.",
+  alternates: { canonical: "https://planmycashflows.com/markets" },
   openGraph: {
     title: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
     description:
       "Sortable, searchable screeners for every asset class we track. Indian & US stocks, 100 cryptos, hand-picked mutual funds, gold & silver ETFs — one page.",
-    url: "https://auriscashflow.com/markets",
+    url: "https://planmycashflows.com/markets",
     type: "website",
   },
 };
@@ -53,7 +54,7 @@ export default async function Page() {
     name: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
     description:
       "Live screeners for Indian & US stocks, 100 cryptocurrencies, hand-picked mutual funds, and gold/silver ETFs.",
-    url: "https://auriscashflow.com/markets",
+    url: "https://planmycashflows.com/markets",
     datasets: [
       {
         name: "Indian & US Stock Screener",
@@ -79,12 +80,16 @@ export default async function Page() {
   });
 
   const breadcrumb = breadcrumbSchema([
-    { name: "Home", url: "https://auriscashflow.com/" },
-    { name: "Markets", url: "https://auriscashflow.com/markets" },
+    { name: "Home", url: "https://planmycashflows.com/" },
+    { name: "Markets", url: "https://planmycashflows.com/markets" },
   ]);
 
   return (
     <>
+      {/* Live ticker tape — first thing visible on the Markets page so the
+          running prices greet you the moment the page opens. */}
+      <TickerTape />
+
       <Hero
         eyebrow="Live markets"
         title="Markets hub"

@@ -14,7 +14,7 @@ const HIGH_PRIORITY_PATHS = {
 };
 
 module.exports = {
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://auriscashflow.com",
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://planmycashflows.com",
   generateRobotsTxt: true,
   sitemapSize: 7000,
   changefreq: "weekly",

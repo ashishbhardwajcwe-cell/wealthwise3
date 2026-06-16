@@ -28,7 +28,7 @@ export function WhatsAppFloat() {
       href={siteConfig.whatsappUrl}
       target="_blank"
       rel="noreferrer"
-      aria-label="Chat with Auris Cashflow on WhatsApp"
+      aria-label="Chat with PlanMyCashflows on WhatsApp"
       className="auris-whatsapp-float fixed bottom-5 right-5 md:bottom-7 md:right-7 z-40 group inline-flex items-center gap-2 pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 print:hidden"
       style={{ background: "#25D366", color: "white" }}
     >

@@ -78,7 +78,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (result.kind === "sanity") {
     const post = result.post;
     const category = post.category?.title ?? "Uncategorised";
-    const author = post.author?.name ?? "Auris Cashflow";
+    const author = post.author?.name ?? "PlanMyCashflows";
     const date = post.publishedAt?.slice(0, 10) ?? "";
     const heroImageUrl = post.heroImage?.asset
       ? urlFor(post.heroImage as never).width(1800).height(1000).fit("crop").auto("format").url()
@@ -340,7 +340,7 @@ function AuthorBio({ authorName, authorRole }: { authorName: string; authorRole?
         <div>
           <h3 className="font-semibold text-[var(--color-navy)]" style={{ fontSize: "1.0625rem" }}>{authorName}</h3>
           <p className="text-sm text-[var(--color-slate)] mt-1 leading-relaxed">
-            {authorRole ?? "Founder of Auris Cashflow. Ex-Indian Army (20 years). NISM-certified Investment Adviser. Writes about wealth management for Indian and global investors."}
+            {authorRole ?? "Founder of PlanMyCashflows. Ex-Indian Army (20 years). NISM-certified Investment Adviser. Writes about wealth management for Indian and global investors."}
           </p>
         </div>
       </div>

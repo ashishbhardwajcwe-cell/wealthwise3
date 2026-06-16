@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Auris Cashflow Studio",
+  title: "PlanMyCashflows Studio",
   robots: { index: false, follow: false },
 };
 

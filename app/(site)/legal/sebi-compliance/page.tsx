@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "SEBI Compliance",
-  description: "Regulatory disclosures and SEBI-mandated information for Auris Cashflow.",
+  description: "Regulatory disclosures and SEBI-mandated information for PlanMyCashflows.",
 };
 
 export default function SEBICompliancePage() {
@@ -17,7 +17,7 @@ export default function SEBICompliancePage() {
         {
           heading: "Current regulatory status",
           content: [
-            `${siteConfig.legalName} (CIN: ${siteConfig.cin}) operates the Auris Cashflow brand. Our current regulatory standing:`,
+            `${siteConfig.legalName} (CIN: ${siteConfig.cin}) operates the PlanMyCashflows brand. Our current regulatory standing:`,
             "**SEBI Registered Investment Adviser (RIA):** Application under processing. Until granted, we do not provide specific investment recommendations.",
             "**NISM Investment Adviser Levels I and II:** Certified (relevant team members).",
             "**AMFI Mutual Fund Distributor:** ARN application in process.",
@@ -29,7 +29,7 @@ export default function SEBICompliancePage() {
           content: [
             "**Educational content** — articles, deep-dives, guides on investment products and tax planning. No specific recommendations.",
             "**Free tools** — the AI Wealth Planner, calculators, Guided Plan. All outputs are educational and illustrative.",
-            "**WealthWise application** — portfolio tracking, goal projection, scenario planning. The app provides analysis tools; the user makes investment decisions.",
+            "**CashFlow Planner application** — portfolio tracking, goal projection, scenario planning. The app provides analysis tools; the user makes investment decisions.",
             "**Consulting and education** — paid sessions with Col Ashish on financial education, planning frameworks, and product evaluation (not specific recommendations until RIA-licensed).",
           ],
         },
@@ -69,7 +69,7 @@ export default function SEBICompliancePage() {
         {
           heading: "Reporting concerns",
           content: [
-            "If you believe Auris Cashflow has acted inconsistently with these disclosures or any SEBI requirement, please email compliance@auriscashflow.com.",
+            "If you believe PlanMyCashflows has acted inconsistently with these disclosures or any SEBI requirement, please email compliance@planmycashflows.com.",
             "You may also report concerns directly to SEBI via the SCORES portal at https://scores.sebi.gov.in.",
           ],
         },

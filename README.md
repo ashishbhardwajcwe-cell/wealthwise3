@@ -1,6 +1,6 @@
-# Auris Cashflow — Marketing Site (wealthwise3)
+# PlanMyCashflows — Marketing Site (wealthwise3)
 
-The marketing site for [Auris Cashflow](https://auriscashflow.com) — built with Next.js 15, TypeScript, and Tailwind CSS v4.
+The marketing site for [PlanMyCashflows](https://planmycashflows.com) — built with Next.js 15, TypeScript, and Tailwind CSS v4.
 
 ## Stack
 
@@ -28,7 +28,7 @@ The marketing site for [Auris Cashflow](https://auriscashflow.com) — built wit
   /gold                            Physical, ETF, SGB
 /ai-wealth-planner                 Free AI planner (Claude-powered)
 /guided                            Guided Plan (interactive Q&A wizard)
-/wealthwise                        WealthWise app product page
+/wealthwise                        CashFlow Planner app product page
 /for/                              Audience landing pages
   /defence-officers
   /nri
