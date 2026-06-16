@@ -34,6 +34,13 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
   const [period, setPeriod] = useState<Period>("short");
   const watchlist = useWatchlist();
 
+  // 3Y/5Y/10Y are only populated when a paid CoinGecko data plan is configured
+  // (the free tier can't return multi-year history). Hide those columns rather
+  // than show empty/mislabeled figures; they appear automatically once data exists.
+  const hasLongTerm = coins.some(
+    (c) => c.change3yPct != null || c.change5yPct != null || c.change10yPct != null,
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let rows = coins.slice(0, topN);
@@ -169,7 +176,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
           </button>
           <button
             onClick={() => {
-              const headers = ["Rank", "Coin", "Symbol", "Price (INR)", "Price (USD)", "24h %", "7d %", "30d %", "1Y %", "3Y %", "5Y %", "10Y %", "24h Volume (INR)", "Market Cap (INR)", "From ATH %"];
+              const headers = ["Rank", "Coin", "Symbol", "Price (INR)", "Price (USD)", "24h %", "7d %", "30d %", "1Y %", ...(hasLongTerm ? ["3Y %", "5Y %", "10Y %"] : []), "24h Volume (INR)", "Market Cap (INR)", "From ATH %"];
               downloadCsv(`auris-crypto-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (c, h) => {
                 switch (h) {
                   case "Rank":              return c.rank;
@@ -224,9 +231,13 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
                 ) : (
                   <>
                     <Th label="1Y"  k="change1y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the trailing 1 year. From CoinGecko's live feed." />
-                    <Th label="3Y"  k="change3y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 3 years (not annualised — crypto convention). Available for the top 30 coins by market cap." />
-                    <Th label="5Y"  k="change5y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 5 years. Many coins didn't exist that long — shown as ‘—’ where data is missing." />
-                    <Th label="10Y" k="change10y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 10 years. Mostly meaningful for BTC, LTC, XRP, ETH — others didn't exist." />
+                    {hasLongTerm && (
+                      <>
+                        <Th label="3Y"  k="change3y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 3 years (not annualised — crypto convention). Available for the top coins by market cap." />
+                        <Th label="5Y"  k="change5y"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 5 years. Many coins didn't exist that long — shown as ‘—’ where data is missing." />
+                        <Th label="10Y" k="change10y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total percent change over the trailing 10 years. Mostly meaningful for BTC, LTC, XRP, ETH — others didn't exist." />
+                      </>
+                    )}
                   </>
                 )}
                 <Th label="24h Volume"  k="volume"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total INR value traded across exchanges in the last 24 hours. High volume = better liquidity." />
@@ -269,9 +280,13 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
                   ) : (
                     <>
                       <ChangeCell value={c.change1yPct} big />
-                      <ChangeCell value={c.change3yPct} big />
-                      <ChangeCell value={c.change5yPct} big />
-                      <ChangeCell value={c.change10yPct} big />
+                      {hasLongTerm && (
+                        <>
+                          <ChangeCell value={c.change3yPct} big />
+                          <ChangeCell value={c.change5yPct} big />
+                          <ChangeCell value={c.change10yPct} big />
+                        </>
+                      )}
                     </>
                   )}
                   <td className="px-4 py-3 text-right tabular-nums text-xs text-[var(--color-slate)]">{fmtMarketCap(c.volume24hInr)}</td>

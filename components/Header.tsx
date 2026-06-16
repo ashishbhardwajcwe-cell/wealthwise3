@@ -16,23 +16,25 @@ interface NavMenuItem {
   label: string;
   desc: string;
   icon?: string;
-  /** Accent colour (hex) for the icon + its tinted tile. */
+  /** Accent colour (hex) for the lucide-icon fallback tile. */
   tone?: string;
+  /** Preferred display glyph — a colour emoji shown in place of the icon. */
+  emoji?: string;
   external?: boolean;
 }
 
 const plannersMenu: NavMenuItem[] = [
-  { href: "/plan", label: "All planners — overview", desc: "Compare snapshot, guided plan and the full app side-by-side", icon: "LayoutGrid", tone: "#334155" },
-  { href: "/ai-wealth-planner", label: "AI Snapshot", desc: "60-second personalised snapshot · No signup", icon: "Sparkles", tone: "#D97706" },
-  { href: "/guided", label: "Guided Plan", desc: "10-minute YNAB-style Q&A · No signup", icon: "ListChecks", tone: "#0F766E" },
+  { href: "/plan", label: "All planners — overview", desc: "Compare snapshot, guided plan and the full app side-by-side", icon: "LayoutGrid", tone: "#334155", emoji: "🗂️" },
+  { href: "/ai-wealth-planner", label: "AI Snapshot", desc: "60-second personalised snapshot · No signup", icon: "Sparkles", tone: "#D97706", emoji: "✨" },
+  { href: "/guided", label: "Guided Plan", desc: "10-minute YNAB-style Q&A · No signup", icon: "ListChecks", tone: "#0F766E", emoji: "✅" },
 ];
 
 const resourcesMenu: NavMenuItem[] = [
-  { href: "/blog", label: "Blog", desc: "Guides, analysis and playbooks", icon: "BookOpen", tone: "#2563EB" },
-  { href: "/resources/calculators", label: "Calculators", desc: "SIP, retirement, FIRE, EMI and more", icon: "Calculator", tone: "#7C3AED" },
-  { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained", icon: "BookA", tone: "#0F766E" },
-  { href: "/resources/downloads", label: "Free downloads", desc: "Checklists and PDF playbooks", icon: "Download", tone: "#16A34A" },
-  { href: "/about", label: "About", desc: "Our story, mission and the team", icon: "Info", tone: "#475569" },
+  { href: "/blog", label: "Blog", desc: "Guides, analysis and playbooks", icon: "BookOpen", tone: "#2563EB", emoji: "📰" },
+  { href: "/resources/calculators", label: "Calculators", desc: "SIP, retirement, FIRE, EMI and more", icon: "Calculator", tone: "#7C3AED", emoji: "🧮" },
+  { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained", icon: "BookA", tone: "#0F766E", emoji: "📖" },
+  { href: "/resources/downloads", label: "Free downloads", desc: "Checklists and PDF playbooks", icon: "Download", tone: "#16A34A", emoji: "📥" },
+  { href: "/about", label: "About", desc: "Our story, mission and the team", icon: "Info", tone: "#475569", emoji: "ℹ️" },
 ];
 
 /** A nav head is "active" when the current path falls under any of its prefixes. */
@@ -69,7 +71,7 @@ export function Header() {
             open={products}
             setOpen={setProducts}
             active={isActive(pathname, "/investment-products")}
-            items={investmentProducts.map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone }))}
+            items={investmentProducts.map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone, emoji: p.emoji }))}
           />
           <DropdownNavItem
             label="Planners"
@@ -86,7 +88,7 @@ export function Header() {
             open={forMenu}
             setOpen={setForMenu}
             active={isActive(pathname, "/for")}
-            items={audiences.map((a) => ({ href: `/for/${a.slug}`, label: a.name, desc: a.short, icon: a.icon, tone: a.tone }))}
+            items={audiences.map((a) => ({ href: `/for/${a.slug}`, label: a.name, desc: a.short, icon: a.icon, tone: a.tone, emoji: a.emoji }))}
           />
           <DropdownNavItem
             label="Resources"
@@ -204,14 +206,18 @@ function DropdownNavItem({
                 : null;
               const content = (
                 <div className="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/70 transition-colors">
-                  {Icon && (
+                  {item.emoji ? (
+                    <span className="mt-0.5 w-7 h-7 flex items-center justify-center shrink-0 text-[20px] leading-none" aria-hidden>
+                      {item.emoji}
+                    </span>
+                  ) : Icon ? (
                     <span
                       className="mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                       style={{ backgroundColor: item.tone ? `${item.tone}26` : "var(--color-sand)" }}
                     >
                       <Icon className="w-4 h-4" style={{ color: item.tone ?? "var(--color-gold-dim)" }} />
                     </span>
-                  )}
+                  ) : null}
                   <div>
                     <div className="text-sm font-semibold text-[var(--color-navy)] inline-flex items-center gap-1">
                       {item.label}

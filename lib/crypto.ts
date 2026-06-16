@@ -5,7 +5,25 @@
  * Single shared upstream call per revalidation window per region.
  */
 
-const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
+// A paid CoinGecko key (env COINGECKO_API_KEY) switches the client to the Pro
+// host + auth header, which unlocks full daily history (days=max&interval=daily)
+// and a commercial licence. On the free/Demo tier that history call is capped to
+// the last 365 days and silently mislabels ~1Y data as 3Y/5Y/10Y — so without a
+// key we skip it entirely and the UI hides those columns (see getCoinLongTermReturns).
+const COINGECKO_PRO_KEY = process.env.COINGECKO_API_KEY?.trim() || "";
+const COINGECKO_BASE = COINGECKO_PRO_KEY
+  ? "https://pro-api.coingecko.com/api/v3"
+  : "https://api.coingecko.com/api/v3";
+
+/** True when a paid CoinGecko key is configured — unlocks 3Y/5Y/10Y history. */
+export const CRYPTO_LONG_TERM_ENABLED = Boolean(COINGECKO_PRO_KEY);
+
+function cgHeaders(): Record<string, string> {
+  const h: Record<string, string> = { Accept: "application/json" };
+  if (COINGECKO_PRO_KEY) h["x-cg-pro-api-key"] = COINGECKO_PRO_KEY;
+  return h;
+}
+
 const REVALIDATE_SECONDS = 300; // 5 min cache for live prices
 const HISTORY_REVALIDATE = 60 * 60 * 24; // 24h for historical (long-term returns barely move day-to-day)
 
@@ -67,7 +85,7 @@ export async function getTopCryptoInINR(limit: number = 100): Promise<CoinMarket
   try {
     const res = await fetch(url, {
       next: { revalidate: REVALIDATE_SECONDS, tags: ["crypto:markets"] },
-      headers: { Accept: "application/json" },
+      headers: cgHeaders(),
     });
     if (!res.ok) {
       console.warn(`CoinGecko returned ${res.status}: ${res.statusText}`);
@@ -109,7 +127,7 @@ export async function getCoinUsdPrices(ids: string[]): Promise<Record<string, nu
   try {
     const res = await fetch(url, {
       next: { revalidate: REVALIDATE_SECONDS, tags: ["crypto:markets"] },
-      headers: { Accept: "application/json" },
+      headers: cgHeaders(),
     });
     if (!res.ok) return {};
     const data: Record<string, { usd: number }> = await res.json();
@@ -147,6 +165,10 @@ export async function getCoinLongTermReturns(
   limit: number = 25,
 ): Promise<Map<string, LongTermReturns>> {
   const out = new Map<string, LongTermReturns>();
+  // Free/Demo CoinGecko caps market_chart history to 365 days and ignores
+  // interval=daily, which makes 3Y/5Y/10Y silently wrong (they collapse to the
+  // 1Y figure). Only attempt the long-history call when a paid key unlocks it.
+  if (!CRYPTO_LONG_TERM_ENABLED) return out;
   const subset = ids.slice(0, limit);
   if (subset.length === 0) return out;
 
@@ -170,7 +192,7 @@ async function fetchCoinHistory(id: string): Promise<LongTermReturns | null> {
       `?vs_currency=inr&days=max&interval=daily`;
     const res = await fetch(url, {
       next: { revalidate: HISTORY_REVALIDATE, tags: ["crypto:history", `crypto:history:${id}`] },
-      headers: { Accept: "application/json" },
+      headers: cgHeaders(),
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
