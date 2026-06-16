@@ -174,12 +174,17 @@ const GlobalCSS = () => (
     @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
     @keyframes float { 0%,100% { transform:translateY(0px); } 50% { transform:translateY(-8px); } }
     @keyframes scaleIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+    @keyframes glowPulse { 0%,100% { opacity:.5; transform:translate(-50%,-50%) scale(1); } 50% { opacity:.85; transform:translate(-50%,-50%) scale(1.08); } }
+    @keyframes auroraShift { 0% { transform:translate3d(-5%,-3%,0) rotate(0deg); } 50% { transform:translate3d(5%,4%,0) rotate(7deg); } 100% { transform:translate3d(-5%,-3%,0) rotate(0deg); } }
+    @keyframes bounceDown { 0%,100% { transform:translateX(-50%) translateY(0); opacity:.55; } 50% { transform:translateX(-50%) translateY(7px); opacity:1; } }
     .fadeUp { animation: fadeUp 0.7s ease both; }
     .fadeIn { animation: fadeIn 0.5s ease both; }
     .scaleIn { animation: scaleIn 0.4s ease both; }
     .hover-lift { transition: transform 0.3s, box-shadow 0.3s; }
     .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(10,22,40,0.12); }
     .gold-shimmer { background: linear-gradient(90deg, ${T.gold}, ${T.goldLight}, ${T.gold}); background-size: 200% auto; animation: shimmer 3s linear infinite; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-ghost { transition: all 0.3s; }
+    .hero-ghost:hover { background: rgba(255,255,255,0.16) !important; border-color: rgba(255,255,255,0.5) !important; transform: translateY(-2px); }
     .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(201,168,76,0.15); }
     input:focus, select:focus { outline: none; border-color: ${T.gold} !important; box-shadow: 0 0 0 3px ${T.gold}20 !important; }
     .btn-gold { background: linear-gradient(135deg, ${T.gold}, ${T.goldLight}); color: ${T.navy}; border: none; font-weight: 700; cursor: pointer; transition: all 0.3s; }
@@ -467,35 +472,49 @@ const Navbar = ({ user, isDemo, onAuthClick, onLogout, onLogoClick, onGuided, gu
 const Landing = ({ onGetStarted, onAuth }) => (
   <div>
     {/* Hero */}
-    <section style={{ position:"relative", minHeight:"85vh", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", background:`linear-gradient(160deg, ${T.navy} 0%, ${T.ocean} 40%, ${T.midnight} 100%)` }}>
-      <div style={{ position:"absolute", top:"10%", right:"5%", width:300, height:300, borderRadius:"50%", background:`radial-gradient(circle, ${T.gold}12 0%, transparent 70%)`, animation:"float 6s ease-in-out infinite" }} />
-      <div style={{ position:"absolute", bottom:"15%", left:"8%", width:200, height:200, borderRadius:"50%", background:`radial-gradient(circle, ${T.teal}10 0%, transparent 70%)`, animation:"float 8s ease-in-out infinite 1s" }} />
+    <section style={{ position:"relative", minHeight:"90vh", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", padding:"48px 0", background:`linear-gradient(160deg, ${T.navy} 0%, ${T.ocean} 42%, ${T.midnight} 100%)` }}>
+      {/* Ambient spotlight behind the headline */}
+      <div style={{ position:"absolute", top:"42%", left:"50%", width:760, height:760, borderRadius:"50%", background:`radial-gradient(circle, ${T.gold}14 0%, ${T.gold}06 35%, transparent 68%)`, animation:"glowPulse 9s ease-in-out infinite", pointerEvents:"none" }} />
+      {/* Slow-drifting aurora sheen */}
+      <div style={{ position:"absolute", inset:"-20%", background:`radial-gradient(40% 50% at 25% 30%, ${T.teal}14 0%, transparent 60%), radial-gradient(38% 46% at 78% 68%, ${T.gold}12 0%, transparent 62%)`, filter:"blur(22px)", animation:"auroraShift 26s ease-in-out infinite", pointerEvents:"none" }} />
+      {/* Floating orbs */}
+      <div style={{ position:"absolute", top:"10%", right:"6%", width:300, height:300, borderRadius:"50%", background:`radial-gradient(circle, ${T.gold}12 0%, transparent 70%)`, animation:"float 6s ease-in-out infinite", pointerEvents:"none" }} />
+      <div style={{ position:"absolute", bottom:"15%", left:"8%", width:220, height:220, borderRadius:"50%", background:`radial-gradient(circle, ${T.teal}12 0%, transparent 70%)`, animation:"float 8s ease-in-out infinite 1s", pointerEvents:"none" }} />
+      <div style={{ position:"absolute", top:"24%", left:"16%", width:130, height:130, borderRadius:"50%", background:`radial-gradient(circle, ${T.goldLight}10 0%, transparent 70%)`, animation:"float 7s ease-in-out infinite 0.5s", pointerEvents:"none" }} />
       <div style={{ position:"absolute", inset:0, background:`url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C9A84C' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }} />
 
-      <div className="fadeUp" style={{ position:"relative", zIndex:1, textAlign:"center", maxWidth:720, padding:"0 24px" }}>
-        <Badge color={T.goldLight}>PlanMyCashflows — Expert Wealth Advisory</Badge>
-        <h1 style={{ fontFamily:DISPLAY, fontSize:"clamp(36px,6vw,60px)", fontWeight:700, color:T.white, lineHeight:1.15, marginTop:20 }}>
-          Your Roadmap to<br/><span className="gold-shimmer" style={{ fontSize:"clamp(40px,7vw,68px)" }}>Financial Independence</span>
+      <div style={{ position:"relative", zIndex:1, textAlign:"center", maxWidth:760, padding:"0 24px" }}>
+        <div className="fadeUp" style={{ animationDelay:"0.05s" }}>
+          <Badge color={T.goldLight}>PlanMyCashflows — Expert Wealth Advisory</Badge>
+        </div>
+        <h1 className="fadeUp" style={{ animationDelay:"0.12s", fontFamily:DISPLAY, fontSize:"clamp(36px,6vw,62px)", fontWeight:700, color:T.white, lineHeight:1.12, letterSpacing:"-0.5px", marginTop:22 }}>
+          Your Roadmap to<br/><span className="gold-shimmer" style={{ fontSize:"clamp(40px,7vw,70px)" }}>Financial Independence</span>
         </h1>
-        <p style={{ color:`${T.white}80`, fontSize:18, maxWidth:540, margin:"20px auto 0", lineHeight:1.7 }}>
+        <p className="fadeUp" style={{ animationDelay:"0.2s", color:`${T.white}85`, fontSize:18, maxWidth:548, margin:"22px auto 0", lineHeight:1.7 }}>
           Built for discerning HNI clients & wealth planners. Input your income, assets and goals — get a comprehensive financial roadmap with retirement projections, estate planning insights, and AI-powered advisory.
         </p>
-        <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:36, flexWrap:"wrap" }}>
-          <button onClick={onGetStarted} className="btn-gold" style={{ padding:"16px 40px", borderRadius:14, fontSize:17, letterSpacing:"0.03em" }}>
+        <div className="fadeUp" style={{ animationDelay:"0.28s", display:"flex", gap:14, justifyContent:"center", marginTop:38, flexWrap:"wrap" }}>
+          <button onClick={onGetStarted} className="btn-gold" style={{ padding:"16px 42px", borderRadius:14, fontSize:17, letterSpacing:"0.03em" }}>
             Start Your Plan →
           </button>
-          <button onClick={onAuth} style={{ padding:"16px 32px", borderRadius:14, fontSize:15, background:`${T.white}10`, color:T.white, border:`1.5px solid ${T.white}25`, cursor:"pointer", fontWeight:600, transition:"all 0.3s" }}>
+          <button onClick={onAuth} className="hero-ghost" style={{ padding:"16px 34px", borderRadius:14, fontSize:15, background:`${T.white}10`, color:T.white, border:`1.5px solid ${T.white}30`, cursor:"pointer", fontWeight:600 }}>
             Sign In
           </button>
         </div>
-        <div style={{ display:"flex", justifyContent:"center", gap:32, marginTop:40 }}>
+        <div className="fadeUp" style={{ animationDelay:"0.36s", display:"flex", justifyContent:"center", gap:44, marginTop:44, flexWrap:"wrap" }}>
           {[["500+","Clients Guided"],["₹12Cr+","Tax Savings Found"],["4.9★","Client Rating"]].map(([n,l]) => (
             <div key={l}>
-              <div style={{ fontFamily:DISPLAY, fontSize:28, fontWeight:700, color:T.gold }}>{n}</div>
-              <div style={{ fontSize:12, color:`${T.white}60`, fontWeight:500 }}>{l}</div>
+              <div style={{ fontFamily:DISPLAY, fontSize:30, fontWeight:700, color:T.gold }}>{n}</div>
+              <div style={{ fontSize:12, color:`${T.white}60`, fontWeight:500, marginTop:2 }}>{l}</div>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Scroll-to-explore cue */}
+      <div style={{ position:"absolute", bottom:26, left:"50%", display:"flex", flexDirection:"column", alignItems:"center", gap:6, color:`${T.white}55`, animation:"bounceDown 2.4s ease-in-out infinite", pointerEvents:"none" }}>
+        <span style={{ fontSize:10, fontWeight:600, letterSpacing:"0.18em", textTransform:"uppercase" }}>Explore</span>
+        <svg width="20" height="12" viewBox="0 0 20 12" fill="none" aria-hidden><path d="M2 2l8 8 8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </div>
     </section>
 
