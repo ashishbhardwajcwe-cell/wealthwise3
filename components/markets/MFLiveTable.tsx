@@ -93,17 +93,19 @@ export function MFLiveTable({
   }
 
   function exportCsv() {
-    const headers = ["Fund", "AMC", "Category", "NAV (INR)", "6M %", "1Y CAGR %", "3Y CAGR %", "5Y CAGR %", "As of", "Scheme code"];
+    const headers = ["Fund", "AMC", "Category", "CRISIL Rating", "NAV (INR)", "6M %", "1Y CAGR %", "3Y CAGR %", "5Y CAGR %", "Expense %", "As of", "Scheme code"];
     downloadCsv(`auris-mutual-funds-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
       switch (h) {
         case "Fund":        return r.name;
         case "AMC":         return r.amc;
         case "Category":    return categoryName(r.category);
+        case "CRISIL Rating": return r.crisilRating ?? "";
         case "NAV (INR)":   return r.nav?.toFixed(4) ?? "";
         case "6M %":        return r.return6m?.toFixed(2) ?? "";
         case "1Y CAGR %":   return r.return1y?.toFixed(2) ?? "";
         case "3Y CAGR %":   return r.return3y?.toFixed(2) ?? "";
         case "5Y CAGR %":   return r.return5y?.toFixed(2) ?? "";
+        case "Expense %":   return r.expenseRatio?.toFixed(2) ?? "";
         case "As of":       return r.asOf ?? "";
         case "Scheme code": return r.schemeCode;
         default:            return "";
@@ -187,6 +189,9 @@ export function MFLiveTable({
                 <Th label="Fund"     k="name"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="AMC"      k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left"  tip="Asset Management Company — the firm that runs the fund (e.g. SBI, HDFC, ICICI Prudential)." />
                 <Th label="Category" k="category" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
+                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1 justify-center">Rating <InfoTip text="CRISIL rating (1–5), via Kuvera — based on risk-adjusted returns. Higher is better. Shown where available." /></span>
+                </th>
                 <Th label="NAV (₹)"  k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Net Asset Value — the per-unit price of the fund as published daily by AMFI." />
                 <Th label="6M"       k="return6m" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Simple percent change over the trailing 6 months (not annualised — the window is shorter than a year)." />
                 <Th label="1Y CAGR"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Compound Annual Growth Rate over the trailing 1 year. Annualised return as if it compounded smoothly." />
@@ -200,7 +205,7 @@ export function MFLiveTable({
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-12 text-center text-[var(--color-slate)]">No funds match the filter.</td></tr>
+                <tr><td colSpan={13} className="px-4 py-12 text-center text-[var(--color-slate)]">No funds match the filter.</td></tr>
               ) : filtered.map((r) => {
                 const sparklineUp =
                   r.sparkline30d.length >= 2 &&
@@ -218,6 +223,7 @@ export function MFLiveTable({
                         {categoryName(r.category)}
                       </span>
                     </td>
+                    <RatingCell value={r.crisilRating} />
                     <td className="px-4 py-3 text-right tabular-nums font-semibold text-[var(--color-navy)]">
                       {r.nav != null ? r.nav.toFixed(2) : <span className="text-[var(--color-slate)]/60">—</span>}
                     </td>
@@ -225,6 +231,7 @@ export function MFLiveTable({
                     <ReturnCell value={r.return1y} />
                     <ReturnCell value={r.return3y} />
                     <ReturnCell value={r.return5y} />
+                    <ExpenseCell value={r.expenseRatio} />
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
                         <Sparkline points={r.sparkline30d} positive={sparklineUp} />
@@ -240,8 +247,9 @@ export function MFLiveTable({
 
         <p className="text-[11px] text-[var(--color-slate)] mt-4 italic leading-relaxed">
           NAVs from AMFI India&apos;s daily feed (~10 PM IST). Returns computed as annualised CAGR using historical NAVs from MFAPI.
-          All schemes shown are Direct/Growth plans. Past performance is not indicative of future returns. This list is editorial,
-          not a recommendation. Read scheme-related documents carefully before investing.
+          CRISIL rating and expense ratio via Kuvera, shown where available. All schemes shown are Direct/Growth plans. Past
+          performance is not indicative of future returns. This list is editorial, not a recommendation. Read scheme-related
+          documents carefully before investing.
         </p>
       </div>
     </section>
@@ -338,4 +346,24 @@ function ReturnCell({ value }: { value: number | null }) {
       {positive ? "+" : ""}{value.toFixed(1)}%
     </td>
   );
+}
+
+function RatingCell({ value }: { value: number | null }) {
+  if (value == null) {
+    return <td className="px-4 py-3 text-center text-[var(--color-slate)]/40 tabular-nums">—</td>;
+  }
+  const n = Math.max(0, Math.min(5, Math.round(value)));
+  return (
+    <td className="px-4 py-3 text-center whitespace-nowrap" title={`CRISIL ${n}/5`}>
+      <span className="text-[var(--color-gold-dim)] tracking-tight">{"★".repeat(n)}</span>
+      <span className="text-[var(--color-silver)] tracking-tight">{"★".repeat(5 - n)}</span>
+    </td>
+  );
+}
+
+function ExpenseCell({ value }: { value: number | null }) {
+  if (value == null) {
+    return <td className="px-4 py-3 text-right text-[var(--color-slate)]/40 tabular-nums">—</td>;
+  }
+  return <td className="px-4 py-3 text-right tabular-nums text-[var(--color-navy)]">{value.toFixed(2)}%</td>;
 }
