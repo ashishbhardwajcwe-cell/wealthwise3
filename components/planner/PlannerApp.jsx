@@ -2463,7 +2463,7 @@ const GuidedPlanWizard = ({ onExit, onAuthClick }) => {
   );
 };
 
-export default function App({ initialPage } = {}) {
+export default function App({ initialPage, embedded } = {}) {
   // Deep-link shortcut. When the URL has ?app=1 / ?planner=1 or the path is
   // /app, /app/dashboard or /planner, the user came from the marketing site
   // explicitly intending to open the planner — skip the in-app landing page
@@ -2547,13 +2547,21 @@ export default function App({ initialPage } = {}) {
   return (
     <div style={{ minHeight:"100vh", background:T.cream }}>
       <GlobalCSS />
-      <Navbar user={user} isDemo={isDemo} onAuthClick={openAuth} onLogout={handleLogout} onLogoClick={()=>setPage(user||isDemo?"dashboard":"landing")} onGuided={()=>setPage("guided")} guidedActive={page==="guided"} />
+      {/* When embedded inside the marketing site (/app), the site supplies its
+          own Header + Footer. Suppress the planner's internal chrome so the
+          page reads as one continuous site instead of an app stacked on an
+          app. The Guided-Plan tab still works via the site's Planners menu,
+          and sign-in/out is handled by the site header's account button
+          (shared Supabase session). */}
+      {!embedded && (
+        <Navbar user={user} isDemo={isDemo} onAuthClick={openAuth} onLogout={handleLogout} onLogoClick={()=>setPage(user||isDemo?"dashboard":"landing")} onGuided={()=>setPage("guided")} guidedActive={page==="guided"} />
+      )}
       {isDemo && <DemoBanner onSignIn={openAuth} />}
       <AuthModal show={showAuth} onClose={()=>setShowAuth(false)} onSignIn={handleSignIn} onDemo={handleDemo} />
       {page === "landing" && <Landing onGetStarted={()=>{ if(user)setPage("dashboard"); else setShowAuth(true); }} onAuth={openAuth} />}
       {page === "dashboard" && <Dashboard user={user} isDemo={isDemo} onAuthClick={openAuth} onLogout={handleLogout} />}
       {page === "guided" && <GuidedPlanWizard onExit={()=>setPage(user||isDemo?"dashboard":"landing")} onAuthClick={openAuth} />}
-      <SiteFooter />
+      {!embedded && <SiteFooter />}
     </div>
   );
 }
