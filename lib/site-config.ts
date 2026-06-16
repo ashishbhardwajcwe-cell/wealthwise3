@@ -38,6 +38,7 @@ export const investmentProducts = [
 ] as const;
 
 export const audiences = [
+  { slug: "defence-officers", name: "Defence Officers", short: "From olive greens to financial independence." },
   { slug: "professionals", name: "Salaried Professionals", short: "Mid-career planning that actually compounds." },
   { slug: "software-professionals", name: "Software & IT Professionals", short: "ESOPs, RSUs and high-income tax planning." },
   { slug: "executives", name: "Corporate Executives", short: "CXOs and senior leaders with complex comp." },
