@@ -137,7 +137,7 @@ export default function HomePage() {
             {audiences.map((a) => (
               <ProductCard
                 key={a.slug}
-                icon={a.slug === "defence-officers" ? "Shield" : a.slug === "nri" ? "Plane" : a.slug === "hni" ? "Gem" : "Briefcase"}
+                icon={a.slug === "defence-officers" ? "Shield" : a.slug === "nri" ? "Plane" : a.slug === "hni" ? "Gem" : a.slug === "software-professionals" ? "Cpu" : a.slug === "executives" ? "Building2" : "Briefcase"}
                 name={a.name}
                 short={a.short}
                 href={`/for/${a.slug}`}

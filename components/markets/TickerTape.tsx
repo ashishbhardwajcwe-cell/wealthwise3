@@ -16,7 +16,6 @@ interface Props {
 const DEFAULT_SYMBOLS: TickerSymbol[] = [
   { proName: "BSE:SENSEX",      title: "Sensex" },
   { proName: "BSE:BSE500",      title: "BSE 500" },
-  { proName: "BSE:BANKEX",      title: "Bankex" },
   { proName: "BSE:RELIANCE",    title: "Reliance" },
   { proName: "BSE:TCS",         title: "TCS" },
   { proName: "BSE:HDFCBANK",    title: "HDFC Bank" },
