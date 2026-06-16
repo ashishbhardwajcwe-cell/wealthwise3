@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X, ExternalLink, ChevronDown } from "lucide-react";
+import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
 import { CurrencySwitcher } from "./CurrencySwitcher";
@@ -14,21 +15,22 @@ interface NavMenuItem {
   href: string;
   label: string;
   desc: string;
+  icon?: string;
   external?: boolean;
 }
 
 const plannersMenu: NavMenuItem[] = [
-  { href: "/plan", label: "All planners — overview", desc: "Compare snapshot, guided plan and the full app side-by-side" },
-  { href: "/ai-wealth-planner", label: "AI Snapshot", desc: "60-second personalised snapshot · No signup" },
-  { href: "/guided", label: "Guided Plan", desc: "10-minute YNAB-style Q&A · No signup" },
+  { href: "/plan", label: "All planners — overview", desc: "Compare snapshot, guided plan and the full app side-by-side", icon: "LayoutGrid" },
+  { href: "/ai-wealth-planner", label: "AI Snapshot", desc: "60-second personalised snapshot · No signup", icon: "Sparkles" },
+  { href: "/guided", label: "Guided Plan", desc: "10-minute YNAB-style Q&A · No signup", icon: "ListChecks" },
 ];
 
 const resourcesMenu: NavMenuItem[] = [
-  { href: "/blog", label: "Blog", desc: "Guides, analysis and playbooks" },
-  { href: "/resources/calculators", label: "Calculators", desc: "SIP, retirement, FIRE, EMI and more" },
-  { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained" },
-  { href: "/resources/downloads", label: "Free downloads", desc: "Checklists and PDF playbooks" },
-  { href: "/about", label: "About", desc: "Our story, mission and the team" },
+  { href: "/blog", label: "Blog", desc: "Guides, analysis and playbooks", icon: "BookOpen" },
+  { href: "/resources/calculators", label: "Calculators", desc: "SIP, retirement, FIRE, EMI and more", icon: "Calculator" },
+  { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained", icon: "BookA" },
+  { href: "/resources/downloads", label: "Free downloads", desc: "Checklists and PDF playbooks", icon: "Download" },
+  { href: "/about", label: "About", desc: "Our story, mission and the team", icon: "Info" },
 ];
 
 /** A nav head is "active" when the current path falls under any of its prefixes. */
@@ -65,7 +67,7 @@ export function Header() {
             open={products}
             setOpen={setProducts}
             active={isActive(pathname, "/investment-products")}
-            items={investmentProducts.map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short }))}
+            items={investmentProducts.map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon }))}
           />
           <DropdownNavItem
             label="Planners"
@@ -82,7 +84,7 @@ export function Header() {
             open={forMenu}
             setOpen={setForMenu}
             active={isActive(pathname, "/for")}
-            items={audiences.map((a) => ({ href: `/for/${a.slug}`, label: a.name, desc: a.short }))}
+            items={audiences.map((a) => ({ href: `/for/${a.slug}`, label: a.name, desc: a.short, icon: a.icon }))}
           />
           <DropdownNavItem
             label="Resources"
@@ -195,13 +197,23 @@ function DropdownNavItem({
         <div className={`absolute top-full left-0 pt-2 ${width}`}>
           <div className="glass-panel rounded-xl p-3 grid grid-cols-1 gap-1">
             {items.map((item) => {
+              const Icon = item.icon
+                ? (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[item.icon]
+                : null;
               const content = (
-                <div className="rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/70 transition-colors">
-                  <div className="text-sm font-semibold text-[var(--color-navy)] inline-flex items-center gap-1">
-                    {item.label}
-                    {item.external && <ExternalLink className="w-3 h-3 text-[var(--color-slate)]" />}
+                <div className="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/70 transition-colors">
+                  {Icon && (
+                    <span className="mt-0.5 w-8 h-8 rounded-lg bg-[var(--color-sand)]/70 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 text-[var(--color-gold-dim)]" />
+                    </span>
+                  )}
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--color-navy)] inline-flex items-center gap-1">
+                      {item.label}
+                      {item.external && <ExternalLink className="w-3 h-3 text-[var(--color-slate)]" />}
+                    </div>
+                    <div className="text-xs text-[var(--color-slate)] mt-0.5">{item.desc}</div>
                   </div>
-                  <div className="text-xs text-[var(--color-slate)] mt-0.5">{item.desc}</div>
                 </div>
               );
               return item.external ? (
