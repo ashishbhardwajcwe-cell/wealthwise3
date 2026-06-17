@@ -160,7 +160,10 @@ const retCorpus = (annExp, inf, portR, yToRet, yInRet) => {
 const GlobalCSS = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Reset is scoped to the planner subtree (.pmc-app) so it never strips
+       padding/margins off the shared site Header + Footer, which rely on
+       Tailwind's layered utilities (unlayered `*` would otherwise win). */
+    .pmc-app, .pmc-app *, .pmc-app *::before, .pmc-app *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body { font-family: ${BODY}; color: ${T.navy}; background: ${T.cream}; overflow-x: hidden; }
     input, select, textarea { font-family: ${BODY}; }
@@ -2625,7 +2628,7 @@ export default function App({ initialPage, embedded } = {}) {
   const openAuth = () => setShowAuth(true);
 
   return (
-    <div style={{ minHeight:"100vh", background:T.cream }}>
+    <div className="pmc-app" style={{ minHeight:"100vh", background:T.cream }}>
       <GlobalCSS />
       {/* When embedded inside the marketing site (/app), the site supplies its
           own Header + Footer. Suppress the planner's internal chrome so the
