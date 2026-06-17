@@ -560,7 +560,7 @@ const Landing = ({ onGetStarted, onAuth }) => (
             Built for discerning HNI clients & wealth planners. Input your income, assets and goals — get a comprehensive financial roadmap with retirement projections, estate-planning insights, and AI-powered advisory.
           </p>
           <div className="hero-actions fadeUp" style={{ animationDelay:"0.28s", display:"flex", gap:14, marginTop:32, flexWrap:"wrap" }}>
-            <button onClick={onGetStarted} className="btn-gold" style={{ padding:"15px 38px", borderRadius:14, fontSize:16, letterSpacing:"0.03em" }}>
+            <button onClick={onGetStarted} className="btn-gold" style={{ padding:"15px 38px", borderRadius:14, fontSize:16, letterSpacing:"0.03em", background:`linear-gradient(135deg, ${T.gold}, ${T.goldLight})`, color:T.navy, fontWeight:700, boxShadow:`0 8px 28px ${T.gold}45` }}>
               Start Your Plan →
             </button>
             <button onClick={onAuth} className="hero-ghost" style={{ padding:"15px 30px", borderRadius:14, fontSize:15, background:`${T.white}10`, color:T.white, border:`1.5px solid ${T.white}30`, cursor:"pointer", fontWeight:600 }}>
@@ -679,7 +679,7 @@ const Landing = ({ onGetStarted, onAuth }) => (
     <section style={{ padding:"60px 24px", background:`linear-gradient(135deg, ${T.navy}, ${T.ocean})`, textAlign:"center" }}>
       <h2 style={{ fontFamily:DISPLAY, fontSize:32, fontWeight:700, color:T.white }}>Ready to Plan Your Financial Future?</h2>
       <p style={{ color:`${T.white}70`, marginTop:8, fontSize:16 }}>It takes just 5 minutes to create your comprehensive financial plan</p>
-      <button onClick={onGetStarted} className="btn-gold" style={{ marginTop:28, padding:"16px 48px", borderRadius:14, fontSize:17 }}>Create My Plan — Free →</button>
+      <button onClick={onGetStarted} className="btn-gold" style={{ marginTop:28, padding:"16px 48px", borderRadius:14, fontSize:17, background:`linear-gradient(135deg, ${T.gold}, ${T.goldLight})`, color:T.navy, fontWeight:700, boxShadow:`0 8px 28px ${T.gold}45` }}>Create My Plan — Free →</button>
     </section>
 
   </div>
