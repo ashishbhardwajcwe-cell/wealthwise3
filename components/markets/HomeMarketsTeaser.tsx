@@ -14,8 +14,8 @@ interface TileSpec {
 
 const TILES: TileSpec[] = [
   {
-    label: "Nifty 50",
-    symbol: "NSE:NIFTY",
+    label: "Sensex",
+    symbol: "BSE:SENSEX",
     caption: "Indian equities",
     href: "/markets#stocks",
     Icon: LineChart,
