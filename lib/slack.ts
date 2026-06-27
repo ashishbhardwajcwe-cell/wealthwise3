@@ -12,8 +12,25 @@
 
 const WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 
+// Slack treats hooks.slack.com responses as best-effort; cap the wait so a slow
+// or unreachable endpoint can never stall the request that triggered it.
+const TIMEOUT_MS = 2500;
+
 export function isSlackConfigured(): boolean {
   return !!WEBHOOK_URL;
+}
+
+/**
+ * Escape Slack mrkdwn control characters so untrusted user input can't trigger
+ * mentions (e.g. <!channel>) or break message formatting. Length-capped to keep
+ * a single field from dominating the message. See api.slack.com/reference/surfaces/formatting#escaping
+ */
+export function escapeSlack(text: string): string {
+  return text
+    .slice(0, 256)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /**
@@ -31,6 +48,7 @@ export async function notifySlack(text: string): Promise<void> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) {
       console.error("slack notify failed", res.status, await res.text());

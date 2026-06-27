@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { redis, snapshotRateLimit, inputHash, isRedisConfigured } from "@/lib/redis";
-import { notifySlack } from "@/lib/slack";
+import { redis, snapshotRateLimit, inputHash, isRedisConfigured, getClientIp } from "@/lib/redis";
+import { notifySlack, escapeSlack } from "@/lib/slack";
 
 export const runtime = "nodejs";
 
@@ -57,15 +57,6 @@ function validate(input: Partial<SnapshotInput>): input is SnapshotInput {
     typeof input.primaryGoal === "string" &&
     ["conservative", "balanced", "aggressive"].includes(input.riskTolerance ?? "")
   );
-}
-
-/** Best-effort client IP extraction from common proxy headers. */
-function getClientIp(req: NextRequest): string {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
-  const real = req.headers.get("x-real-ip");
-  if (real) return real;
-  return "unknown";
 }
 
 const CACHE_TTL_SECONDS = 60 * 60 * 24; // 24h
@@ -146,21 +137,32 @@ Provide a calm, honest assessment. Use educational language only. Output JSON on
 
     const parsed = JSON.parse(jsonText);
 
-    // Cache for 24h
+    // Cache, audit metrics, and team notification are all independent of the
+    // response and of each other — run them concurrently so none blocks the
+    // reply, and a failure in one (e.g. a cache write) doesn't fail the request.
+    // Only runs on a fresh generation; cache hits returned earlier.
+    const sideEffects: Promise<unknown>[] = [
+      // Anonymised (no PII), consistent with the audit log below.
+      notifySlack(`:bar_chart: New AI wealth snapshot — ${escapeSlack(data.country)}, age ${data.age}, ${data.riskTolerance}`),
+    ];
     if (cacheKey && redis) {
-      await redis.set(cacheKey, JSON.stringify(parsed), { ex: CACHE_TTL_SECONDS });
+      sideEffects.push(redis.set(cacheKey, JSON.stringify(parsed), { ex: CACHE_TTL_SECONDS }));
     }
-
-    // Anonymised audit log (no PII — just shape of input + country/age bucket)
     if (redis) {
-      const day = new Date().toISOString().slice(0, 10);
-      await redis.hincrby(`auris:snapshot:metrics:${day}`, `${data.country}|${data.riskTolerance}`, 1);
-      await redis.expire(`auris:snapshot:metrics:${day}`, 60 * 60 * 24 * 90);
+      const r = redis;
+      // Anonymised audit log (just shape of input + country/age bucket).
+      // hincrby must precede expire, so chain those two; run the chain in parallel.
+      const metricsKey = `auris:snapshot:metrics:${new Date().toISOString().slice(0, 10)}`;
+      sideEffects.push(
+        r.hincrby(metricsKey, `${data.country}|${data.riskTolerance}`, 1)
+          .then(() => r.expire(metricsKey, 60 * 60 * 24 * 90)),
+      );
     }
 
-    // Team notification — anonymised (no PII), consistent with the audit log above.
-    // Only fires on a fresh generation, since cache hits return earlier.
-    await notifySlack(`:bar_chart: New AI wealth snapshot — ${data.country}, age ${data.age}, ${data.riskTolerance}`);
+    const results = await Promise.allSettled(sideEffects);
+    for (const settled of results) {
+      if (settled.status === "rejected") console.error("snapshot side-effect failed", settled.reason);
+    }
 
     return NextResponse.json(parsed, { headers: { "X-Cache": "MISS" } });
   } catch (error) {
