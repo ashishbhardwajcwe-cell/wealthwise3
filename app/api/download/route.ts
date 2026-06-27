@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resend, FROM_ADDRESS, REPLY_TO, NOTIFY_ADDRESS, isResendConfigured } from "@/lib/resend";
+import { notifySlack } from "@/lib/slack";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
     }
 
     const item = DOWNLOAD_CATALOG[slug];
+
+    // Team notification (independent of Resend; no-op if SLACK_WEBHOOK_URL unset)
+    await notifySlack(`:arrow_down: Guide download: *${item.title}*  _(${email})_`);
 
     if (!isResendConfigured() || !resend) {
       return NextResponse.json({ ok: true, queued: false });

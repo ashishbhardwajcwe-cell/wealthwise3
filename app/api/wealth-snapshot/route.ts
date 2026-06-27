@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { redis, snapshotRateLimit, inputHash, isRedisConfigured } from "@/lib/redis";
+import { notifySlack } from "@/lib/slack";
 
 export const runtime = "nodejs";
 
@@ -156,6 +157,10 @@ Provide a calm, honest assessment. Use educational language only. Output JSON on
       await redis.hincrby(`auris:snapshot:metrics:${day}`, `${data.country}|${data.riskTolerance}`, 1);
       await redis.expire(`auris:snapshot:metrics:${day}`, 60 * 60 * 24 * 90);
     }
+
+    // Team notification — anonymised (no PII), consistent with the audit log above.
+    // Only fires on a fresh generation, since cache hits return earlier.
+    await notifySlack(`:bar_chart: New AI wealth snapshot — ${data.country}, age ${data.age}, ${data.riskTolerance}`);
 
     return NextResponse.json(parsed, { headers: { "X-Cache": "MISS" } });
   } catch (error) {
