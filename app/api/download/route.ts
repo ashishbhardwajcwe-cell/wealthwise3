@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resend, FROM_ADDRESS, REPLY_TO, NOTIFY_ADDRESS, isResendConfigured } from "@/lib/resend";
-import { notifySlack } from "@/lib/slack";
+import { notifySlack, escapeSlack } from "@/lib/slack";
+import { formRateLimit, getClientIp } from "@/lib/redis";
 
 export const runtime = "nodejs";
 
@@ -42,31 +43,49 @@ export async function POST(req: NextRequest) {
 
     const item = DOWNLOAD_CATALOG[slug];
 
-    // Team notification (independent of Resend; no-op if SLACK_WEBHOOK_URL unset)
-    await notifySlack(`:arrow_down: Guide download: *${item.title}*  _(${email})_`);
-
-    if (!isResendConfigured() || !resend) {
-      return NextResponse.json({ ok: true, queued: false });
+    // Rate limit per IP (10 / hour). Skipped silently if Upstash isn't configured.
+    if (formRateLimit) {
+      const { success } = await formRateLimit.limit(getClientIp(req));
+      if (!success) {
+        return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+      }
     }
 
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: email,
-      replyTo: REPLY_TO,
-      subject: `Your download: ${item.title}`,
-      html: downloadHtml(item),
-      text: downloadText(item),
-    });
+    // Run notifications concurrently so a slow Slack or email never blocks the
+    // others — or the response. Slack is a no-op without SLACK_WEBHOOK_URL;
+    // emails are skipped when Resend is unconfigured.
+    const queued = isResendConfigured() && !!resend;
+    const tasks: Promise<unknown>[] = [
+      notifySlack(`:arrow_down: Guide download: *${escapeSlack(item.title)}*  _(${escapeSlack(email)})_`),
+    ];
+    if (queued && resend) {
+      tasks.push(
+        // Guide email to the requester
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: email,
+          replyTo: REPLY_TO,
+          subject: `Your download: ${item.title}`,
+          html: downloadHtml(item),
+          text: downloadText(item),
+        }),
+        // Internal notification
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: NOTIFY_ADDRESS,
+          replyTo: email,
+          subject: `Download requested: ${slug}`,
+          text: `Email: ${email}\nDownload: ${slug} (${item.title})\n`,
+        }),
+      );
+    }
 
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: NOTIFY_ADDRESS,
-      replyTo: email,
-      subject: `Download requested: ${slug}`,
-      text: `Email: ${email}\nDownload: ${slug} (${item.title})\n`,
-    });
+    const results = await Promise.allSettled(tasks);
+    for (const r of results) {
+      if (r.status === "rejected") console.error("download task failed", r.reason);
+    }
 
-    return NextResponse.json({ ok: true, queued: true });
+    return NextResponse.json({ ok: true, queued });
   } catch (err) {
     console.error("download error", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });

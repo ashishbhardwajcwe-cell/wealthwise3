@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resend, FROM_ADDRESS, REPLY_TO, NOTIFY_ADDRESS, isResendConfigured } from "@/lib/resend";
-import { notifySlack } from "@/lib/slack";
+import { notifySlack, escapeSlack } from "@/lib/slack";
+import { formRateLimit, getClientIp } from "@/lib/redis";
 
 export const runtime = "nodejs";
 
@@ -14,34 +15,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    // Team notification (independent of Resend; no-op if SLACK_WEBHOOK_URL unset)
-    await notifySlack(`:tada: New newsletter subscriber: *${email}*  _(source: ${source ?? "unknown"})_`);
-
-    if (!isResendConfigured() || !resend) {
-      // Soft success in environments without Resend configured (dev / preview)
-      return NextResponse.json({ ok: true, queued: false });
+    // Rate limit per IP (10 / hour). Skipped silently if Upstash isn't configured.
+    if (formRateLimit) {
+      const { success } = await formRateLimit.limit(getClientIp(req));
+      if (!success) {
+        return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+      }
     }
 
-    // 1. Welcome email to the subscriber
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: email,
-      replyTo: REPLY_TO,
-      subject: "Welcome to the PlanMyCashflows weekly note",
-      html: WELCOME_HTML,
-      text: WELCOME_TEXT,
-    });
+    // Run notifications concurrently so a slow Slack or email never blocks the
+    // others — or the response. Slack is a no-op without SLACK_WEBHOOK_URL;
+    // emails are skipped when Resend is unconfigured.
+    const queued = isResendConfigured() && !!resend;
+    const tasks: Promise<unknown>[] = [
+      notifySlack(`:tada: New newsletter subscriber: *${escapeSlack(email)}*  _(source: ${escapeSlack(source ?? "unknown")})_`),
+    ];
+    if (queued && resend) {
+      tasks.push(
+        // Welcome email to the subscriber
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: email,
+          replyTo: REPLY_TO,
+          subject: "Welcome to the PlanMyCashflows weekly note",
+          html: WELCOME_HTML,
+          text: WELCOME_TEXT,
+        }),
+        // Internal notification
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: NOTIFY_ADDRESS,
+          replyTo: email,
+          subject: `New newsletter subscriber: ${email}`,
+          text: `Email: ${email}\nSource: ${source ?? "unknown"}\n`,
+        }),
+      );
+    }
 
-    // 2. Internal notification
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: NOTIFY_ADDRESS,
-      replyTo: email,
-      subject: `New newsletter subscriber: ${email}`,
-      text: `Email: ${email}\nSource: ${source ?? "unknown"}\n`,
-    });
+    const results = await Promise.allSettled(tasks);
+    for (const r of results) {
+      if (r.status === "rejected") console.error("newsletter task failed", r.reason);
+    }
 
-    return NextResponse.json({ ok: true, queued: true });
+    return NextResponse.json({ ok: true, queued });
   } catch (err) {
     console.error("newsletter error", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
