@@ -1798,8 +1798,8 @@ const ReportView = ({ data, getAge, onBack, aiAnalysis, aiLoading, onRequestAI, 
 const SOCIALS = [
   {
     name: "Website",
-    label: "auris8.com",
-    href: "https://auris8.com",
+    label: "planmycashflows.com",
+    href: "https://planmycashflows.com",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 17.93V18a1 1 0 00-2 0v1.93A8.001 8.001 0 014.07 13H6a1 1 0 000-2H4.07A8.001 8.001 0 0111 4.07V6a1 1 0 002 0V4.07A8.001 8.001 0 0119.93 11H18a1 1 0 000 2h1.93A8.001 8.001 0 0113 19.93z"/>
@@ -1809,8 +1809,8 @@ const SOCIALS = [
   },
   {
     name: "YouTube",
-    label: "YouTube @AurisWealth",
-    href: "https://www.youtube.com/@AurisWealth",
+    label: "YouTube @planmycashflows",
+    href: "https://www.youtube.com/@planmycashflows",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31 31 0 000 12a31 31 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31 31 0 0024 12a31 31 0 00-.5-5.8zM9.75 15.5v-7l6.5 3.5-6.5 3.5z"/>
