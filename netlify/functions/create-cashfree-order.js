@@ -45,7 +45,7 @@ exports.handler = async (event) => {
         customer_details: {
           customer_id: customer_id || "guest_" + Date.now(),
           customer_name: customer_name || "PLANMYCASHFLOWS Customer",
-          customer_email: customer_email || "customer@auris8.com",
+          customer_email: customer_email || "customer@planmycashflows.com",
           customer_phone: customer_phone || "9999999999",
         },
         order_meta: {
