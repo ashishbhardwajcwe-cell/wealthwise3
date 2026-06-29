@@ -1,6 +1,6 @@
-# Auris Cashflow — Marketing Site (wealthwise3)
+# PlanMyCashflows — Marketing Site (wealthwise3)
 
-The marketing site for [Auris Cashflow](https://auriscashflow.com) — built with Next.js 15, TypeScript, and Tailwind CSS v4.
+The marketing site for [PlanMyCashflows](https://planmycashflows.com) — built with Next.js 15, TypeScript, and Tailwind CSS v4.
 
 ## Stack
 
@@ -28,7 +28,7 @@ The marketing site for [Auris Cashflow](https://auriscashflow.com) — built wit
   /gold                            Physical, ETF, SGB
 /ai-wealth-planner                 Free AI planner (Claude-powered)
 /guided                            Guided Plan (interactive Q&A wizard)
-/wealthwise                        WealthWise app product page
+/wealthwise                        CashFlow Planner app product page
 /for/                              Audience landing pages
   /defence-officers
   /nri
@@ -81,6 +81,21 @@ The Guided Plan (ported from wealthwise2) lives at `/guided` and is composed of:
 - `components/AIPlannerForm.tsx` — 4-step wizard with Recharts results
 - Strips PII before sending to model
 - System prompt enforces SEBI-compliant educational framing only
+
+### In-app "AI Pro Analysis" (Supabase Edge Function)
+The full CashFlow Planner app (`components/planner/PlannerApp.jsx`, mounted at
+`/app`) has its own AI endpoint, separate from the marketing snapshot above. It
+calls a Supabase Edge Function — `ai-analysis` — on the shared Supabase project
+(`hbddsvwghboftjsgtate`). The function source lives in `supabase/functions/ai-analysis/`
+(migrated here from the retired wealthwise2 repo so this repo holds the only
+version-controlled copy).
+
+- Deploy: `supabase functions deploy ai-analysis`
+- Requires the `ANTHROPIC_API_KEY` secret to be set on the Supabase project
+- `verify_jwt = true` — the caller must be an authenticated Supabase user
+- This is the only Supabase Edge Function in this repo; other server work
+  (Cashfree order creation, newsletter, downloads) runs as Netlify/Next.js
+  routes.
 
 ### Investment product pages
 Each of the 9 product pages uses a shared template (`components/InvestmentProductPage.tsx`) with product-specific data in `lib/product-data.ts`. Consistent structure helps SEO and reading flow.

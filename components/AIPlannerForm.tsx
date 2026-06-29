@@ -422,11 +422,11 @@ function SnapshotResults({ result, currency, onReset }: { result: SnapshotResult
       <div className="mt-8 p-6 bg-[var(--color-parchment)] rounded-xl border border-[var(--color-gold)]/30">
         <h3 className="text-lg font-semibold mb-2">This is the surface.</h3>
         <p className="text-sm text-[var(--color-slate)] leading-relaxed mb-4">
-          The full WealthWise plan covers 16 sections including SWOT, tax harvesting, insurance gap, retirement scenarios, and detailed goal planning.
+          The full CashFlow Planner plan covers 16 sections including SWOT, tax harvesting, insurance gap, retirement scenarios, and detailed goal planning.
           Try it free for 14 days — no card required.
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
-          <a href="https://app.auriscashflow.com/?signup" className="btn-primary">Start free trial</a>
+          <a href="https://app.planmycashflows.com/?signup" className="btn-primary">Start free trial</a>
           <button onClick={onReset} className="btn-outline">Run another snapshot</button>
         </div>
       </div>

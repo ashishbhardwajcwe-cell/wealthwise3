@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resend, FROM_ADDRESS, REPLY_TO, NOTIFY_ADDRESS, isResendConfigured } from "@/lib/resend";
+import { notifySlack, escapeSlack } from "@/lib/slack";
+import { formRateLimit, getClientIp } from "@/lib/redis";
 
 export const runtime = "nodejs";
 
@@ -8,22 +10,22 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DOWNLOAD_CATALOG: Record<string, { title: string; url: string; pages: number }> = {
   "financial-health-check": {
     title: "The 15-minute financial health check for professionals",
-    url: "https://auriscashflow.com/resources/guides/financial-health-check",
+    url: "https://planmycashflows.com/resources/guides/financial-health-check",
     pages: 8,
   },
   "defence-transition-planner": {
     title: "The defence officer's transition financial planner",
-    url: "https://auriscashflow.com/resources/guides/defence-transition-planner",
+    url: "https://planmycashflows.com/resources/guides/defence-transition-planner",
     pages: 24,
   },
   "nri-india-cheatsheet": {
     title: "NRI investing in India: 2026 cheat sheet",
-    url: "https://auriscashflow.com/resources/guides/nri-india-cheatsheet",
+    url: "https://planmycashflows.com/resources/guides/nri-india-cheatsheet",
     pages: 16,
   },
   "pms-empanelment-guide": {
     title: "PMS empanelment: how to evaluate a manager",
-    url: "https://auriscashflow.com/resources/guides/pms-empanelment-guide",
+    url: "https://planmycashflows.com/resources/guides/pms-empanelment-guide",
     pages: 12,
   },
 };
@@ -41,28 +43,49 @@ export async function POST(req: NextRequest) {
 
     const item = DOWNLOAD_CATALOG[slug];
 
-    if (!isResendConfigured() || !resend) {
-      return NextResponse.json({ ok: true, queued: false });
+    // Rate limit per IP (10 / hour). Skipped silently if Upstash isn't configured.
+    if (formRateLimit) {
+      const { success } = await formRateLimit.limit(getClientIp(req));
+      if (!success) {
+        return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+      }
     }
 
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: email,
-      replyTo: REPLY_TO,
-      subject: `Your download: ${item.title}`,
-      html: downloadHtml(item),
-      text: downloadText(item),
-    });
+    // Run notifications concurrently so a slow Slack or email never blocks the
+    // others — or the response. Slack is a no-op without SLACK_WEBHOOK_URL;
+    // emails are skipped when Resend is unconfigured.
+    const queued = isResendConfigured() && !!resend;
+    const tasks: Promise<unknown>[] = [
+      notifySlack(`:arrow_down: Guide download: *${escapeSlack(item.title)}*  _(${escapeSlack(email)})_`),
+    ];
+    if (queued && resend) {
+      tasks.push(
+        // Guide email to the requester
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: email,
+          replyTo: REPLY_TO,
+          subject: `Your download: ${item.title}`,
+          html: downloadHtml(item),
+          text: downloadText(item),
+        }),
+        // Internal notification
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: NOTIFY_ADDRESS,
+          replyTo: email,
+          subject: `Download requested: ${slug}`,
+          text: `Email: ${email}\nDownload: ${slug} (${item.title})\n`,
+        }),
+      );
+    }
 
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: NOTIFY_ADDRESS,
-      replyTo: email,
-      subject: `Download requested: ${slug}`,
-      text: `Email: ${email}\nDownload: ${slug} (${item.title})\n`,
-    });
+    const results = await Promise.allSettled(tasks);
+    for (const r of results) {
+      if (r.status === "rejected") console.error("download task failed", r.reason);
+    }
 
-    return NextResponse.json({ ok: true, queued: true });
+    return NextResponse.json({ ok: true, queued });
   } catch (err) {
     console.error("download error", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
@@ -86,7 +109,7 @@ function downloadHtml(item: { title: string; url: string; pages: number }) {
         On the guide page, you'll also find a "Save as PDF" button if you'd like to keep an offline copy.
       </p>
       <p>I'll also send you our weekly note every Friday. Reply "unsubscribe" anytime to stop.</p>
-      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, Auris Cashflow</span></p>
+      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, PlanMyCashflows</span></p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
       <p style="font-size: 12px; color: #5A6B80;">
         Auris Pvt Ltd (CIN: U70200HR2026PTC141922). Educational content only. Not investment advice.
@@ -109,7 +132,7 @@ Read your guide: ${item.url}
 I'll also send you our weekly note every Friday. Reply "unsubscribe" anytime.
 
 — Col Ashish Bhardwaj
-Founder, Auris Cashflow
+Founder, PlanMyCashflows
 
 ---
 Auris Pvt Ltd (CIN: U70200HR2026PTC141922).

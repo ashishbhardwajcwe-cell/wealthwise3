@@ -26,7 +26,7 @@ const DOWNLOADS = [
   {
     slug: "pms-empanelment-guide",
     title: "PMS empanelment: how to evaluate a manager",
-    desc: "The 7-point framework Auris uses to evaluate any PMS before recommending. Includes the questions to ask in your discovery call.",
+    desc: "The 7-point framework PlanMyCashflows uses to evaluate any PMS before recommending. Includes the questions to ask in your discovery call.",
     pages: 12,
   },
 ];

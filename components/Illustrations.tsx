@@ -47,7 +47,7 @@ export function FounderPortrait({ variant }: { variant: "uniform" | "civilian" }
 
       {/* Caption */}
       <text x="120" y="305" textAnchor="middle" fill="#C9A84C" fontSize="11" fontFamily="serif" letterSpacing="2" opacity="0.7">
-        {variant === "uniform" ? "20 YEARS · INDIAN ARMY" : "FOUNDER · AURIS WEALTH"}
+        {variant === "uniform" ? "20 YEARS · INDIAN ARMY" : "FOUNDER · PLANMYCASHFLOWS WEALTH"}
       </text>
     </svg>
   );
@@ -55,7 +55,7 @@ export function FounderPortrait({ variant }: { variant: "uniform" | "civilian" }
 
 export function AppScreenshot({ title, kind }: { title: string; kind: "dashboard" | "goals" | "harvest" | "scenarios" | "insurance" | "drift" }) {
   return (
-    <svg viewBox="0 0 320 200" className="w-full h-full" role="img" aria-label={`WealthWise — ${title}`}>
+    <svg viewBox="0 0 320 200" className="w-full h-full" role="img" aria-label={`CashFlow Planner — ${title}`}>
       <defs>
         <linearGradient id={`screen-${kind}`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#FFFDF5" />
@@ -234,11 +234,11 @@ export function UnifiedPlanDiagram() {
         ))}
       </g>
 
-      {/* CENTER — WealthWise */}
+      {/* CENTER — CashFlow Planner */}
       <g>
         <rect x="310" y="80" width="180" height="160" rx="14" fill="#0A1628" />
         <rect x="310" y="80" width="180" height="6" rx="3" fill="url(#unifyGrad)" />
-        <text x="400" y="120" textAnchor="middle" fill="#FFFDF5" fontSize="14" fontWeight="600" fontFamily="serif">WealthWise</text>
+        <text x="400" y="120" textAnchor="middle" fill="#FFFDF5" fontSize="14" fontWeight="600" fontFamily="serif">CashFlow Planner</text>
         <text x="400" y="140" textAnchor="middle" fill="#C9A84C" fontSize="9" letterSpacing="1.5">UNIFYING LAYER</text>
         {/* tiny dots representing aggregation */}
         {[0, 1, 2, 3].map((i) => (
@@ -247,7 +247,7 @@ export function UnifiedPlanDiagram() {
         <text x="400" y="210" textAnchor="middle" fill="#C4CDD5" fontSize="8">aggregate · analyse · plan</text>
       </g>
 
-      {/* Connection arrows from chaos to WealthWise */}
+      {/* Connection arrows from chaos to CashFlow Planner */}
       {[80, 130, 170, 200].map((y, i) => (
         <path key={i} d={`M 220 ${y} Q 270 ${y - 5} 310 ${100 + i * 35}`} stroke="#C9A84C" strokeWidth="1" fill="none" opacity="0.4" />
       ))}
@@ -271,7 +271,7 @@ export function UnifiedPlanDiagram() {
         ))}
       </g>
 
-      {/* Arrow from WealthWise to plan */}
+      {/* Arrow from CashFlow Planner to plan */}
       <path d="M 490 160 L 555 160" stroke="#C9A84C" strokeWidth="2" fill="none" />
       <path d="M 547 155 L 558 160 L 547 165 Z" fill="#C9A84C" />
     </svg>

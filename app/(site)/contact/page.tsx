@@ -64,7 +64,7 @@ export default function ContactPage() {
                 <Field label="Phone (optional)" name="phone" type="tel" />
                 <SelectField label="What can we help with?" name="topic" options={[
                   "Free AI Wealth Planner question",
-                  "WealthWise app trial / pricing",
+                  "CashFlow Planner app trial / pricing",
                   "1:1 financial planning",
                   "PMS / AIF advisory",
                   "NRI planning",

@@ -7,6 +7,7 @@ import { ConsentBanner } from "@/components/ConsentBanner";
 import { Analytics } from "@/components/Analytics";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { WhatsAppFloat } from "@/components/WhatsAppFloat";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { siteConfig } from "@/lib/site-config";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     <AuthProvider>
     <CurrencyProvider>
       <Header />
+      <ScrollReveal />
       <main>{children}</main>
       <DisclaimerBanner />
       <Footer />

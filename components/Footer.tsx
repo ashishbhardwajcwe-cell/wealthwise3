@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { siteConfig, investmentProducts, audiences, calculators } from "@/lib/site-config";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { SocialLinks } from "@/components/SocialLinks";
 
 export function Footer() {
   return (
@@ -12,13 +13,13 @@ export function Footer() {
             <div className="flex items-center gap-3 mb-3">
               <Image
                 src="/auris-logo.png"
-                alt="Auris Cashflow"
+                alt="PlanMyCashflows"
                 width={44}
                 height={44}
                 className="rounded-md"
               />
               <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                Auris<span className="text-[var(--color-gold)]">Cashflow</span>
+                PlanMy<span className="text-[var(--color-gold)]">Cashflows</span>
               </div>
             </div>
             <p className="text-sm text-[var(--color-silver)] max-w-xs mb-6">
@@ -74,7 +75,7 @@ export function Footer() {
               <li><Link href="/about" className="text-[var(--color-silver)] hover:text-white">About</Link></li>
               <li><Link href="/contact" className="text-[var(--color-silver)] hover:text-white">Contact</Link></li>
               <li><Link href="/pricing" className="text-[var(--color-silver)] hover:text-white">Pricing</Link></li>
-              <li><Link href="/wealthwise" className="text-[var(--color-silver)] hover:text-white">WealthWise App</Link></li>
+              <li><Link href="/wealthwise" className="text-[var(--color-silver)] hover:text-white">CashFlow Planner App</Link></li>
             </ul>
           </div>
 
@@ -104,18 +105,10 @@ export function Footer() {
 
           <div>
             <h4 className="text-sm font-semibold text-[var(--color-gold-light)] mb-4">Connect</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href={siteConfig.social.linkedin} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">LinkedIn</a></li>
-              <li><a href={siteConfig.social.youtube} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">YouTube</a></li>
-              <li><a href={siteConfig.social.twitter} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">Twitter</a></li>
-              <li><a href={siteConfig.social.instagram} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white">Instagram</a></li>
-              <li>
-                <a href={siteConfig.whatsappUrl} target="_blank" rel="noreferrer" className="text-[var(--color-silver)] hover:text-white inline-flex items-center gap-1.5">
-                  <span aria-hidden>💬</span> WhatsApp
-                </a>
-              </li>
-              <li><a href={`mailto:${siteConfig.email}`} className="text-[var(--color-silver)] hover:text-white">{siteConfig.email}</a></li>
-            </ul>
+            <div className="mb-4">
+              <SocialLinks size={40} />
+            </div>
+            <a href={`mailto:${siteConfig.email}`} className="text-sm text-[var(--color-silver)] hover:text-white">{siteConfig.email}</a>
           </div>
         </div>
 

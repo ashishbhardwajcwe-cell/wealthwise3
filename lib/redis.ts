@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
+import type { NextRequest } from "next/server";
 
 const url = process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -16,8 +17,26 @@ export const snapshotRateLimit = redis
     })
   : null;
 
+// Shared limiter for unauthenticated lead forms (newsletter, guide download).
+// 10 submissions per IP per hour — generous for real users, caps email/Slack abuse.
+export const formRateLimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, "1 h"),
+      analytics: true,
+      prefix: "auris:form",
+    })
+  : null;
+
 export function isRedisConfigured(): boolean {
   return !!(url && token);
+}
+
+/** Best-effort client IP extraction from common proxy headers. */
+export function getClientIp(req: NextRequest): string {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
 }
 
 /** Stable hash of an input object, used as a cache key. */

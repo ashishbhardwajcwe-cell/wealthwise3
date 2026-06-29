@@ -3,7 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Menu, X, ExternalLink } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, X, ExternalLink, ChevronDown } from "lucide-react";
+import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
 import { CurrencySwitcher } from "./CurrencySwitcher";
@@ -13,111 +15,113 @@ interface NavMenuItem {
   href: string;
   label: string;
   desc: string;
+  icon?: string;
+  /** Accent colour (hex) for the lucide-icon fallback tile. */
+  tone?: string;
+  /** Preferred display glyph — a colour emoji shown in place of the icon. */
+  emoji?: string;
   external?: boolean;
 }
 
 const plannersMenu: NavMenuItem[] = [
-  {
-    href: "/plan",
-    label: "All planners — overview",
-    desc: "Compare snapshot, guided plan and the full app side-by-side",
-  },
-  {
-    href: "/ai-wealth-planner",
-    label: "AI Snapshot",
-    desc: "60-second personalised snapshot · No signup",
-  },
-  {
-    href: "/guided",
-    label: "Guided Plan",
-    desc: "10-minute YNAB-style Q&A · No signup",
-  },
+  { href: "/plan", label: "All planners — overview", desc: "Compare snapshot, guided plan and the full app side-by-side", icon: "LayoutGrid", tone: "#334155", emoji: "🗂️" },
+  { href: "/ai-wealth-planner", label: "AI Snapshot", desc: "60-second personalised snapshot · No signup", icon: "Sparkles", tone: "#D97706", emoji: "✨" },
+  { href: "/guided", label: "Guided Plan", desc: "10-minute YNAB-style Q&A · No signup", icon: "ListChecks", tone: "#0F766E", emoji: "✅" },
 ];
+
+const resourcesMenu: NavMenuItem[] = [
+  { href: "/blog", label: "Blog", desc: "Guides, analysis and playbooks", icon: "BookOpen", tone: "#2563EB", emoji: "📰" },
+  { href: "/resources/calculators", label: "Calculators", desc: "SIP, retirement, FIRE, EMI and more", icon: "Calculator", tone: "#7C3AED", emoji: "🧮" },
+  { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained", icon: "BookA", tone: "#0F766E", emoji: "📖" },
+  { href: "/resources/downloads", label: "Free downloads", desc: "Checklists and PDF playbooks", icon: "Download", tone: "#16A34A", emoji: "📥" },
+  { href: "/about", label: "About", desc: "Our story, mission and the team", icon: "Info", tone: "#475569", emoji: "ℹ️" },
+];
+
+/** A nav head is "active" when the current path falls under any of its prefixes. */
+function isActive(pathname: string, match: string | string[]): boolean {
+  const prefixes = Array.isArray(match) ? match : [match];
+  return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState(false);
   const [planners, setPlanners] = useState(false);
   const [forMenu, setForMenu] = useState(false);
+  const [resources, setResources] = useState(false);
+  const pathname = usePathname() || "/";
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--color-offwhite)]/85 border-b border-[var(--color-silver)]/40">
-      <div className="container-wide flex items-center justify-between h-16">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="Auris Cashflow — Home">
-          <Image
-            src="/auris-logo.png"
-            alt="Auris Cashflow"
-            width={36}
-            height={36}
-            priority
-            className="rounded-md"
-          />
-          <span className="text-lg font-semibold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-            Auris<span className="text-[var(--color-gold-dim)]">Cashflow</span>
+    <header className="sticky top-0 z-50 glass-nav">
+      <div className="container-wide flex items-center justify-between gap-4 h-16">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 shrink-0 mr-1 transition-transform hover:scale-[1.02]"
+          aria-label="PlanMyCashflows — Home"
+        >
+          <Image src="/auris-logo.png" alt="PlanMyCashflows" width={34} height={34} priority className="rounded-md" />
+          <span className="text-base font-semibold tracking-tight whitespace-nowrap" style={{ fontFamily: "var(--font-display)" }}>
+            PlanMy<span className="text-[var(--color-gold-dim)]">Cashflows</span>
           </span>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-1.5">
           <DropdownNavItem
-            label="Investment Products"
+            label="Products"
             open={products}
             setOpen={setProducts}
-            items={investmentProducts.map((p) => ({
-              href: `/investment-products/${p.slug}`,
-              label: p.name,
-              desc: p.short,
-            }))}
+            active={isActive(pathname, "/investment-products")}
+            items={investmentProducts.map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone, emoji: p.emoji }))}
           />
           <DropdownNavItem
-            label="Wealth Planners"
+            label="Planners"
             open={planners}
             setOpen={setPlanners}
+            active={isActive(pathname, ["/plan", "/ai-wealth-planner", "/guided"])}
             items={plannersMenu}
             width="w-[26rem]"
           />
-          <NavLink href="/markets">Markets</NavLink>
-          <NavLink href="/equity/analysis">Research</NavLink>
+          <NavLink href="/markets" active={isActive(pathname, "/markets")}>Markets</NavLink>
+          <NavLink href="/equity/analysis" active={isActive(pathname, "/equity")}>Research</NavLink>
           <DropdownNavItem
             label="For"
             open={forMenu}
             setOpen={setForMenu}
-            items={audiences.map((a) => ({
-              href: `/for/${a.slug}`,
-              label: a.name,
-              desc: a.short,
-            }))}
+            active={isActive(pathname, "/for")}
+            items={audiences.map((a) => ({ href: `/for/${a.slug}`, label: a.name, desc: a.short, icon: a.icon, tone: a.tone, emoji: a.emoji }))}
           />
-          <NavLink href="/blog">Blog</NavLink>
-          <NavLink href="/resources/calculators">Calculators</NavLink>
-          <NavLink href="/about">About</NavLink>
-          <NavLink href="/pricing">Pricing</NavLink>
+          <DropdownNavItem
+            label="Resources"
+            open={resources}
+            setOpen={setResources}
+            active={isActive(pathname, ["/blog", "/resources", "/about"])}
+            items={resourcesMenu}
+            width="w-[24rem]"
+          />
+          <NavLink href="/pricing" active={isActive(pathname, "/pricing")}>Pricing</NavLink>
         </nav>
 
-        <div className="hidden lg:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-3 shrink-0">
           <CurrencySwitcher />
           <AccountButton />
           <a
             href={siteConfig.appDeepLink}
             target="_blank"
             rel="noreferrer"
-            className="btn-primary text-sm py-2 px-4"
-            title="Open the AI Wealth Planner — skips the marketing landing and goes straight to data entry"
+            className="btn-primary text-sm py-2 px-3.5 whitespace-nowrap"
+            title="Open the AI Wealth Planner — goes straight to data entry"
           >
-            AI Wealth Planner <ExternalLink className="w-3.5 h-3.5" />
+            AI Planner <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
 
-        <button
-          aria-label="Toggle menu"
-          className="lg:hidden p-2"
-          onClick={() => setOpen(!open)}
-        >
+        <button aria-label="Toggle menu" className="lg:hidden p-2" onClick={() => setOpen(!open)}>
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
       {open && (
-        <div className="lg:hidden border-t border-[var(--color-silver)]/40 bg-white">
+        <div className="lg:hidden glass border-t border-[var(--color-silver)]/40">
           <div className="container-wide py-4 flex flex-col gap-1">
             <MobileLink href="/investment-products/mutual-funds">Investment Products</MobileLink>
             <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Wealth Planners</div>
@@ -156,12 +160,9 @@ export function Header() {
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function NavLink({ href, active, children }: { href: string; active?: boolean; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="px-3 py-2 text-sm font-medium text-[var(--color-navy)] hover:text-[var(--color-gold-dim)] transition-colors"
-    >
+    <Link href={href} className="nav-pill" data-active={active ? "true" : undefined}>
       {children}
     </Link>
   );
@@ -169,10 +170,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 
 function MobileLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="px-2 py-3 text-base font-medium text-[var(--color-navy)] border-b border-[var(--color-silver)]/30"
-    >
+    <Link href={href} className="px-2 py-3 text-base font-medium text-[var(--color-navy)] border-b border-[var(--color-silver)]/30">
       {children}
     </Link>
   );
@@ -182,35 +180,51 @@ function DropdownNavItem({
   label,
   open,
   setOpen,
+  active,
   items,
   width = "w-[28rem]",
 }: {
   label: string;
   open: boolean;
   setOpen: (v: boolean) => void;
+  active?: boolean;
   items: NavMenuItem[];
   width?: string;
 }) {
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button className="px-3 py-2 text-sm font-medium text-[var(--color-navy)] hover:text-[var(--color-gold-dim)]">
+    <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button className="nav-pill" data-active={active ? "true" : undefined}>
         {label}
+        <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
         <div className={`absolute top-full left-0 pt-2 ${width}`}>
-          <div className="bg-white border border-[var(--color-silver)]/50 rounded-xl shadow-lg p-3 grid grid-cols-1 gap-1">
+          <div className="glass-panel rounded-xl p-3 grid grid-cols-1 gap-1">
             {items.map((item) => {
+              const Icon = item.icon
+                ? (Icons as unknown as Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>>)[item.icon]
+                : null;
               const content = (
-                <div className="rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/60 transition-colors">
-                  <div className="text-sm font-semibold text-[var(--color-navy)] inline-flex items-center gap-1">
-                    {item.label}
-                    {item.external && <ExternalLink className="w-3 h-3 text-[var(--color-slate)]" />}
+                <div className="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/70 transition-colors">
+                  {item.emoji ? (
+                    <span className="mt-0.5 w-7 h-7 flex items-center justify-center shrink-0 text-[20px] leading-none" aria-hidden>
+                      {item.emoji}
+                    </span>
+                  ) : Icon ? (
+                    <span
+                      className="mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: item.tone ? `${item.tone}26` : "var(--color-sand)" }}
+                    >
+                      <Icon className="w-4 h-4" style={{ color: item.tone ?? "var(--color-gold-dim)" }} />
+                    </span>
+                  ) : null}
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--color-navy)] inline-flex items-center gap-1">
+                      {item.label}
+                      {item.external && <ExternalLink className="w-3 h-3 text-[var(--color-slate)]" />}
+                    </div>
+                    <div className="text-xs text-[var(--color-slate)] mt-0.5">{item.desc}</div>
                   </div>
-                  <div className="text-xs text-[var(--color-slate)] mt-0.5">{item.desc}</div>
                 </div>
               );
               return item.external ? (

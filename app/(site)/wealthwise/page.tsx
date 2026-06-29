@@ -6,19 +6,19 @@ import { CTASection } from "@/components/CTASection";
 import { AppScreenshot } from "@/components/Illustrations";
 
 export const metadata: Metadata = {
-  title: "WealthWise — The wealth platform that thinks alongside you",
+  title: "CashFlow Planner — The wealth platform that thinks alongside you",
   description:
-    "WealthWise unifies your portfolio across banks, brokers, AMCs and goal types — and tells you what to do next. Try free for 14 days.",
+    "CashFlow Planner unifies your portfolio across banks, brokers, AMCs and goal types — and tells you what to do next. Try free for 14 days.",
 };
 
-export default function WealthWiseAppPage() {
+export default function CashFlowPlannerAppPage() {
   return (
     <>
       <Hero
         eyebrow="The Product"
         title="The wealth platform that thinks alongside you"
-        subtitle="See everything you own, know what you should do next, plan for any future. WealthWise turns 30 spreadsheets and apps into one coherent picture."
-        primaryCta={{ label: "Start 14-day free trial", href: "https://app.auriscashflow.com/?signup" }}
+        subtitle="See everything you own, know what you should do next, plan for any future. CashFlow Planner turns 30 spreadsheets and apps into one coherent picture."
+        primaryCta={{ label: "Start 14-day free trial", href: "https://app.planmycashflows.com/?signup" }}
         secondaryCta={{ label: "See pricing", href: "/pricing" }}
       />
 
@@ -69,14 +69,14 @@ export default function WealthWiseAppPage() {
         <div className="container-wide">
           <div className="max-w-3xl mb-12">
             <span className="eyebrow">How we compare</span>
-            <h2 className="mt-3">WealthWise vs everything else you&apos;ve tried</h2>
+            <h2 className="mt-3">CashFlow Planner vs everything else you&apos;ve tried</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b border-[var(--color-silver)]/40">
                   <th className="text-left p-4 font-semibold text-[var(--color-slate)]">Capability</th>
-                  <th className="text-center p-4 font-semibold text-[var(--color-gold-dim)]">WealthWise</th>
+                  <th className="text-center p-4 font-semibold text-[var(--color-gold-dim)]">CashFlow Planner</th>
                   <th className="text-center p-4 font-semibold text-[var(--color-slate)]">Excel</th>
                   <th className="text-center p-4 font-semibold text-[var(--color-slate)]">Traditional Advisor</th>
                   <th className="text-center p-4 font-semibold text-[var(--color-slate)]">Kuvera / INDmoney</th>
@@ -114,7 +114,7 @@ export default function WealthWiseAppPage() {
               Excel wasn&apos;t enough. The apps I tried were either glorified portfolio trackers or thinly disguised distributor platforms.
             </p>
             <p>
-              WealthWise is what I wanted. A serious tool for serious investors — military officers, professionals, NRIs, families with real complexity.
+              CashFlow Planner is what I wanted. A serious tool for serious investors — military officers, professionals, NRIs, families with real complexity.
               It doesn&apos;t sell you products. It tells you what to do.
             </p>
             <p className="text-[var(--color-gold-light)] font-semibold">— Col Ashish Bhardwaj</p>
@@ -125,7 +125,7 @@ export default function WealthWiseAppPage() {
       <CTASection
         title="Start your 14-day free trial"
         subtitle="No credit card required. Cancel anytime in one click. Your data stays private — encrypted in transit and at rest."
-        primaryCta={{ label: "Try WealthWise free", href: "https://app.auriscashflow.com/?signup" }}
+        primaryCta={{ label: "Try CashFlow Planner free", href: "https://app.planmycashflows.com/?signup" }}
         secondaryCta={{ label: "See pricing", href: "/pricing" }}
       />
     </>

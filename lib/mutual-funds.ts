@@ -114,6 +114,10 @@ export interface MFLiveRow {
   return1y: number | null;
   return3y: number | null;
   return5y: number | null;
+  /** CRISIL rating 1–5 (via Kuvera). Null when unavailable. */
+  crisilRating: number | null;
+  /** Total expense ratio as a percent, e.g. 0.63 (via Kuvera). Null when unavailable. */
+  expenseRatio: number | null;
   /** Last ~30 days of NAVs in chronological order (oldest first). */
   sparkline30d: number[];
   found: boolean;
@@ -126,9 +130,21 @@ export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Pr
     fetchReturnsMap(funds.map((f) => f.schemeCode)),
   ]);
 
+  // The AMFI feed gives us each scheme's ISIN for free; use it to pull CRISIL
+  // rating + expense ratio from the (free) Kuvera proxy. Strictly best-effort —
+  // any miss leaves those fields null and the table renders unchanged.
+  const isinByCode = new Map<string, string>();
+  for (const f of funds) {
+    const isin = navMap.get(f.schemeCode)?.isin;
+    if (isin) isinByCode.set(f.schemeCode, isin);
+  }
+  const enrichMap = await fetchEnrichmentMap([...new Set(isinByCode.values())]);
+
   return funds.map((f): MFLiveRow => {
     const navHit = navMap.get(f.schemeCode);
     const ret = returnsMap.get(f.schemeCode);
+    const isin = isinByCode.get(f.schemeCode);
+    const enrich = isin ? enrichMap.get(isin) : undefined;
     return {
       schemeCode: f.schemeCode,
       category: f.category,
@@ -140,15 +156,17 @@ export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Pr
       return1y: ret?.return1y ?? null,
       return3y: ret?.return3y ?? null,
       return5y: ret?.return5y ?? null,
+      crisilRating: enrich?.crisilRating ?? null,
+      expenseRatio: enrich?.expenseRatio ?? null,
       sparkline30d: ret?.sparkline30d ?? [],
       found: !!(navHit || ret),
     };
   });
 }
 
-/** AMFI daily feed parser. */
-async function fetchAMFINavMap(): Promise<Map<string, { nav: number; asOf: string }>> {
-  const out = new Map<string, { nav: number; asOf: string }>();
+/** AMFI daily feed parser. Columns: Scheme Code;ISIN Growth;ISIN Reinvest;Name;NAV;Date */
+async function fetchAMFINavMap(): Promise<Map<string, { nav: number; asOf: string; isin?: string }>> {
+  const out = new Map<string, { nav: number; asOf: string; isin?: string }>();
   try {
     const res = await fetch(AMFI_FEED_URL, {
       next: { revalidate: NAV_REVALIDATE, tags: ["amfi:nav"] },
@@ -161,17 +179,77 @@ async function fetchAMFINavMap(): Promise<Map<string, { nav: number; asOf: strin
       if (parts.length < 6) continue;
       const code = parts[0].trim();
       if (!/^\d+$/.test(code)) continue;
+      // parts[1] is the Growth (or Div-Payout) ISIN; Indian MF ISINs start "INF".
+      const isinRaw = parts[1]?.trim();
+      const isin = isinRaw && /^INF/i.test(isinRaw) ? isinRaw : undefined;
       const navStr = parts[4]?.trim();
       const date = parts[5]?.trim();
       if (!navStr || navStr === "N.A." || !date) continue;
       const nav = parseFloat(navStr);
       if (Number.isNaN(nav)) continue;
-      out.set(code, { nav, asOf: date });
+      out.set(code, { nav, asOf: date, isin });
     }
   } catch (err) {
     console.warn("AMFI fetch failed:", err);
   }
   return out;
+}
+
+// ─── Kuvera enrichment (CRISIL rating + expense ratio) ──────────────
+// Free, unofficial proxy (mf.captnemo.in) over Kuvera, keyed by ISIN.
+// Strictly best-effort: failures / timeouts / missing fields → null, never
+// throw, so the table always renders even if the proxy is unavailable.
+
+const KUVERA_PROXY_BASE = "https://mf.captnemo.in/kuvera";
+
+export interface MFEnrichment {
+  crisilRating: number | null;
+  expenseRatio: number | null;
+}
+
+async function fetchEnrichmentMap(isins: string[]): Promise<Map<string, MFEnrichment>> {
+  const out = new Map<string, MFEnrichment>();
+  if (isins.length === 0) return out;
+  const results = await Promise.allSettled(isins.map((i) => fetchKuveraEnrichment(i)));
+  results.forEach((r, idx) => {
+    if (r.status === "fulfilled" && r.value) out.set(isins[idx], r.value);
+  });
+  return out;
+}
+
+async function fetchKuveraEnrichment(isin: string): Promise<MFEnrichment | null> {
+  try {
+    const res = await fetch(`${KUVERA_PROXY_BASE}/${encodeURIComponent(isin)}`, {
+      next: { revalidate: HISTORY_REVALIDATE, tags: ["kuvera", `kuvera:${isin}`] },
+      headers: {
+        Accept: "application/json",
+        // Some proxies reject the default server UA — present a browser-like one.
+        "User-Agent": "Mozilla/5.0 (compatible; PlanMyCashflows/1.0; +https://planmycashflows.com)",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const body: unknown = await res.json();
+    // Kuvera returns either a single object or a one-element array.
+    const fund = (Array.isArray(body) ? body[0] : body) as Record<string, unknown> | undefined;
+    if (!fund || typeof fund !== "object") return null;
+    const crisilRating = pickNumber(fund.crisil_rating ?? fund.fund_rating);
+    const expenseRatio = pickNumber(fund.expense_ratio);
+    if (crisilRating == null && expenseRatio == null) return null;
+    return { crisilRating, expenseRatio };
+  } catch {
+    return null;
+  }
+}
+
+/** Coerce a number | numeric-string into a finite number, else null. */
+function pickNumber(v: unknown): number | null {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
 
 interface SchemeReturns {

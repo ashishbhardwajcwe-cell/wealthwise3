@@ -31,7 +31,7 @@ export default function AIWealthPlannerPage() {
               rel="noreferrer"
               className="font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1 hover:text-[var(--color-navy)]"
             >
-              Open WealthWise <ExternalLink className="w-3.5 h-3.5" />
+              Open CashFlow Planner <ExternalLink className="w-3.5 h-3.5" />
             </a>
             {" · "}or{" "}
             <Link href="/plan" className="font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1 hover:text-[var(--color-navy)]">
@@ -56,7 +56,7 @@ export default function AIWealthPlannerPage() {
             />
             <InfoCard
               title="Want depth?"
-              body="The full WealthWise app covers 16 sections including SWOT, tax harvesting, insurance gap analysis, and detailed goal planning."
+              body="The full CashFlow Planner app covers 16 sections including SWOT, tax harvesting, insurance gap analysis, and detailed goal planning."
             />
           </div>
         </div>

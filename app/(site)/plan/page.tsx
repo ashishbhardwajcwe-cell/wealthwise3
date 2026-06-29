@@ -6,9 +6,9 @@ import { CTASection } from "@/components/CTASection";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "Wealth Planner — Snapshot, Guided Plan, Full App | Auris Cashflow",
+  title: "Wealth Planner — Snapshot, Guided Plan, Full App | PlanMyCashflows",
   description:
-    "Three ways to plan: a free 60-second AI snapshot, a 10-minute guided plan, or the full WealthWise app with portfolio aggregation, tax harvesting and PDF reports.",
+    "Three ways to plan: a free 60-second AI snapshot, a 10-minute guided plan, or the full CashFlow Planner app with portfolio aggregation, tax harvesting and PDF reports.",
 };
 
 interface PlannerCard {
@@ -58,7 +58,7 @@ const CARDS: PlannerCard[] = [
   {
     icon: <Layers className="w-6 h-6" />,
     eyebrow: "Full picture · Login required",
-    title: "Full WealthWise App",
+    title: "Full CashFlow Planner App",
     copy: "The complete platform: portfolio aggregation across banks/AMCs/brokers, AI wealth plan covering 16 sections (SWOT, risk profile, retirement scenarios, tax harvesting, insurance gap, asset allocation drift), PDF export. 14-day free trial — no card required.",
     time: "~30 minutes for first plan",
     gate: "14-day free trial · Login",
@@ -78,7 +78,7 @@ export default function Page() {
       <Hero
         eyebrow="Wealth planning"
         title="Three planners. One place."
-        subtitle="Pick the depth that matches the moment — a 60-second snapshot, a 10-minute guided plan, or the full WealthWise app. All three are free to try. The first two run in your browser. The full app saves your plan and tracks it over time."
+        subtitle="Pick the depth that matches the moment — a 60-second snapshot, a 10-minute guided plan, or the full CashFlow Planner app. All three are free to try. The first two run in your browser. The full app saves your plan and tracks it over time."
         primaryCta={{ label: "Open the full app", href: siteConfig.appDeepLink }}
         secondaryCta={{ label: "Try the 60-second snapshot", href: "/ai-wealth-planner" }}
         align="left"
@@ -91,7 +91,7 @@ export default function Page() {
           </div>
 
           <p className="text-xs text-[var(--color-slate)] text-center mt-10 italic max-w-2xl mx-auto">
-            The Snapshot and Guided Plan run entirely in your browser with no data stored. The full WealthWise app
+            The Snapshot and Guided Plan run entirely in your browser with no data stored. The full CashFlow Planner app
             saves your plan and tracks it over time — that’s why it asks you to sign in. Your data is encrypted in
             transit and at rest.
           </p>

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resend, FROM_ADDRESS, REPLY_TO, NOTIFY_ADDRESS, isResendConfigured } from "@/lib/resend";
+import { notifySlack, escapeSlack } from "@/lib/slack";
+import { formRateLimit, getClientIp } from "@/lib/redis";
 
 export const runtime = "nodejs";
 
@@ -13,31 +15,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    if (!isResendConfigured() || !resend) {
-      // Soft success in environments without Resend configured (dev / preview)
-      return NextResponse.json({ ok: true, queued: false });
+    // Rate limit per IP (10 / hour). Skipped silently if Upstash isn't configured.
+    if (formRateLimit) {
+      const { success } = await formRateLimit.limit(getClientIp(req));
+      if (!success) {
+        return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+      }
     }
 
-    // 1. Welcome email to the subscriber
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: email,
-      replyTo: REPLY_TO,
-      subject: "Welcome to the Auris Cashflow weekly note",
-      html: WELCOME_HTML,
-      text: WELCOME_TEXT,
-    });
+    // Run notifications concurrently so a slow Slack or email never blocks the
+    // others — or the response. Slack is a no-op without SLACK_WEBHOOK_URL;
+    // emails are skipped when Resend is unconfigured.
+    const queued = isResendConfigured() && !!resend;
+    const tasks: Promise<unknown>[] = [
+      notifySlack(`:tada: New newsletter subscriber: *${escapeSlack(email)}*  _(source: ${escapeSlack(source ?? "unknown")})_`),
+    ];
+    if (queued && resend) {
+      tasks.push(
+        // Welcome email to the subscriber
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: email,
+          replyTo: REPLY_TO,
+          subject: "Welcome to the PlanMyCashflows weekly note",
+          html: WELCOME_HTML,
+          text: WELCOME_TEXT,
+        }),
+        // Internal notification
+        resend.emails.send({
+          from: FROM_ADDRESS,
+          to: NOTIFY_ADDRESS,
+          replyTo: email,
+          subject: `New newsletter subscriber: ${email}`,
+          text: `Email: ${email}\nSource: ${source ?? "unknown"}\n`,
+        }),
+      );
+    }
 
-    // 2. Internal notification
-    await resend.emails.send({
-      from: FROM_ADDRESS,
-      to: NOTIFY_ADDRESS,
-      replyTo: email,
-      subject: `New newsletter subscriber: ${email}`,
-      text: `Email: ${email}\nSource: ${source ?? "unknown"}\n`,
-    });
+    const results = await Promise.allSettled(tasks);
+    for (const r of results) {
+      if (r.status === "rejected") console.error("newsletter task failed", r.reason);
+    }
 
-    return NextResponse.json({ ok: true, queued: true });
+    return NextResponse.json({ ok: true, queued });
   } catch (err) {
     console.error("newsletter error", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
@@ -50,7 +70,7 @@ const WELCOME_HTML = `
   <body style="font-family: -apple-system, system-ui, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; color: #0A1628; line-height: 1.6;">
     <div style="border-top: 4px solid #C9A84C; padding-top: 24px;">
       <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 28px; margin: 0 0 16px; letter-spacing: -0.5px;">
-        Welcome to <span style="color: #C9A84C;">Auris Cashflow</span>
+        Welcome to <span style="color: #C9A84C;">PlanMyCashflows</span>
       </h1>
       <p>One short note a week. No noise.</p>
       <p>
@@ -61,14 +81,14 @@ const WELCOME_HTML = `
         Each Friday you'll get a 5-minute read on something specific — usually a case study, a tax
         nuance, or a question one of you asked.
       </p>
-      <p>While you're here, here's where every Auris wealth planner lives:</p>
+      <p>While you're here, here's where every PlanMyCashflows wealth planner lives:</p>
       <ul>
-        <li><a href="https://auriscashflow.com/plan" style="color: #A08030;">Wealth Planner hub</a> — pick a Snapshot, Guided Plan, or the full app</li>
-        <li><a href="https://auriscashflow.com/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot, no signup</li>
-        <li><a href="https://auriscashflow.com/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive plan, no signup</li>
-        <li><a href="https://app.auriscashflow.com" style="color: #A08030;">Full WealthWise app</a> — complete planner, 14-day trial, login required</li>
+        <li><a href="https://planmycashflows.com/plan" style="color: #A08030;">Wealth Planner hub</a> — pick a Snapshot, Guided Plan, or the full app</li>
+        <li><a href="https://planmycashflows.com/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot, no signup</li>
+        <li><a href="https://planmycashflows.com/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive plan, no signup</li>
+        <li><a href="https://app.planmycashflows.com" style="color: #A08030;">Full CashFlow Planner app</a> — complete planner, 14-day trial, login required</li>
       </ul>
-      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, Auris Cashflow</span></p>
+      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, PlanMyCashflows</span></p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
       <p style="font-size: 12px; color: #5A6B80;">
         Auris Pvt Ltd (CIN: U70200HR2026PTC141922). Educational content only. Not investment advice.
@@ -78,7 +98,7 @@ const WELCOME_HTML = `
   </body>
 </html>`;
 
-const WELCOME_TEXT = `Welcome to Auris Cashflow.
+const WELCOME_TEXT = `Welcome to PlanMyCashflows.
 
 One short note a week. No noise.
 
@@ -88,14 +108,14 @@ compounds (planning, tax efficiency, boring discipline) and what doesn't
 
 Each Friday you'll get a 5-minute read on something specific.
 
-Where every Auris wealth planner lives:
-- Wealth Planner hub: https://auriscashflow.com/plan
-- AI Snapshot (60 sec): https://auriscashflow.com/ai-wealth-planner
-- Guided Plan (10 min): https://auriscashflow.com/guided
-- Full app: https://app.auriscashflow.com
+Where every PlanMyCashflows wealth planner lives:
+- Wealth Planner hub: https://planmycashflows.com/plan
+- AI Snapshot (60 sec): https://planmycashflows.com/ai-wealth-planner
+- Guided Plan (10 min): https://planmycashflows.com/guided
+- Full app: https://app.planmycashflows.com
 
 — Col Ashish Bhardwaj
-Founder, Auris Cashflow
+Founder, PlanMyCashflows
 
 ---
 Auris Pvt Ltd (CIN: U70200HR2026PTC141922).
