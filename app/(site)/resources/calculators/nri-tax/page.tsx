@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalculatorWrapper } from "@/components/CalculatorWrapper";
-import { fmtINR, fmtCurrency } from "@/lib/utils";
+import { fmtINR } from "@/lib/utils";
 
 const COUNTRIES: { code: string; label: string; symbol: string; taxOnLT: number; taxOnST: number; note: string }[] = [
   { code: "US", label: "United States", symbol: "USD", taxOnLT: 15, taxOnST: 32, note: "LTCG 0-20% (varies by bracket; 15% mid-range)" },
@@ -56,7 +56,7 @@ export default function NRITaxCalculatorPage() {
 
       <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="India tax" value={fmtINR(indiaTax)} sub={`${indiaTaxRate}% rate`} />
-        <Stat label={`${ctry.label} tax (gross)`} value={fmtCurrency(residentTaxGross, ctry.symbol === "USD" ? "USD" : ctry.symbol === "GBP" ? "GBP" : "INR")} sub={`${residentTaxRate}% rate`} />
+        <Stat label={`${ctry.label} tax (gross, ₹ equivalent)`} value={fmtINR(residentTaxGross)} sub={`${residentTaxRate}% rate`} />
         <Stat label="FTC available (DTAA)" value={fmtINR(ftcAvailable)} color="#10B981" />
         <Stat label="Total effective tax" value={`${effectiveRate.toFixed(1)}%`} color="#C9A84C" big sub={fmtINR(totalTax)} />
       </div>

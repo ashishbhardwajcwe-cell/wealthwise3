@@ -1,16 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown, ArrowDown, ArrowUp, Search, Download, X } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import type { MFLiveRow } from "@/lib/mutual-funds";
 import { MF_CATEGORIES } from "@/lib/mutual-funds";
 import { Sparkline } from "./Sparkline";
 import { StarButton } from "./StarButton";
 import { InfoTip } from "@/components/InfoTip";
+import {
+  Th, PlainTh, FilterStatus, LiveEyebrow, pillBtn,
+  useTableSort, sortRows, latestAmfiDate,
+} from "@/components/tables/table-utils";
 import { downloadCsv } from "@/lib/csv-export";
 import { useWatchlist } from "@/lib/use-watchlist";
 
 type SortKey = "name" | "amc" | "category" | "nav" | "return6m" | "return1y" | "return3y" | "return5y";
+
+const TEXT_KEYS = ["name", "amc", "category"] as const;
 
 interface Props {
   rows: MFLiveRow[];
@@ -33,9 +39,8 @@ export function MFLiveTable({
 }: Props) {
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortKey>("return3y");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [watchOnly, setWatchOnly] = useState(false);
+  const { sortBy, sortDir, toggleSort } = useTableSort<SortKey>("return3y", "desc", TEXT_KEYS);
   const watchlist = useWatchlist();
 
   const filtered = useMemo(() => {
@@ -49,34 +54,10 @@ export function MFLiveTable({
         row.amc.toLowerCase().includes(q),
       );
     }
-    const dir = sortDir === "asc" ? 1 : -1;
-    return [...r].sort((a, b) => {
-      const av = getValue(a, sortBy);
-      const bv = getValue(b, sortBy);
-      if (typeof av === "string" && typeof bv === "string") return av.localeCompare(bv) * dir;
-      const an = Number(av);
-      const bn = Number(bv);
-      const ainvalid = av == null || Number.isNaN(an);
-      const binvalid = bv == null || Number.isNaN(bn);
-      if (ainvalid && !binvalid) return 1;
-      if (!ainvalid && binvalid) return -1;
-      if (ainvalid && binvalid) return 0;
-      return (an - bn) * dir;
-    });
+    return sortRows(r, getValue, sortBy, sortDir);
   }, [rows, filter, search, sortBy, sortDir, watchOnly, watchlist]);
 
-  function toggleSort(key: SortKey) {
-    if (sortBy === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else {
-      setSortBy(key);
-      setSortDir(key === "name" || key === "amc" || key === "category" ? "asc" : "desc");
-    }
-  }
-
-  const latestAsOf = useMemo(() => {
-    const dates = rows.map((r) => r.asOf).filter(Boolean) as string[];
-    return dates.length > 0 ? dates[0] : null;
-  }, [rows]);
+  const latestAsOf = useMemo(() => latestAmfiDate(rows.map((r) => r.asOf)), [rows]);
 
   const categoryName = (slug: string) => MF_CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
   const usedCategories = useMemo(() => {
@@ -117,13 +98,7 @@ export function MFLiveTable({
     <section className="py-12 md:py-16 bg-white border-y border-[var(--color-silver)]/30">
       <div className="container-wide">
         <div className="mb-6">
-          <span className="eyebrow inline-flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-emerald)] opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-emerald)]" />
-            </span>
-            {eyebrow}
-          </span>
+          <LiveEyebrow>{eyebrow}</LiveEyebrow>
           <h2 className="mt-2">{title}</h2>
           <p className="text-sm text-[var(--color-slate)] mt-2">
             {subtitle ?? (
@@ -189,18 +164,21 @@ export function MFLiveTable({
                 <Th label="Fund"     k="name"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="AMC"      k="amc"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left"  tip="Asset Management Company — the firm that runs the fund (e.g. SBI, HDFC, ICICI Prudential)." />
                 <Th label="Category" k="category" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">
+                <PlainTh align="center">
                   <span className="inline-flex items-center gap-1 justify-center">Rating <InfoTip text="CRISIL rating (1–5), via Kuvera — based on risk-adjusted returns. Higher is better. Shown where available." /></span>
-                </th>
+                </PlainTh>
                 <Th label="NAV (₹)"  k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Net Asset Value — the per-unit price of the fund as published daily by AMFI." />
                 <Th label="6M"       k="return6m" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Simple percent change over the trailing 6 months (not annualised — the window is shorter than a year)." />
                 <Th label="1Y CAGR"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Compound Annual Growth Rate over the trailing 1 year. Annualised return as if it compounded smoothly." />
                 <Th label="3Y CAGR"  k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 3 years — a more honest read than 1Y." />
                 <Th label="5Y CAGR"  k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 5 years — the timeframe SEBI suggests for equity funds." />
-                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">
+                <PlainTh align="center">
+                  <span className="inline-flex items-center gap-1">Expense <InfoTip text="Total Expense Ratio — the annual fee the AMC charges, already reflected in the NAV. Via Kuvera, shown where available." /></span>
+                </PlainTh>
+                <PlainTh align="center">
                   <span className="inline-flex items-center gap-1">30d <InfoTip text="Sparkline of the last 30 NAV points from MFAPI, oldest left, newest right." /></span>
-                </th>
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">As of</th>
+                </PlainTh>
+                <PlainTh align="right">As of</PlainTh>
               </tr>
             </thead>
             <tbody>
@@ -256,41 +234,6 @@ export function MFLiveTable({
   );
 }
 
-function pillBtn(active: boolean) {
-  return `px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-    active
-      ? "bg-[var(--color-navy)] text-[var(--color-cream)] border-[var(--color-navy)]"
-      : "bg-white text-[var(--color-navy)] border-[var(--color-silver)]/40 hover:border-[var(--color-gold)]"
-  }`;
-}
-
-export function FilterStatus({
-  active,
-  shown,
-  total,
-  onReset,
-}: {
-  active: boolean;
-  shown: number;
-  total: number;
-  onReset: () => void;
-}) {
-  if (!active) return <div className="h-2" />;
-  return (
-    <div className="flex items-center justify-between gap-2 mb-2 text-xs text-[var(--color-slate)]">
-      <span>
-        Showing <strong className="text-[var(--color-navy)]">{shown}</strong> of {total}
-      </span>
-      <button
-        onClick={onReset}
-        className="inline-flex items-center gap-1 text-[var(--color-gold-dim)] hover:text-[var(--color-navy)] font-semibold"
-      >
-        <X className="w-3 h-3" /> Reset filters
-      </button>
-    </div>
-  );
-}
-
 function getValue(r: MFLiveRow, key: SortKey): string | number | null {
   switch (key) {
     case "name":     return r.name;
@@ -302,32 +245,6 @@ function getValue(r: MFLiveRow, key: SortKey): string | number | null {
     case "return3y": return r.return3y;
     case "return5y": return r.return5y;
   }
-}
-
-function Th({ label, k, sortBy, sortDir, onSort, align = "left", tip }: {
-  label: string; k: SortKey;
-  sortBy: SortKey; sortDir: "asc" | "desc";
-  onSort: (k: SortKey) => void; align?: "left" | "right";
-  tip?: string;
-}) {
-  const active = sortBy === k;
-  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
-  return (
-    <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}>
-      <span className={`inline-flex items-center gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
-        <button
-          onClick={() => onSort(k)}
-          className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
-            active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)] font-semibold"
-          }`}
-        >
-          {label}
-          <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
-        </button>
-        {tip && <InfoTip text={tip} />}
-      </span>
-    </th>
-  );
 }
 
 function ReturnCell({ value }: { value: number | null }) {

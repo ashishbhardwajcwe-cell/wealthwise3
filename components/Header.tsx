@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X, ExternalLink, ChevronDown } from "lucide-react";
-import * as Icons from "lucide-react";
+import { getNamedIcon } from "@/components/nav-icons";
 import { cn } from "@/lib/utils";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
 import { CurrencySwitcher } from "./CurrencySwitcher";
@@ -201,9 +201,7 @@ function DropdownNavItem({
         <div className={`absolute top-full left-0 pt-2 ${width}`}>
           <div className="glass-panel rounded-xl p-3 grid grid-cols-1 gap-1">
             {items.map((item) => {
-              const Icon = item.icon
-                ? (Icons as unknown as Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>>)[item.icon]
-                : null;
+              const Icon = getNamedIcon(item.icon);
               const content = (
                 <div className="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-[var(--color-sand)]/70 transition-colors">
                   {item.emoji ? (

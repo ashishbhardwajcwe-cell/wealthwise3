@@ -21,13 +21,32 @@ export const fmtCurrency = (n: number, currency: string = "INR"): string => {
   return `${s}${Math.round(n).toLocaleString("en-US")}`;
 };
 
+/** Country → reporting currency for the AI snapshot flows. Shared by the
+ *  client form and the /api/wealth-snapshot route so they can't drift. */
+export const COUNTRY_CURRENCY: Record<string, string> = {
+  India: "INR",
+  US: "USD",
+  UK: "GBP",
+  UAE: "AED",
+  Singapore: "SGD",
+  Other: "USD",
+};
+
+export const currencyForCountry = (country: string): string =>
+  COUNTRY_CURRENCY[country] ?? "USD";
+
 export const fv = (p: number, r: number, y: number) => p * Math.pow(1 + r, y);
 export const pv = (f: number, r: number, y: number) => (y > 0 ? f / Math.pow(1 + r, y) : f);
+
+// Both SIP helpers assume the instalment is invested at the START of each
+// month (annuity-due) — the convention used by standard Indian SIP
+// calculators. They are exact inverses of each other:
+// sipFutureValue(sipRequired(T, r, y), r, y) === T.
 export const sipRequired = (target: number, r: number, y: number): number => {
   if (y <= 0) return target;
   const rm = r / 12;
   const n = y * 12;
-  return rm === 0 ? target / n : (target * rm) / (Math.pow(1 + rm, n) - 1);
+  return rm === 0 ? target / n : (target * rm) / ((Math.pow(1 + rm, n) - 1) * (1 + rm));
 };
 export const sipFutureValue = (monthly: number, r: number, y: number): number => {
   if (y <= 0) return 0;

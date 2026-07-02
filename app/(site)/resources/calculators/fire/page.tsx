@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalculatorWrapper } from "@/components/CalculatorWrapper";
-import { fmtINR, sipFutureValue } from "@/lib/utils";
+import { fmtINR } from "@/lib/utils";
 
 export default function FIRECalculatorPage() {
   const [age, setAge] = useState(30);
@@ -10,16 +10,22 @@ export default function FIRECalculatorPage() {
   const [currentCorpus, setCurrentCorpus] = useState(2500000);
   const [annualExpenses, setAnnualExpenses] = useState(960000);
   const [returnPct, setReturnPct] = useState(11);
+  const [inflationPct, setInflationPct] = useState(6);
   const [swr, setSwr] = useState(4);
 
-  // FIRE corpus = annual expenses / SWR
+  // FIRE corpus = annual expenses / SWR, in TODAY's rupees. The target
+  // inflates every year, so the accumulation below compounds at the REAL
+  // (inflation-adjusted) return — comparing a nominal corpus against a
+  // today's-rupees target would understate years-to-FIRE badly.
   const fireCorpus = annualExpenses / (swr / 100);
+  const realR = (1 + returnPct / 100) / (1 + inflationPct / 100) - 1;
 
-  // Simulate year by year
+  // Simulate year by year in today's rupees. Savings are assumed to keep
+  // pace with inflation (constant in real terms).
   let corpus = currentCorpus;
   let yearsToFire = 0;
   for (let y = 1; y <= 60; y++) {
-    corpus = corpus * (1 + returnPct / 100) + monthlySaving * 12 * (1 + returnPct / 100 / 2);
+    corpus = corpus * (1 + realR) + monthlySaving * 12 * (1 + realR / 2);
     if (corpus >= fireCorpus) {
       yearsToFire = y;
       break;
@@ -32,7 +38,7 @@ export default function FIRECalculatorPage() {
     <CalculatorWrapper
       title="FIRE Calculator"
       subtitle="Financial Independence, Retire Early. When does work become optional for you?"
-      notes="Uses the 4% Safe Withdrawal Rate (Trinity Study) by default. Indian investors often use 3-3.5% for more conservative SWR given different inflation/return profile vs US data."
+      notes="Uses the 4% Safe Withdrawal Rate (Trinity Study) by default; Indian investors often use 3-3.5% for a more conservative SWR given different inflation/return profiles vs US data. The projection works in today's rupees: growth compounds at the inflation-adjusted (real) return, and monthly savings are assumed to rise with inflation."
     >
       <div className="grid md:grid-cols-2 gap-4">
         <Input label="Current age" value={age} setValue={setAge} min={20} max={60} step={1} />
@@ -40,6 +46,7 @@ export default function FIRECalculatorPage() {
         <Input label="Monthly savings (₹)" value={monthlySaving} setValue={setMonthlySaving} min={5000} max={1000000} step={5000} />
         <Input label="Annual living expenses (₹)" value={annualExpenses} setValue={setAnnualExpenses} min={100000} max={20000000} step={50000} />
         <Input label="Expected return % p.a." value={returnPct} setValue={setReturnPct} min={4} max={18} step={0.5} />
+        <Input label="Inflation % p.a." value={inflationPct} setValue={setInflationPct} min={2} max={12} step={0.5} />
         <Input label="Safe Withdrawal Rate %" value={swr} setValue={setSwr} min={2.5} max={5} step={0.25} />
       </div>
 
@@ -50,8 +57,8 @@ export default function FIRECalculatorPage() {
       </div>
 
       <p className="mt-6 text-sm text-[var(--color-slate)] leading-relaxed">
-        At a {swr}% withdrawal rate, your FIRE corpus would generate {fmtINR(annualExpenses)} per year in retirement.
-        Most FIRE practitioners use a 3.5-4% SWR for a 30+ year horizon.
+        At a {swr}% withdrawal rate, your FIRE corpus would generate {fmtINR(annualExpenses)} per year (in today&apos;s
+        purchasing power) in retirement. Most FIRE practitioners use a 3.5-4% SWR for a 30+ year horizon.
       </p>
     </CalculatorWrapper>
   );

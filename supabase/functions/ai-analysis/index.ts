@@ -6,6 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Completed years since date of birth (year subtraction alone overstates
+// age by one for anyone whose birthday hasn't come round yet this year).
+function computeAge(dob: Date): number {
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const beforeBirthday =
+    now.getMonth() < dob.getMonth() ||
+    (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate());
+  if (beforeBirthday) age -= 1;
+  return age;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -21,7 +33,7 @@ serve(async (req) => {
     const { planData } = await req.json();
     if (!planData) return new Response(JSON.stringify({ error: "Missing planData" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const age = planData.dob ? new Date().getFullYear() - new Date(planData.dob).getFullYear() : 35;
+    const age = planData.dob ? computeAge(new Date(planData.dob)) : 35;
     const totalInc = (planData.salaryMonthly || 0) + (planData.otherIncomeMonthly || 0);
     const totalExp = (planData.householdExp||0)+(planData.childcareExp||0)+(planData.giftsExp||0)+(planData.vacationExp||0)+(planData.otherExp||0);
     const savings = totalInc - totalExp;
@@ -39,7 +51,7 @@ serve(async (req) => {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-5",
         max_tokens: 4000,
         system: "You are an expert Indian financial planner. Give specific actionable advice with exact numbers in Indian Rupees. Respond ONLY in valid JSON, no markdown no backticks.",
         messages: [{ role: "user", content: prompt }],
