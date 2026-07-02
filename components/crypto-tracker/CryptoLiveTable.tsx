@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown, ArrowDown, ArrowUp, Search, TrendingUp, TrendingDown, Minus, Download } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, Minus, Download } from "lucide-react";
 import type { CoinMarketRow } from "@/lib/crypto";
 import { Sparkline } from "@/components/markets/Sparkline";
 import { StarButton } from "@/components/markets/StarButton";
 import { InfoTip } from "@/components/InfoTip";
-import { FilterStatus } from "@/components/markets/MFLiveTable";
+import {
+  Th, PlainTh, FilterStatus, LiveEyebrow,
+  useTableSort, sortRows,
+} from "@/components/tables/table-utils";
 import { downloadCsv } from "@/lib/csv-export";
 import { useWatchlist } from "@/lib/use-watchlist";
 
@@ -25,13 +28,16 @@ interface Props {
 
 const TOP_FILTERS = [10, 25, 50, 100];
 
+// text columns and rank sort ascending by default; numeric columns descending.
+const ASC_KEYS = ["rank", "name"] as const;
+
 export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
   const [topN, setTopN] = useState(50);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortKey>("rank");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [watchOnly, setWatchOnly] = useState(false);
   const [period, setPeriod] = useState<Period>("short");
+  const { sortBy, sortDir, toggleSort, setSortBy, setSortDir } =
+    useTableSort<SortKey>("rank", "asc", ASC_KEYS);
   const watchlist = useWatchlist();
 
   // 3Y/5Y/10Y are only populated when a paid CoinGecko data plan is configured
@@ -51,18 +57,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
         c.symbol.toLowerCase().includes(q),
       );
     }
-    const dir = sortDir === "asc" ? 1 : -1;
-    return [...rows].sort((a, b) => {
-      const av = getValue(a, sortBy);
-      const bv = getValue(b, sortBy);
-      if (typeof av === "string" && typeof bv === "string") return av.localeCompare(bv) * dir;
-      const an = Number(av);
-      const bn = Number(bv);
-      if (Number.isNaN(an) && !Number.isNaN(bn)) return 1;
-      if (!Number.isNaN(an) && Number.isNaN(bn)) return -1;
-      if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
-      return (an - bn) * dir;
-    });
+    return sortRows(rows, getValue, sortBy, sortDir);
   }, [coins, topN, search, sortBy, sortDir, watchOnly, watchlist]);
 
   const filtersActive = search.trim() !== "" || topN !== 50 || watchOnly;
@@ -71,15 +66,6 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
     setSearch("");
     setTopN(50);
     setWatchOnly(false);
-  }
-
-  function toggleSort(key: SortKey) {
-    if (sortBy === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else {
-      setSortBy(key);
-      // numeric columns default to descending (biggest first); text ascending.
-      setSortDir(key === "name" || key === "rank" ? "asc" : "desc");
-    }
   }
 
   if (coins.length === 0) {
@@ -94,25 +80,15 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
     );
   }
 
-  const updatedAt = new Date().toLocaleTimeString("en-IN", {
-    hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata",
-  });
-
   return (
     <section className="py-12 md:py-16 bg-white border-y border-[var(--color-silver)]/30">
       <div className="container-wide">
         <div className="mb-6">
-          <span className="eyebrow inline-flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-emerald)] opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-emerald)]" />
-            </span>
-            Live screener
-          </span>
+          <LiveEyebrow>Live screener</LiveEyebrow>
           <h2 className="mt-2">Cryptocurrency screener</h2>
           <p className="text-sm text-[var(--color-slate)] mt-2">
-            {coins.length} coins, auto-refreshes every 5 min. Click any column header to sort.
-            <span className="text-[var(--color-slate)]/70"> Last updated {updatedAt} IST · CoinGecko</span>
+            {coins.length} coins, refreshed every 5 minutes. Click any column header to sort.
+            <span className="text-[var(--color-slate)]/70"> Prices via CoinGecko.</span>
           </p>
         </div>
 
@@ -221,7 +197,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
                 <Th label="#"           k="rank"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left"  tip="Rank by market capitalisation (largest first), per CoinGecko." />
                 <Th label="Coin"        k="name"       sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="Price (INR)" k="priceInr"   sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Last traded price in Indian Rupees, derived from CoinGecko's INR feed." />
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">USD</th>
+                <PlainTh align="right">USD</PlainTh>
                 {period === "short" ? (
                   <>
                     <Th label="24h %"       k="change24h"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Percent change over the last 24 hours." />
@@ -243,9 +219,9 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
                 <Th label="24h Volume"  k="volume"     sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Total INR value traded across exchanges in the last 24 hours. High volume = better liquidity." />
                 <Th label="Market Cap"  k="marketCap"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Circulating supply × current price. The total market value of the coin." />
                 <Th label="From ATH"    k="athChange"  sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Distance from the All-Time High. -40% means the coin is 40% below its peak ever." />
-                <th className="px-4 py-3 text-center font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider">
+                <PlainTh align="center">
                   <span className="inline-flex items-center gap-1 justify-center">7d chart <InfoTip text="Hourly price sparkline for the past 7 days." /></span>
-                </th>
+                </PlainTh>
               </tr>
             </thead>
             <tbody>
@@ -329,32 +305,6 @@ function getValue(c: CoinMarketRow, k: SortKey): string | number | null {
     case "marketCap":  return c.marketCapInr;
     case "athChange":  return c.athChangePct;
   }
-}
-
-function Th({ label, k, sortBy, sortDir, onSort, align = "left", tip }: {
-  label: string; k: SortKey;
-  sortBy: SortKey; sortDir: "asc" | "desc";
-  onSort: (k: SortKey) => void; align?: "left" | "right";
-  tip?: string;
-}) {
-  const active = sortBy === k;
-  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
-  return (
-    <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"} font-semibold`}>
-      <span className={`inline-flex items-center gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
-        <button
-          onClick={() => onSort(k)}
-          className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
-            active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)]"
-          }`}
-        >
-          {label}
-          <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-40"}`} />
-        </button>
-        {tip && <InfoTip text={tip} />}
-      </span>
-    </th>
-  );
 }
 
 function ChangeCell({ value, muted, big }: { value: number | null; muted?: boolean; big?: boolean }) {

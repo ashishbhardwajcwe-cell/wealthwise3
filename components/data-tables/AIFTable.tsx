@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import type { AifFund } from "@/lib/investment-data";
+import {
+  Th, PlainTh, fmtPct, pillBtn,
+  useTableSort, sortRows, latestAmfiDate,
+} from "@/components/tables/table-utils";
 
 type SortKey = "fundName" | "manager" | "category" | "vintage" | "fundSize" | "netIrr" | "moic";
 
+const TEXT_KEYS = ["fundName", "manager", "category"] as const;
+
 export function AIFTable({ funds }: { funds: AifFund[] }) {
   const [filter, setFilter] = useState<string>("All");
-  const [sortBy, setSortBy] = useState<SortKey>("netIrr");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const { sortBy, sortDir, toggleSort } = useTableSort<SortKey>("netIrr", "desc", TEXT_KEYS);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -20,24 +24,10 @@ export function AIFTable({ funds }: { funds: AifFund[] }) {
   const rows = useMemo(() => {
     let r = funds;
     if (filter !== "All") r = r.filter((f) => f.category === filter);
-    const dir = sortDir === "asc" ? 1 : -1;
-    return [...r].sort((a, b) => {
-      const av = getValue(a, sortBy);
-      const bv = getValue(b, sortBy);
-      if (typeof av === "string" && typeof bv === "string") return av.localeCompare(bv) * dir;
-      return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
-    });
+    return sortRows(r, getValue, sortBy, sortDir);
   }, [funds, filter, sortBy, sortDir]);
 
-  function toggleSort(key: SortKey) {
-    if (sortBy === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else { setSortBy(key); setSortDir(key === "fundName" || key === "manager" || key === "category" ? "asc" : "desc"); }
-  }
-
-  const latestAsOf = useMemo(() => {
-    const dates = funds.map((f) => f.asOfDate).filter(Boolean).sort();
-    return dates[dates.length - 1];
-  }, [funds]);
+  const latestAsOf = useMemo(() => latestAmfiDate(funds.map((f) => f.asOfDate)), [funds]);
 
   return (
     <section className="py-16 bg-white">
@@ -53,12 +43,7 @@ export function AIFTable({ funds }: { funds: AifFund[] }) {
           </div>
           <div className="flex gap-2 flex-wrap">
             {categories.map((c) => (
-              <button key={c} onClick={() => setFilter(c)}
-                className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
-                  filter === c
-                    ? "bg-[var(--color-navy)] text-[var(--color-cream)] border-[var(--color-navy)]"
-                    : "bg-white text-[var(--color-navy)] border-[var(--color-silver)]/40 hover:border-[var(--color-gold)]"
-                }`}>
+              <button key={c} onClick={() => setFilter(c)} className={pillBtn(filter === c)}>
                 {c}
               </button>
             ))}
@@ -76,8 +61,8 @@ export function AIFTable({ funds }: { funds: AifFund[] }) {
                 <Th label="Size" k="fundSize" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <Th label="Net IRR" k="netIrr" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <Th label="MOIC" k="moic" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-xs uppercase tracking-wider">Fees</th>
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-xs uppercase tracking-wider">As of</th>
+                <PlainTh align="right">Fees</PlainTh>
+                <PlainTh align="right">As of</PlainTh>
               </tr>
             </thead>
             <tbody>
@@ -118,27 +103,6 @@ function getValue(f: AifFund, key: SortKey): string | number | undefined {
   if (key === "netIrr") return f.returns?.netIrr;
   if (key === "moic") return f.returns?.moic;
   return undefined;
-}
-
-function Th({ label, k, sortBy, sortDir, onSort, align = "left" }: {
-  label: string; k: SortKey; sortBy: SortKey; sortDir: "asc" | "desc";
-  onSort: (k: SortKey) => void; align?: "left" | "right";
-}) {
-  const active = sortBy === k;
-  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
-  return (
-    <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}>
-      <button onClick={() => onSort(k)} className="inline-flex items-center gap-1 text-xs uppercase tracking-wider font-semibold text-[var(--color-slate)] hover:text-[var(--color-navy)]">
-        {label}
-        <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-50"}`} />
-      </button>
-    </th>
-  );
-}
-
-function fmtPct(v?: number) {
-  if (v === undefined || v === null) return "—";
-  return `${v.toFixed(1)}%`;
 }
 
 function returnColor(v?: number) {

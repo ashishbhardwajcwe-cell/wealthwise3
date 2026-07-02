@@ -2,99 +2,46 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getSupabase } from "@/lib/supabase";
+import { sharedCookieStorage } from "@/lib/shared-cookie-storage";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, AreaChart, Area
 } from "recharts";
 
 // SUPABASE CONFIG
-const SUPABASE_URL = "https://hbddsvwghboftjsgtate.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRzdndnaGJvZnRqc2d0YXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDA0NjMsImV4cCI6MjA5MDExNjQ2M30.kTyLJ1WTh2jyau0cqGsaxMfGwhwBwQOGU-eyMJiyNEs";
+// Prefer the site-wide client from lib/supabase (env-driven, memoized, and
+// shared with the header's AccountButton so only ONE GoTrueClient touches the
+// auth cookies). The hardcoded values below are a fallback for environments
+// where NEXT_PUBLIC_SUPABASE_* is not configured — same public project, and
+// the anon key is designed to be public.
+const FALLBACK_SUPABASE_URL = "https://hbddsvwghboftjsgtate.supabase.co";
+const FALLBACK_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiZGRzdndnaGJvZnRqc2d0YXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDA0NjMsImV4cCI6MjA5MDExNjQ2M30.kTyLJ1WTh2jyau0cqGsaxMfGwhwBwQOGU-eyMJiyNEs";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_SUPABASE_URL;
 const DEMO_MODE = false;
+
+let _fallbackClient = null;
+function getPlannerSupabase() {
+  const shared = getSupabase();
+  if (shared) return shared;
+  if (!_fallbackClient) {
+    _fallbackClient = createClient(FALLBACK_SUPABASE_URL, FALLBACK_SUPABASE_ANON_KEY, {
+      auth: {
+        storage: sharedCookieStorage, // cross-subdomain SSO — see lib/shared-cookie-storage
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
+  }
+  return _fallbackClient;
+}
+const supabase = getPlannerSupabase();
 
 // CASHFREE CONFIG
 const PRO_PRICE = 999; // Amount in rupees (₹999)
 const PRO_PRICE_DISPLAY = "₹999";
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SHARED COOKIE STORAGE — enables single sign-on with planmycashflows.com
-// (marketing site). Both apps write the auth session to a cookie scoped
-// to `.planmycashflows.com` so the browser shares it across subdomains.
-// On localhost, falls back to a per-origin cookie (no Domain attribute).
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function getSharedCookieDomain() {
-  if (typeof window === "undefined") return undefined;
-  const host = window.location.hostname;
-  if (!host || host === "localhost" || host === "127.0.0.1") return undefined;
-  if (host === "planmycashflows.com" || host.endsWith(".planmycashflows.com")) return "planmycashflows.com";
-  return undefined;
-}
-
-// Browsers silently drop cookies over ~4KB. Google OAuth sessions (JWT +
-// provider token + profile) routinely exceed that, while email/password
-// sessions fit — which made Google sign-in appear broken while email
-// worked. Values are therefore split into <=3180-byte chunks stored as
-// `key.0`, `key.1`, ... (same convention as @supabase/ssr).
-const COOKIE_CHUNK_SIZE = 3180;
-
-function readRawCookie(name) {
-  if (typeof document === "undefined") return null;
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const m = document.cookie.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));
-  return m ? m[1] : null;
-}
-
-function writeRawCookie(name, value, maxAge) {
-  if (typeof document === "undefined") return;
-  const domain = getSharedCookieDomain();
-  const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
-  const parts = [`${name}=${value}`, "Path=/", `Max-Age=${maxAge}`, "SameSite=Lax"];
-  if (isHttps) parts.push("Secure");
-  if (domain) parts.push(`Domain=${domain}`);
-  document.cookie = parts.join("; ");
-}
-
-const sharedCookieStorage = {
-  getItem(key) {
-    const single = readRawCookie(key);
-    if (single !== null) return decodeURIComponent(single);
-    let joined = "";
-    for (let i = 0; ; i++) {
-      const part = readRawCookie(`${key}.${i}`);
-      if (part === null) return i > 0 ? decodeURIComponent(joined) : null;
-      joined += part;
-    }
-  },
-  setItem(key, value) {
-    if (typeof document === "undefined") return;
-    this.removeItem(key); // clear any stale single/chunked cookies first
-    const encoded = encodeURIComponent(value);
-    const yearSecs = 60 * 60 * 24 * 365;
-    if (encoded.length <= COOKIE_CHUNK_SIZE) {
-      writeRawCookie(key, encoded, yearSecs);
-      return;
-    }
-    for (let i = 0; i * COOKIE_CHUNK_SIZE < encoded.length; i++) {
-      writeRawCookie(`${key}.${i}`, encoded.slice(i * COOKIE_CHUNK_SIZE, (i + 1) * COOKIE_CHUNK_SIZE), yearSecs);
-    }
-  },
-  removeItem(key) {
-    if (typeof document === "undefined") return;
-    writeRawCookie(key, "", 0);
-    for (let i = 0; readRawCookie(`${key}.${i}`) !== null; i++) {
-      writeRawCookie(`${key}.${i}`, "", 0);
-    }
-  },
-};
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    storage: sharedCookieStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
 
 // When an OAuth round-trip fails, Supabase redirects straight back to the
 // site with the reason hidden in the URL (#error_description=... or
@@ -142,10 +89,12 @@ const fmt = (n) => {
 };
 const fv = (p,r,y) => p * Math.pow(1+r,y);
 const pvCalc = (f,r,y) => y > 0 ? f / Math.pow(1+r,y) : f;
+// Start-of-month SIP (annuity-due) — matches lib/utils sipRequired and the
+// convention of standard Indian SIP calculators.
 const sipReq = (f,r,y) => {
   if (y <= 0) return f;
   const rm = r/12, n = y*12;
-  return rm === 0 ? f/n : (f*rm)/(Math.pow(1+rm,n)-1);
+  return rm === 0 ? f/n : (f*rm)/((Math.pow(1+rm,n)-1)*(1+rm));
 };
 const retCorpus = (annExp, inf, portR, yToRet, yInRet) => {
   const expAtRet = annExp * Math.pow(1+inf, yToRet);
@@ -829,7 +778,7 @@ const Dashboard = ({ user, isDemo, onAuthClick, onLogout }) => {
     const totalGoals = data.goals.reduce((s,g)=>s+g.currentValue,0);
     
     setAiAnalysis({
-      summary: `Based on your comprehensive financial profile, you are in a ${parseFloat(savRatio) >= 30 ? 'strong' : 'moderate'} financial position with a savings ratio of ${savRatio}%. Your current financial assets of ${fmt(totalFA)} provide a reasonable foundation, though targeted optimisation can significantly accelerate your journey to financial independence.`,
+      summary: `Based on your financial profile, you are in a ${parseFloat(savRatio) >= 30 ? 'strong' : 'moderate'} financial position with a savings ratio of ${savRatio}%. Your current financial assets of ${fmt(totalFA)} provide a reasonable foundation, though targeted optimisation can significantly accelerate your journey to financial independence. (Note: the AI service was unavailable, so this is an automated rule-based summary of your inputs, not a personalised AI analysis — please retry later for the full version.)`,
       strengths: [
         parseFloat(savRatio) >= 20 ? `Your savings ratio of ${savRatio}% demonstrates strong financial discipline — you're saving well above the national average.` : `While your savings ratio needs improvement, the fact that you're planning proactively shows excellent financial awareness.`,
         data.liabilities.length === 0 ? "Being completely debt-free is a major advantage — your entire savings can compound without interest drag." : "Managing your liabilities actively shows financial maturity.",
@@ -838,7 +787,7 @@ const Dashboard = ({ user, isDemo, onAuthClick, onLogout }) => {
       recommendations: [
         { title: "Emergency Fund Priority", detail: `Maintain ${fmt(totalExp * 6)} (6 months expenses) in a liquid fund or savings account before pursuing any investment goals. This should be your first milestone.`, urgency: "Immediate" },
         { title: "Tax Optimisation", detail: `Consider maximising Section 80C (₹1.5L via ELSS/PPF), 80CCD(1B) (₹50K via NPS), and 80D (health insurance premiums). This could save you ₹50,000–80,000 annually in taxes.`, urgency: "This Quarter" },
-        { title: "SIP Step-Up Strategy", detail: `Increase your SIPs by ${data.incomeGrowth}% annually in line with salary growth. A ₹${((data.sipMonthly * data.incomeGrowth / 100)/1000).toFixed(0)}K annual SIP increase can add ${fmt(data.sipMonthly * 12 * 0.4)} to your retirement corpus.`, urgency: "Annual" },
+        { title: "SIP Step-Up Strategy", detail: `Increase your SIPs by ${data.incomeGrowth}% annually in line with salary growth — that keeps your savings rate constant as income rises, and stepped-up SIPs typically end up contributing 1.5–2x what a flat SIP would over a 15–20 year horizon.`, urgency: "Annual" },
         { title: "Portfolio Rebalancing", detail: `Review your ${data.equityAlloc}:${data.debtAlloc} equity:debt allocation every 6 months. As you approach retirement, gradually shift to a more conservative ${Math.max(data.equityAlloc-20,40)}:${Math.min(data.debtAlloc+20,60)} allocation.`, urgency: "Semi-Annual" },
         { title: "Goal Prioritisation", detail: totalGoals > totalFA * 2 ? `Your goals total ${fmt(totalGoals)} against assets of ${fmt(totalFA)}. Consider prioritising high-priority goals first and potentially adjusting lower-priority goal timelines by 2–3 years.` : `Your asset base covers your goals well. Focus on maintaining consistent investments and avoid lifestyle inflation.`, urgency: "Review" },
       ],
@@ -922,7 +871,13 @@ const Dashboard = ({ user, isDemo, onAuthClick, onLogout }) => {
 
   const getAge = () => {
     if (!data.dob) return 35;
-    return new Date().getFullYear() - new Date(data.dob).getFullYear();
+    const dob = new Date(data.dob);
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    // Year subtraction alone overstates age by one before the birthday.
+    if (now.getMonth() < dob.getMonth() ||
+        (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate())) age -= 1;
+    return age;
   };
 
   if (showReport) {

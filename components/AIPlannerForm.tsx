@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, ArrowRight, ArrowLeft, Sparkles, TrendingUp } from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
-} from "recharts";
-import { fmtCurrency } from "@/lib/utils";
+import dynamic from "next/dynamic";
+import { Loader2, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
+import { fmtCurrency, COUNTRY_CURRENCY, currencyForCountry } from "@/lib/utils";
+import type { SnapshotResult } from "@/components/SnapshotResults";
+
+// The results view pulls in recharts (~100 kB gz) — defer it until a
+// snapshot actually exists instead of shipping it with the empty form.
+const SnapshotResults = dynamic(() => import("@/components/SnapshotResults"), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-white border border-[var(--color-silver)]/40 rounded-2xl shadow-sm p-8 flex items-center justify-center gap-2 text-sm text-[var(--color-slate)]">
+      <Loader2 className="w-4 h-4 animate-spin" /> Preparing your snapshot…
+    </div>
+  ),
+});
 
 type RiskTolerance = "conservative" | "balanced" | "aggressive";
 
@@ -24,19 +34,7 @@ interface FormState {
   riskTolerance: RiskTolerance | "";
 }
 
-interface SnapshotResult {
-  where_you_stand: string;
-  trajectory_summary: string;
-  projected_corpus: number;
-  yearly_projection: { year: number; value: number }[];
-  three_levers: { lever: string; impact: string }[];
-  next_step: string;
-}
-
-const COUNTRIES = ["India", "US", "UK", "UAE", "Singapore", "Other"];
-const CURRENCY_BY_COUNTRY: Record<string, string> = {
-  India: "INR", US: "USD", UK: "GBP", UAE: "AED", Singapore: "SGD", Other: "USD",
-};
+const COUNTRIES = Object.keys(COUNTRY_CURRENCY);
 
 export function AIPlannerForm() {
   const [step, setStep] = useState(1);
@@ -58,7 +56,7 @@ export function AIPlannerForm() {
   const [result, setResult] = useState<SnapshotResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const currency = CURRENCY_BY_COUNTRY[form.country] ?? "USD";
+  const currency = currencyForCountry(form.country);
 
   const canProceedStep1 = form.age > 0 && form.country && Number(form.monthlyIncome) > 0;
   const canProceedStep2 = Number(form.currentSavings) >= 0 && Number(form.monthlyExpenses) > 0;
@@ -357,84 +355,6 @@ function SummaryRow({ label, value }: { label: string; value: string | number })
     <div className="flex justify-between items-baseline gap-3">
       <span className="text-[var(--color-slate)]">{label}</span>
       <span className="font-semibold text-[var(--color-navy)] text-right">{value}</span>
-    </div>
-  );
-}
-
-function SnapshotResults({ result, currency, onReset }: { result: SnapshotResult; currency: string; onReset: () => void }) {
-  return (
-    <div className="bg-white border border-[var(--color-silver)]/40 rounded-2xl shadow-sm p-6 md:p-8">
-      <div className="flex items-center gap-2 mb-6">
-        <Sparkles className="w-5 h-5 text-[var(--color-gold)]" />
-        <span className="eyebrow">Your snapshot</span>
-      </div>
-
-      <h2 className="text-2xl font-semibold mb-3">Where you stand</h2>
-      <p className="text-[var(--color-slate)] leading-relaxed whitespace-pre-line">{result.where_you_stand}</p>
-
-      <div className="mt-8 bg-[var(--color-parchment)] rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-[var(--color-gold-dim)] font-semibold">Projected corpus at retirement</div>
-            <div className="text-3xl md:text-4xl font-semibold text-[var(--color-navy)] mt-1">
-              {fmtCurrency(result.projected_corpus, currency)}
-            </div>
-          </div>
-          <TrendingUp className="w-8 h-8 text-[var(--color-gold)]" />
-        </div>
-        <p className="text-sm text-[var(--color-slate)] leading-relaxed">{result.trajectory_summary}</p>
-
-        {result.yearly_projection && result.yearly_projection.length > 0 && (
-          <div className="h-56 mt-6">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={result.yearly_projection}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#5A6B80" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#5A6B80" }} tickFormatter={(v) => fmtCurrency(v, currency)} width={80} />
-                <Tooltip formatter={(v: number) => fmtCurrency(v, currency)} />
-                <Line type="monotone" dataKey="value" stroke="#C9A84C" strokeWidth={2.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      <h3 className="text-xl font-semibold mt-10 mb-4">Three levers that move the needle</h3>
-      <div className="space-y-3">
-        {result.three_levers.map((lever, i) => (
-          <div key={i} className="flex gap-4 items-start p-4 bg-white border border-[var(--color-silver)]/40 rounded-lg">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-navy)] text-[var(--color-gold)] flex items-center justify-center text-sm font-semibold flex-shrink-0">
-              {i + 1}
-            </div>
-            <div>
-              <div className="font-semibold text-[var(--color-navy)]">{lever.lever}</div>
-              <div className="text-sm text-[var(--color-slate)] mt-1">{lever.impact}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-10 bg-[var(--color-navy)] text-[var(--color-cream)] rounded-xl p-6">
-        <div className="text-xs uppercase tracking-wider text-[var(--color-gold-light)] font-semibold mb-2">Your next step</div>
-        <p className="text-lg leading-relaxed">{result.next_step}</p>
-      </div>
-
-      <div className="mt-8 p-6 bg-[var(--color-parchment)] rounded-xl border border-[var(--color-gold)]/30">
-        <h3 className="text-lg font-semibold mb-2">This is the surface.</h3>
-        <p className="text-sm text-[var(--color-slate)] leading-relaxed mb-4">
-          The full CashFlow Planner plan covers 16 sections including SWOT, tax harvesting, insurance gap, retirement scenarios, and detailed goal planning.
-          Try it free for 14 days — no card required.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <a href="https://app.planmycashflows.com/?signup" className="btn-primary">Start free trial</a>
-          <button onClick={onReset} className="btn-outline">Run another snapshot</button>
-        </div>
-      </div>
-
-      <p className="text-[11px] text-[var(--color-slate)] italic mt-6 leading-relaxed">
-        This snapshot is generated by an AI assistant for educational purposes only. It does not constitute investment advice.
-        Returns and inflation assumptions are illustrative. Please consult a SEBI-registered investment adviser before making investment decisions.
-      </p>
     </div>
   );
 }

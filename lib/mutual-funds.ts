@@ -83,7 +83,16 @@ export const TRACKED_FUNDS: TrackedFund[] = [
 
 /** Curated gold + silver ETFs. Same data infrastructure as regular MFs
  *  since AMFI publishes ETF NAVs in the same daily feed. Displayed in
- *  their own table on the gold/silver page. */
+ *  their own table on the gold/silver page.
+ *
+ *  ⚠ Several of these codes previously collided with codes in
+ *  TRACKED_FUNDS (a code identifies exactly one AMFI scheme, so a
+ *  collision means one of the two entries is wrong). Every row is now
+ *  identity-checked at fetch time against the official scheme name from
+ *  the AMFI/MFAPI feeds — a mismatched code renders as "—" and logs a
+ *  warning instead of silently showing another fund's numbers. Replace
+ *  any code that warns with the correct one from
+ *  https://www.amfiindia.com/spages/NAVAll.txt */
 export const TRACKED_METAL_ETFS: TrackedFund[] = [
   // Gold ETFs
   { schemeCode: "118819", category: "gold-etf",   amc: "Nippon India",     name: "Gold BeES" },
@@ -123,10 +132,27 @@ export interface MFLiveRow {
   found: boolean;
 }
 
+/**
+ * A scheme code identifies exactly one AMFI scheme. Guard against
+ * mis-mapped codes by checking the official scheme name (from AMFI or
+ * MFAPI) against the configured AMC — and, for metal ETFs, against the
+ * metal itself. Better to render "—" than another fund's numbers.
+ */
+function matchesFund(officialName: string | undefined, fund: TrackedFund): boolean {
+  if (!officialName) return true; // nothing to check against — trust the code
+  const o = officialName.toLowerCase();
+  const amcToken = fund.amc.split(/\s+/)[0].toLowerCase();
+  if (!o.includes(amcToken)) return false;
+  if (fund.category === "gold-etf" && !o.includes("gold")) return false;
+  if (fund.category === "silver-etf" && !o.includes("silver")) return false;
+  return true;
+}
+
 /** Fetch AMFI + MFAPI in parallel, compute returns, return enriched rows. */
 export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Promise<MFLiveRow[]> {
+  const wantedCodes = new Set(funds.map((f) => f.schemeCode));
   const [navMap, returnsMap] = await Promise.all([
-    fetchAMFINavMap(),
+    fetchAMFINavMap(wantedCodes),
     fetchReturnsMap(funds.map((f) => f.schemeCode)),
   ]);
 
@@ -143,6 +169,32 @@ export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Pr
   return funds.map((f): MFLiveRow => {
     const navHit = navMap.get(f.schemeCode);
     const ret = returnsMap.get(f.schemeCode);
+    const officialName = navHit?.schemeName ?? ret?.schemeName;
+
+    if (!matchesFund(officialName, f)) {
+      console.warn(
+        `mutual-funds: scheme code ${f.schemeCode} resolves to "${officialName}" — ` +
+        `expected ${f.amc} ${f.name}. Hiding row data; fix the code in ` +
+        `${f.category.endsWith("-etf") ? "TRACKED_METAL_ETFS" : "TRACKED_FUNDS"}.`,
+      );
+      return {
+        schemeCode: f.schemeCode,
+        category: f.category,
+        amc: f.amc,
+        name: f.name,
+        nav: null,
+        asOf: null,
+        return6m: null,
+        return1y: null,
+        return3y: null,
+        return5y: null,
+        crisilRating: null,
+        expenseRatio: null,
+        sparkline30d: [],
+        found: false,
+      };
+    }
+
     const isin = isinByCode.get(f.schemeCode);
     const enrich = isin ? enrichMap.get(isin) : undefined;
     return {
@@ -164,9 +216,12 @@ export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Pr
   });
 }
 
-/** AMFI daily feed parser. Columns: Scheme Code;ISIN Growth;ISIN Reinvest;Name;NAV;Date */
-async function fetchAMFINavMap(): Promise<Map<string, { nav: number; asOf: string; isin?: string }>> {
-  const out = new Map<string, { nav: number; asOf: string; isin?: string }>();
+/** AMFI daily feed parser. Columns: Scheme Code;ISIN Growth;ISIN Reinvest;Name;NAV;Date
+ *  The feed lists ~15,000 schemes — only rows in `wantedCodes` are kept. */
+async function fetchAMFINavMap(
+  wantedCodes: Set<string>,
+): Promise<Map<string, { nav: number; asOf: string; isin?: string; schemeName?: string }>> {
+  const out = new Map<string, { nav: number; asOf: string; isin?: string; schemeName?: string }>();
   try {
     const res = await fetch(AMFI_FEED_URL, {
       next: { revalidate: NAV_REVALIDATE, tags: ["amfi:nav"] },
@@ -178,16 +233,18 @@ async function fetchAMFINavMap(): Promise<Map<string, { nav: number; asOf: strin
       const parts = line.split(";");
       if (parts.length < 6) continue;
       const code = parts[0].trim();
-      if (!/^\d+$/.test(code)) continue;
+      if (!wantedCodes.has(code)) continue;
       // parts[1] is the Growth (or Div-Payout) ISIN; Indian MF ISINs start "INF".
       const isinRaw = parts[1]?.trim();
       const isin = isinRaw && /^INF/i.test(isinRaw) ? isinRaw : undefined;
+      const schemeName = parts[3]?.trim() || undefined;
       const navStr = parts[4]?.trim();
       const date = parts[5]?.trim();
       if (!navStr || navStr === "N.A." || !date) continue;
       const nav = parseFloat(navStr);
       if (Number.isNaN(nav)) continue;
-      out.set(code, { nav, asOf: date, isin });
+      out.set(code, { nav, asOf: date, isin, schemeName });
+      if (out.size === wantedCodes.size) break; // all tracked codes found — stop scanning
     }
   } catch (err) {
     console.warn("AMFI fetch failed:", err);
@@ -255,6 +312,7 @@ function pickNumber(v: unknown): number | null {
 interface SchemeReturns {
   currentNav: number;
   currentDate: string;
+  schemeName?: string;
   return6m: number | null;
   return1y: number | null;
   return3y: number | null;
@@ -273,9 +331,15 @@ async function fetchReturnsMap(codes: string[]): Promise<Map<string, SchemeRetur
 }
 
 interface MFAPIResponse {
-  meta?: unknown;
+  meta?: { scheme_name?: string };
   data?: Array<{ date: string; nav: string }>;
   status?: string;
+}
+
+/** Pre-parsed NAV point: epoch ms + numeric NAV, newest-first. */
+interface NavPoint {
+  ts: number;
+  nav: number;
 }
 
 async function fetchSchemeReturns(schemeCode: string): Promise<SchemeReturns | null> {
@@ -288,39 +352,34 @@ async function fetchSchemeReturns(schemeCode: string): Promise<SchemeReturns | n
     if (!res.ok) return null;
     const body: MFAPIResponse = await res.json();
     if (!body.data || body.data.length === 0) return null;
-    // MFAPI returns newest-first; first row is latest.
-    const latest = body.data[0];
-    const currentNav = parseFloat(latest.nav);
-    if (Number.isNaN(currentNav)) return null;
-    const currentTs = parseMFAPIDate(latest.date);
-    if (!currentTs) return null;
+
+    // Parse dates and NAVs once — the four return windows below all walk
+    // the same pre-parsed array instead of re-parsing per lookup.
+    const history: NavPoint[] = [];
+    for (const row of body.data) {
+      const ts = parseMFAPIDate(row.date);
+      if (!ts) continue;
+      const nav = parseFloat(row.nav);
+      if (!Number.isNaN(nav) && nav > 0) history.push({ ts, nav });
+    }
+    if (history.length === 0) return null;
+
+    // MFAPI returns newest-first; first point is latest.
+    const { ts: currentTs, nav: currentNav } = history[0];
 
     return {
       currentNav,
-      currentDate: latest.date,
-      return6m: computeSimpleReturn(body.data, currentTs, currentNav, 183),
-      return1y: computeCAGR(body.data, currentTs, currentNav, 365),
-      return3y: computeCAGR(body.data, currentTs, currentNav, 3 * 365),
-      return5y: computeCAGR(body.data, currentTs, currentNav, 5 * 365),
-      sparkline30d: extractSparkline(body.data, 30),
+      currentDate: body.data[0].date,
+      schemeName: body.meta?.scheme_name,
+      return6m: computeSimpleReturn(history, currentTs, currentNav, 183),
+      return1y: computeCAGR(history, currentTs, currentNav, 365),
+      return3y: computeCAGR(history, currentTs, currentNav, 3 * 365),
+      return5y: computeCAGR(history, currentTs, currentNav, 5 * 365),
+      sparkline30d: history.slice(0, 30).map((p) => p.nav).reverse(),
     };
   } catch {
     return null;
   }
-}
-
-/** Take the first `n` MFAPI rows (newest-first) and return their NAVs
- *  in oldest-first chronological order so the sparkline reads left-to-right. */
-function extractSparkline(
-  data: Array<{ date: string; nav: string }>,
-  n: number,
-): number[] {
-  const out: number[] = [];
-  for (let i = 0; i < Math.min(n, data.length); i++) {
-    const v = parseFloat(data[i].nav);
-    if (!Number.isNaN(v) && v > 0) out.push(v);
-  }
-  return out.reverse();
 }
 
 /** MFAPI returns dates as "DD-MM-YYYY". Return epoch ms or null. */
@@ -331,31 +390,22 @@ function parseMFAPIDate(s: string): number | null {
   return Number.isNaN(d.getTime()) ? null : d.getTime();
 }
 
-/** Walk the (newest-first) NAV array and find the closest entry to `daysBack` ago. */
-function findPastNav(
-  data: Array<{ date: string; nav: string }>,
-  targetTs: number,
-): { nav: number; ts: number } | null {
-  for (const row of data) {
-    const ts = parseMFAPIDate(row.date);
-    if (!ts) continue;
-    if (ts <= targetTs) {
-      const nav = parseFloat(row.nav);
-      if (!Number.isNaN(nav) && nav > 0) return { nav, ts };
-      // keep walking — the first valid one wins
-    }
+/** Walk the (newest-first) history and find the closest point at or before `targetTs`. */
+function findPastNav(history: NavPoint[], targetTs: number): NavPoint | null {
+  for (const point of history) {
+    if (point.ts <= targetTs) return point;
   }
   return null;
 }
 
 /** Annualised CAGR over `daysBack` days. */
 function computeCAGR(
-  data: Array<{ date: string; nav: string }>,
+  history: NavPoint[],
   currentTs: number,
   currentNav: number,
   daysBack: number,
 ): number | null {
-  const past = findPastNav(data, currentTs - daysBack * 24 * 60 * 60 * 1000);
+  const past = findPastNav(history, currentTs - daysBack * 24 * 60 * 60 * 1000);
   if (!past) return null;
   const years = (currentTs - past.ts) / (365.25 * 24 * 60 * 60 * 1000);
   if (years <= 0.1) return null;
@@ -364,12 +414,12 @@ function computeCAGR(
 
 /** Simple (non-annualised) percent change over a sub-year window. */
 function computeSimpleReturn(
-  data: Array<{ date: string; nav: string }>,
+  history: NavPoint[],
   currentTs: number,
   currentNav: number,
   daysBack: number,
 ): number | null {
-  const past = findPastNav(data, currentTs - daysBack * 24 * 60 * 60 * 1000);
+  const past = findPastNav(history, currentTs - daysBack * 24 * 60 * 60 * 1000);
   if (!past) return null;
   return (currentNav / past.nav - 1) * 100;
 }

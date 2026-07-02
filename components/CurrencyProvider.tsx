@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type CurrencyCode = "INR" | "USD" | "GBP" | "AED" | "SGD";
 
@@ -26,13 +26,17 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  function setCurrency(c: CurrencyCode) {
+  const setCurrency = useCallback((c: CurrencyCode) => {
     setCurrencyState(c);
     if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, c);
-  }
+  }, []);
+
+  // Stable context value — without the memo every consumer re-renders
+  // whenever this provider (near the root) re-renders.
+  const value = useMemo(() => ({ currency, setCurrency }), [currency, setCurrency]);
 
   return (
-    <CurrencyContext.Provider value={{ currency, setCurrency }}>
+    <CurrencyContext.Provider value={value}>
       {children}
     </CurrencyContext.Provider>
   );

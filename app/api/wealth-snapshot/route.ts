@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { redis, snapshotRateLimit, inputHash, isRedisConfigured, getClientIp } from "@/lib/redis";
 import { notifySlack, escapeSlack } from "@/lib/slack";
+import { currencyForCountry } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const currency = data.country === "India" ? "INR" : data.country === "US" ? "USD" : data.country === "UK" ? "GBP" : data.country === "UAE" ? "AED" : data.country === "Singapore" ? "SGD" : "USD";
+    const currency = currencyForCountry(data.country);
 
     const userPrompt = `Generate a wealth snapshot for the following anonymised investor:
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import * as Icons from "lucide-react";
 import { ArrowRight } from "lucide-react";
+import { getNamedIcon, FallbackIcon } from "@/components/nav-icons";
 
 interface ProductCardProps {
   icon: string;
@@ -10,7 +10,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ icon, name, short, href }: ProductCardProps) {
-  const Icon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[icon] ?? Icons.Circle;
+  const Icon = getNamedIcon(icon) ?? FallbackIcon;
 
   return (
     <Link href={href} className="card-soft group block">

@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import type { UnlistedShare } from "@/lib/investment-data";
+import {
+  Th, PlainTh, pillBtn,
+  useTableSort, sortRows, latestAmfiDate,
+} from "@/components/tables/table-utils";
 
 type SortKey = "company" | "sector" | "priceLowINR" | "ipoStatus";
+
+const TEXT_KEYS = ["company", "sector", "ipoStatus"] as const;
 
 const IPO_STATUS_LABELS: Record<string, string> = {
   none: "No timeline",
@@ -24,8 +29,7 @@ const IPO_STATUS_COLORS: Record<string, string> = {
 
 export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
   const [filter, setFilter] = useState<string>("All");
-  const [sortBy, setSortBy] = useState<SortKey>("company");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const { sortBy, sortDir, toggleSort } = useTableSort<SortKey>("company", "asc", TEXT_KEYS);
 
   const sectors = useMemo(() => {
     const set = new Set<string>();
@@ -36,24 +40,10 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
   const rows = useMemo(() => {
     let r = shares;
     if (filter !== "All") r = r.filter((s) => s.sector === filter);
-    const dir = sortDir === "asc" ? 1 : -1;
-    return [...r].sort((a, b) => {
-      const av = getValue(a, sortBy);
-      const bv = getValue(b, sortBy);
-      if (typeof av === "string" && typeof bv === "string") return av.localeCompare(bv) * dir;
-      return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
-    });
+    return sortRows(r, getValue, sortBy, sortDir);
   }, [shares, filter, sortBy, sortDir]);
 
-  function toggleSort(key: SortKey) {
-    if (sortBy === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else { setSortBy(key); setSortDir(key === "company" || key === "sector" ? "asc" : "desc"); }
-  }
-
-  const latestAsOf = useMemo(() => {
-    const dates = shares.map((s) => s.asOfDate).filter(Boolean).sort();
-    return dates[dates.length - 1];
-  }, [shares]);
+  const latestAsOf = useMemo(() => latestAmfiDate(shares.map((s) => s.asOfDate)), [shares]);
 
   return (
     <section className="py-16 bg-white">
@@ -69,12 +59,7 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
           </div>
           <div className="flex gap-2 flex-wrap">
             {sectors.map((s) => (
-              <button key={s} onClick={() => setFilter(s)}
-                className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
-                  filter === s
-                    ? "bg-[var(--color-navy)] text-[var(--color-cream)] border-[var(--color-navy)]"
-                    : "bg-white text-[var(--color-navy)] border-[var(--color-silver)]/40 hover:border-[var(--color-gold)]"
-                }`}>
+              <button key={s} onClick={() => setFilter(s)} className={pillBtn(filter === s)}>
                 {s}
               </button>
             ))}
@@ -88,10 +73,10 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
                 <Th label="Company" k="company" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="Sector" k="sector" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="Price range (₹)" k="priceLowINR" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-xs uppercase tracking-wider">Lot</th>
+                <PlainTh align="right">Lot</PlainTh>
                 <Th label="IPO" k="ipoStatus" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <th className="px-4 py-3 text-left font-semibold text-[var(--color-slate)] text-xs uppercase tracking-wider">Platforms</th>
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-slate)] text-xs uppercase tracking-wider">As of</th>
+                <PlainTh align="left">Platforms</PlainTh>
+                <PlainTh align="right">As of</PlainTh>
               </tr>
             </thead>
             <tbody>
@@ -138,18 +123,3 @@ function getValue(s: UnlistedShare, key: SortKey): string | number | undefined {
   return undefined;
 }
 
-function Th({ label, k, sortBy, sortDir, onSort, align = "left" }: {
-  label: string; k: SortKey; sortBy: SortKey; sortDir: "asc" | "desc";
-  onSort: (k: SortKey) => void; align?: "left" | "right";
-}) {
-  const active = sortBy === k;
-  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
-  return (
-    <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}>
-      <button onClick={() => onSort(k)} className="inline-flex items-center gap-1 text-xs uppercase tracking-wider font-semibold text-[var(--color-slate)] hover:text-[var(--color-navy)]">
-        {label}
-        <Icon className={`w-3 h-3 ${active ? "text-[var(--color-gold-dim)]" : "opacity-50"}`} />
-      </button>
-    </th>
-  );
-}
