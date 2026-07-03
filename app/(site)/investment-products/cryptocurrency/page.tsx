@@ -18,8 +18,8 @@ export default async function Page() {
   const ids = coins.map((c) => c.id);
   const [usdPrices, longTerm] = await Promise.all([
     ids.length > 0 ? getCoinUsdPrices(ids) : Promise.resolve({}),
-    // 3Y/5Y/10Y for the top 30 — sufficient coverage without hammering CoinGecko.
-    getCoinLongTermReturns(ids, 30),
+    // 2Y/3Y/5Y/10Y for the top 30 — long histories matter most for large caps.
+    getCoinLongTermReturns(coins.map((c) => ({ id: c.id, symbol: c.symbol })), 30),
   ]);
 
   const enriched = coins.map((c) => {

@@ -1,19 +1,36 @@
 /**
- * AMFI India daily NAV feed + MFAPI.in historical returns.
+ * Mutual fund + ETF data layer.
  *
- * AMFI feed: https://www.amfiindia.com/spages/NAVAll.txt (current NAVs)
- * MFAPI:     https://api.mfapi.in/mf/{schemeCode}        (historical NAVs)
- *
- * Both free, no API key.
+ * Sources (all free, no API key):
+ *   AMFI feed  https://www.amfiindia.com/spages/NAVAll.txt
+ *              — official daily NAVs for every Indian scheme, WITH the SEBI
+ *                category section headers and AMC names. Funds and metal
+ *                ETFs are DISCOVERED from this feed by category + AMC, so
+ *                there are no hardcoded scheme codes to go stale or collide.
+ *   MFAPI      https://api.mfapi.in/mf/{schemeCode}
+ *              — historical NAVs (returns + sparkline), keyed by AMFI code.
+ *   Kuvera     https://mf.captnemo.in/kuvera/{isin}
+ *              — CRISIL rating, expense ratio, and 1/3/5Y returns used as a
+ *                fallback when MFAPI is unreachable.
  */
 
 const AMFI_FEED_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 const MFAPI_BASE = "https://api.mfapi.in/mf";
+const KUVERA_PROXY_BASE = "https://mf.captnemo.in/kuvera";
 
 /** 6h for current NAV (AMFI updates once a day). */
 const NAV_REVALIDATE = 60 * 60 * 6;
 /** 24h for historical NAVs (return numbers barely move day-to-day). */
 const HISTORY_REVALIDATE = 60 * 60 * 24;
+
+/** Some upstream hosts (Cloudflare in front of MFAPI, the Kuvera proxy)
+ *  reject requests without a browser-like User-Agent. */
+const BROWSER_UA =
+  "Mozilla/5.0 (compatible; PlanMyCashflows/1.0; +https://planmycashflows.com)";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// ─── Fund universe ──────────────────────────────────────────────────
 
 export interface MFCategory {
   slug: string;
@@ -21,92 +38,56 @@ export interface MFCategory {
   short: string;
 }
 
-export const MF_CATEGORIES: MFCategory[] = [
-  { slug: "large-cap",  name: "Large Cap",  short: "Top 100 companies. Lower volatility, steady compounding." },
-  { slug: "flexi-cap",  name: "Flexi Cap",  short: "Manager picks across market caps. Most popular." },
-  { slug: "mid-cap",    name: "Mid Cap",    short: "Companies 101–250. Higher growth, higher volatility." },
-  { slug: "small-cap",  name: "Small Cap",  short: "Beyond #250. Biggest upside, biggest drawdowns." },
-  { slug: "elss",       name: "ELSS",       short: "80C tax-saver with 3-year lock-in." },
-  { slug: "hybrid",     name: "Hybrid",     short: "Mix of equity + debt." },
-  { slug: "debt",       name: "Debt",       short: "Fixed-income. Use for goals under 3 years." },
+/** SEBI categories we track, with per-category caps that together build the
+ *  "top 100" list. `match` runs against the AMFI section header, e.g.
+ *  "Open Ended Schemes(Equity Scheme - Large Cap Fund)". Order = priority. */
+const CATEGORY_RULES: Array<MFCategory & { cap: number; match: (section: string) => boolean }> = [
+  { slug: "large-cap",     name: "Large Cap",         short: "Top 100 companies. Lower volatility, steady compounding.", cap: 12, match: (s) => /Large Cap Fund/i.test(s) && !/Large & Mid/i.test(s) },
+  { slug: "large-mid-cap", name: "Large & Mid Cap",   short: "Top 250 blend — one notch more aggressive than large cap.", cap: 8,  match: (s) => /Large & Mid Cap/i.test(s) },
+  { slug: "flexi-cap",     name: "Flexi Cap",         short: "Manager picks across market caps. Most popular.",           cap: 10, match: (s) => /Flexi Cap/i.test(s) },
+  { slug: "multi-cap",     name: "Multi Cap",         short: "Mandated 25% each in large, mid and small caps.",           cap: 8,  match: (s) => /Multi Cap/i.test(s) },
+  { slug: "mid-cap",       name: "Mid Cap",           short: "Companies 101–250. Higher growth, higher volatility.",      cap: 12, match: (s) => /Mid Cap Fund/i.test(s) && !/Large & Mid|Small/i.test(s) },
+  { slug: "small-cap",     name: "Small Cap",         short: "Beyond #250. Biggest upside, biggest drawdowns.",           cap: 12, match: (s) => /Small Cap Fund/i.test(s) },
+  { slug: "elss",          name: "ELSS",              short: "80C tax-saver with 3-year lock-in.",                        cap: 10, match: (s) => /ELSS/i.test(s) },
+  { slug: "value",         name: "Value / Contra",    short: "Buys out-of-favour businesses below intrinsic value.",      cap: 6,  match: (s) => /Value Fund|Contra/i.test(s) },
+  { slug: "focused",       name: "Focused",           short: "Concentrated ~25-stock portfolios.",                        cap: 6,  match: (s) => /Focus?sed Fund/i.test(s) },
+  { slug: "hybrid",        name: "Aggressive Hybrid", short: "~65–80% equity + debt cushion.",                            cap: 8,  match: (s) => /Aggressive Hybrid/i.test(s) },
+  { slug: "baf",           name: "Balanced Advantage",short: "Dynamically shifts between equity and debt.",               cap: 6,  match: (s) => /Balanced Advantage|Dynamic Asset Allocation/i.test(s) },
+  { slug: "index",         name: "Index",             short: "Passive Nifty 50 / Sensex trackers at rock-bottom cost.",   cap: 8,  match: (s) => /Index Fund/i.test(s) },
+  { slug: "liquid",        name: "Liquid",            short: "Parking for cash and goals under a year.",                  cap: 4,  match: (s) => /Liquid Fund/i.test(s) },
 ];
 
-export interface TrackedFund {
-  schemeCode: string;
-  category: string;
-  amc: string;
-  name: string;
-}
+export const MF_CATEGORIES: MFCategory[] = CATEGORY_RULES.map(({ slug, name, short }) => ({ slug, name, short }));
 
-export const TRACKED_FUNDS: TrackedFund[] = [
-  // Large Cap
-  { schemeCode: "120586", category: "large-cap", amc: "ICICI Prudential", name: "Bluechip Fund" },
-  { schemeCode: "118834", category: "large-cap", amc: "Mirae Asset",      name: "Large Cap Fund" },
-  { schemeCode: "119598", category: "large-cap", amc: "SBI",              name: "Bluechip Fund" },
-  { schemeCode: "118807", category: "large-cap", amc: "Axis",             name: "Bluechip Fund" },
-  { schemeCode: "118780", category: "large-cap", amc: "Nippon India",     name: "Large Cap Fund" },
-  { schemeCode: "118533", category: "large-cap", amc: "HDFC",             name: "Top 100 Fund" },
+/** Overall size of the "top funds" list. */
+const TOP_FUND_LIMIT = 100;
 
-  // Flexi Cap
-  { schemeCode: "122639", category: "flexi-cap", amc: "Parag Parikh",     name: "Flexi Cap Fund" },
-  { schemeCode: "118472", category: "flexi-cap", amc: "Kotak",            name: "Flexicap Fund" },
-  { schemeCode: "118989", category: "flexi-cap", amc: "HDFC",             name: "Flexi Cap Fund" },
-  { schemeCode: "118566", category: "flexi-cap", amc: "DSP",              name: "Flexi Cap Fund" },
-
-  // Mid Cap
-  { schemeCode: "118473", category: "mid-cap",   amc: "Kotak",            name: "Emerging Equity" },
-  { schemeCode: "120842", category: "mid-cap",   amc: "Axis",             name: "Midcap Fund" },
-  { schemeCode: "120505", category: "mid-cap",   amc: "Motilal Oswal",    name: "Midcap Fund" },
-  { schemeCode: "118552", category: "mid-cap",   amc: "Nippon India",     name: "Growth Fund" },
-
-  // Small Cap
-  { schemeCode: "118778", category: "small-cap", amc: "Nippon India",     name: "Small Cap Fund" },
-  { schemeCode: "120828", category: "small-cap", amc: "Quant",            name: "Small Cap Fund" },
-  { schemeCode: "118784", category: "small-cap", amc: "Axis",             name: "Small Cap Fund" },
-  { schemeCode: "118468", category: "small-cap", amc: "HDFC",             name: "Small Cap Fund" },
-  { schemeCode: "120527", category: "small-cap", amc: "SBI",              name: "Small Cap Fund" },
-
-  // ELSS
-  { schemeCode: "120721", category: "elss",      amc: "Axis",             name: "ELSS Tax Saver" },
-  { schemeCode: "118469", category: "elss",      amc: "Quant",            name: "ELSS Tax Saver" },
-  { schemeCode: "118534", category: "elss",      amc: "Nippon India",     name: "ELSS Tax Saver" },
-
-  // Hybrid
-  { schemeCode: "101099", category: "hybrid",    amc: "ICICI Prudential", name: "Equity & Debt Fund" },
-  { schemeCode: "118565", category: "hybrid",    amc: "HDFC",             name: "Hybrid Equity Fund" },
-  { schemeCode: "118567", category: "hybrid",    amc: "SBI",              name: "Equity Hybrid Fund" },
-
-  // Debt
-  { schemeCode: "101061", category: "debt",      amc: "HDFC",             name: "Liquid Fund" },
-  { schemeCode: "118548", category: "debt",      amc: "ICICI Prudential", name: "Liquid Fund" },
-];
-
-/** Curated gold + silver ETFs. Same data infrastructure as regular MFs
- *  since AMFI publishes ETF NAVs in the same daily feed. Displayed in
- *  their own table on the gold/silver page.
- *
- *  ⚠ Several of these codes previously collided with codes in
- *  TRACKED_FUNDS (a code identifies exactly one AMFI scheme, so a
- *  collision means one of the two entries is wrong). Every row is now
- *  identity-checked at fetch time against the official scheme name from
- *  the AMFI/MFAPI feeds — a mismatched code renders as "—" and logs a
- *  warning instead of silently showing another fund's numbers. Replace
- *  any code that warns with the correct one from
- *  https://www.amfiindia.com/spages/NAVAll.txt */
-export const TRACKED_METAL_ETFS: TrackedFund[] = [
-  // Gold ETFs
-  { schemeCode: "118819", category: "gold-etf",   amc: "Nippon India",     name: "Gold BeES" },
-  { schemeCode: "118566", category: "gold-etf",   amc: "HDFC",             name: "Gold ETF" },
-  { schemeCode: "120829", category: "gold-etf",   amc: "ICICI Prudential", name: "Gold ETF" },
-  { schemeCode: "118469", category: "gold-etf",   amc: "Kotak",            name: "Gold ETF" },
-  { schemeCode: "118550", category: "gold-etf",   amc: "Aditya Birla SL",  name: "Gold ETF" },
-  { schemeCode: "118468", category: "gold-etf",   amc: "SBI",              name: "Gold ETF" },
-
-  // Silver ETFs (launched 2022)
-  { schemeCode: "152716", category: "silver-etf", amc: "ICICI Prudential", name: "Silver ETF" },
-  { schemeCode: "152714", category: "silver-etf", amc: "Nippon India",     name: "Silver BeES" },
-  { schemeCode: "152715", category: "silver-etf", amc: "Aditya Birla SL",  name: "Silver ETF" },
-  { schemeCode: "152717", category: "silver-etf", amc: "HDFC",             name: "Silver ETF" },
+/** AMCs eligible for the top-funds list, in rough AUM order (the feed has
+ *  no AUM, so the industry's largest houses first is the ranking proxy).
+ *  `match` runs against the AMC line in the feed (e.g. "SBI Mutual Fund"). */
+const AMC_WHITELIST: Array<{ match: RegExp; short: string }> = [
+  { match: /^SBI\b/i,              short: "SBI" },
+  { match: /^ICICI Prudential/i,   short: "ICICI Prudential" },
+  { match: /^HDFC\b/i,             short: "HDFC" },
+  { match: /^Nippon India/i,       short: "Nippon India" },
+  { match: /^Kotak/i,              short: "Kotak" },
+  { match: /^Aditya Birla/i,       short: "Aditya Birla SL" },
+  { match: /^UTI\b/i,              short: "UTI" },
+  { match: /^Axis\b/i,             short: "Axis" },
+  { match: /^Mirae/i,              short: "Mirae Asset" },
+  { match: /^Tata\b/i,             short: "Tata" },
+  { match: /^DSP\b/i,              short: "DSP" },
+  { match: /^Bandhan/i,            short: "Bandhan" },
+  { match: /^Edelweiss/i,          short: "Edelweiss" },
+  { match: /^Motilal Oswal/i,      short: "Motilal Oswal" },
+  { match: /^quant\b/i,            short: "Quant" },
+  { match: /^PPFAS|^Parag Parikh/i, short: "Parag Parikh" },
+  { match: /^Canara Robeco/i,      short: "Canara Robeco" },
+  { match: /^Franklin/i,           short: "Franklin Templeton" },
+  { match: /^Invesco/i,            short: "Invesco" },
+  { match: /^HSBC/i,               short: "HSBC" },
+  { match: /^Sundaram/i,           short: "Sundaram" },
+  { match: /^Baroda BNP/i,         short: "Baroda BNP Paribas" },
 ];
 
 export interface MFLiveRow {
@@ -116,13 +97,15 @@ export interface MFLiveRow {
   name: string;
   nav: number | null;
   asOf: string | null;
-  /** Trailing-period return. For 6M this is a simple percent change
-   *  (not annualised — the period is shorter than a year). For 1Y/3Y/5Y
-   *  it's annualised CAGR. Null if data missing. */
+  /** Trailing-period returns. 6M is a simple percent change (window is
+   *  shorter than a year); 1Y/2Y/3Y/5Y/10Y are annualised CAGR.
+   *  Null when the history doesn't reach back far enough. */
   return6m: number | null;
   return1y: number | null;
+  return2y: number | null;
   return3y: number | null;
   return5y: number | null;
+  return10y: number | null;
   /** CRISIL rating 1–5 (via Kuvera). Null when unavailable. */
   crisilRating: number | null;
   /** Total expense ratio as a percent, e.g. 0.63 (via Kuvera). Null when unavailable. */
@@ -132,119 +115,70 @@ export interface MFLiveRow {
   found: boolean;
 }
 
+// ─── AMFI feed parsing ──────────────────────────────────────────────
+
+interface AmfiScheme {
+  code: string;
+  isin?: string;
+  /** Official scheme name from the feed. */
+  officialName: string;
+  nav: number;
+  asOf: string;
+  /** SEBI category text from the enclosing section header. */
+  section: string;
+  /** AMC line the scheme appeared under, minus "Mutual Fund". */
+  amcFull: string;
+}
+
 /**
- * A scheme code identifies exactly one AMFI scheme. Guard against
- * mis-mapped codes by checking the official scheme name (from AMFI or
- * MFAPI) against the configured AMC — and, for metal ETFs, against the
- * metal itself. Better to render "—" than another fund's numbers.
+ * Parse the full AMFI feed preserving its structure. The feed interleaves:
+ *   Open Ended Schemes(Equity Scheme - Large Cap Fund)   ← section header
+ *   Axis Mutual Fund                                     ← AMC line
+ *   120465;INF846K01EW2;-;Axis Bluechip Fund - Direct Plan - Growth;58.4;01-Jul-2026
  */
-function matchesFund(officialName: string | undefined, fund: TrackedFund): boolean {
-  if (!officialName) return true; // nothing to check against — trust the code
-  const o = officialName.toLowerCase();
-  const amcToken = fund.amc.split(/\s+/)[0].toLowerCase();
-  if (!o.includes(amcToken)) return false;
-  if (fund.category === "gold-etf" && !o.includes("gold")) return false;
-  if (fund.category === "silver-etf" && !o.includes("silver")) return false;
-  return true;
-}
-
-/** Fetch AMFI + MFAPI in parallel, compute returns, return enriched rows. */
-export async function getTrackedMFNAVs(funds: TrackedFund[] = TRACKED_FUNDS): Promise<MFLiveRow[]> {
-  const wantedCodes = new Set(funds.map((f) => f.schemeCode));
-  const [navMap, returnsMap] = await Promise.all([
-    fetchAMFINavMap(wantedCodes),
-    fetchReturnsMap(funds.map((f) => f.schemeCode)),
-  ]);
-
-  // The AMFI feed gives us each scheme's ISIN for free; use it to pull CRISIL
-  // rating + expense ratio from the (free) Kuvera proxy. Strictly best-effort —
-  // any miss leaves those fields null and the table renders unchanged.
-  const isinByCode = new Map<string, string>();
-  for (const f of funds) {
-    const isin = navMap.get(f.schemeCode)?.isin;
-    if (isin) isinByCode.set(f.schemeCode, isin);
-  }
-  const enrichMap = await fetchEnrichmentMap([...new Set(isinByCode.values())]);
-
-  return funds.map((f): MFLiveRow => {
-    const navHit = navMap.get(f.schemeCode);
-    const ret = returnsMap.get(f.schemeCode);
-    const officialName = navHit?.schemeName ?? ret?.schemeName;
-
-    if (!matchesFund(officialName, f)) {
-      console.warn(
-        `mutual-funds: scheme code ${f.schemeCode} resolves to "${officialName}" — ` +
-        `expected ${f.amc} ${f.name}. Hiding row data; fix the code in ` +
-        `${f.category.endsWith("-etf") ? "TRACKED_METAL_ETFS" : "TRACKED_FUNDS"}.`,
-      );
-      return {
-        schemeCode: f.schemeCode,
-        category: f.category,
-        amc: f.amc,
-        name: f.name,
-        nav: null,
-        asOf: null,
-        return6m: null,
-        return1y: null,
-        return3y: null,
-        return5y: null,
-        crisilRating: null,
-        expenseRatio: null,
-        sparkline30d: [],
-        found: false,
-      };
-    }
-
-    const isin = isinByCode.get(f.schemeCode);
-    const enrich = isin ? enrichMap.get(isin) : undefined;
-    return {
-      schemeCode: f.schemeCode,
-      category: f.category,
-      amc: f.amc,
-      name: f.name,
-      nav: navHit?.nav ?? ret?.currentNav ?? null,
-      asOf: navHit?.asOf ?? ret?.currentDate ?? null,
-      return6m: ret?.return6m ?? null,
-      return1y: ret?.return1y ?? null,
-      return3y: ret?.return3y ?? null,
-      return5y: ret?.return5y ?? null,
-      crisilRating: enrich?.crisilRating ?? null,
-      expenseRatio: enrich?.expenseRatio ?? null,
-      sparkline30d: ret?.sparkline30d ?? [],
-      found: !!(navHit || ret),
-    };
-  });
-}
-
-/** AMFI daily feed parser. Columns: Scheme Code;ISIN Growth;ISIN Reinvest;Name;NAV;Date
- *  The feed lists ~15,000 schemes — only rows in `wantedCodes` are kept. */
-async function fetchAMFINavMap(
-  wantedCodes: Set<string>,
-): Promise<Map<string, { nav: number; asOf: string; isin?: string; schemeName?: string }>> {
-  const out = new Map<string, { nav: number; asOf: string; isin?: string; schemeName?: string }>();
+async function fetchAmfiSchemes(): Promise<AmfiScheme[]> {
+  const out: AmfiScheme[] = [];
   try {
     const res = await fetch(AMFI_FEED_URL, {
       next: { revalidate: NAV_REVALIDATE, tags: ["amfi:nav"] },
-      headers: { Accept: "text/plain" },
+      headers: { Accept: "text/plain", "User-Agent": BROWSER_UA },
     });
     if (!res.ok) return out;
     const text = await res.text();
-    for (const line of text.split(/\r?\n/)) {
+
+    let section = "";
+    let amcFull = "";
+    for (const rawLine of text.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      if (!line.includes(";")) {
+        // Header lines: either a scheme-type section or an AMC name.
+        const sectionMatch = line.match(/Schemes?\s*\(\s*([^)]+)\)/i);
+        if (sectionMatch) section = sectionMatch[1].trim();
+        else if (!/^Scheme Code/i.test(line)) amcFull = line.replace(/Mutual Fund\s*$/i, "").trim();
+        continue;
+      }
+
       const parts = line.split(";");
       if (parts.length < 6) continue;
       const code = parts[0].trim();
-      if (!wantedCodes.has(code)) continue;
-      // parts[1] is the Growth (or Div-Payout) ISIN; Indian MF ISINs start "INF".
-      const isinRaw = parts[1]?.trim();
-      const isin = isinRaw && /^INF/i.test(isinRaw) ? isinRaw : undefined;
-      const schemeName = parts[3]?.trim() || undefined;
+      if (!/^\d+$/.test(code)) continue;
       const navStr = parts[4]?.trim();
-      const date = parts[5]?.trim();
-      if (!navStr || navStr === "N.A." || !date) continue;
+      const asOf = parts[5]?.trim();
+      if (!navStr || navStr === "N.A." || !asOf) continue;
       const nav = parseFloat(navStr);
-      if (Number.isNaN(nav)) continue;
-      out.set(code, { nav, asOf: date, isin, schemeName });
-      if (out.size === wantedCodes.size) break; // all tracked codes found — stop scanning
+      if (Number.isNaN(nav) || nav <= 0) continue;
+      const isinRaw = parts[1]?.trim();
+      out.push({
+        code,
+        isin: isinRaw && /^INF/i.test(isinRaw) ? isinRaw : undefined,
+        officialName: parts[3]?.trim() ?? "",
+        nav,
+        asOf,
+        section,
+        amcFull,
+      });
     }
   } catch (err) {
     console.warn("AMFI fetch failed:", err);
@@ -252,37 +186,207 @@ async function fetchAMFINavMap(
   return out;
 }
 
-// ─── Kuvera enrichment (CRISIL rating + expense ratio) ──────────────
-// Free, unofficial proxy (mf.captnemo.in) over Kuvera, keyed by ISIN.
-// Strictly best-effort: failures / timeouts / missing fields → null, never
-// throw, so the table always renders even if the proxy is unavailable.
+/** Direct-plan Growth option only (one row per fund; excludes IDCW/Regular). */
+function isDirectGrowth(name: string): boolean {
+  return (
+    /\bdirect\b/i.test(name) &&
+    /growth/i.test(name) &&
+    !/idcw|dividend|bonus|payout|reinvest/i.test(name)
+  );
+}
 
-const KUVERA_PROXY_BASE = "https://mf.captnemo.in/kuvera";
+/** "Axis Bluechip Fund - Direct Plan - Growth" → "Bluechip Fund" (AMC has its
+ *  own column). Strips whichever AMC prefix the fund actually uses — the feed
+ *  AMC line ("PPFAS") and the display short ("Parag Parikh") can differ. */
+function displayName(officialName: string, amcPrefixes: Array<string | undefined>): string {
+  let n = officialName.split(/\s+-\s+/)[0].trim();
+  for (const prefix of amcPrefixes) {
+    if (prefix && n.toLowerCase().startsWith(prefix.toLowerCase())) {
+      n = n.slice(prefix.length).trim();
+      break;
+    }
+  }
+  // "Nippon India ETF Gold BeES" → "ETF Gold BeES" → "Gold BeES"
+  n = n.replace(/^ETF\s+/i, "");
+  return n || officialName;
+}
+
+interface DiscoveredFund {
+  schemeCode: string;
+  category: string;
+  amc: string;
+  amcRank: number;
+  name: string;
+  isin?: string;
+  nav: number;
+  asOf: string;
+}
+
+/** Select the top-N funds: whitelisted AMCs × tracked SEBI categories,
+ *  Direct-Growth plans, capped per category. */
+function discoverTopFunds(schemes: AmfiScheme[], limit = TOP_FUND_LIMIT): DiscoveredFund[] {
+  const byCategory = new Map<string, DiscoveredFund[]>();
+
+  for (const s of schemes) {
+    if (!isDirectGrowth(s.officialName)) continue;
+    // ETFs / FoFs sneak into a few sections — the fund table is for regular schemes.
+    if (/\betf\b|bees|fof|fund of fund/i.test(s.officialName)) continue;
+
+    const rule = CATEGORY_RULES.find((r) => r.match(s.section));
+    if (!rule) continue;
+
+    // Index category: headline Nifty 50 / Sensex trackers only, not the
+    // dozens of factor/sector index products.
+    if (rule.slug === "index") {
+      if (!/nifty\s*50 index|sensex index/i.test(s.officialName)) continue;
+      if (/next|equal|value|momentum|quality|low vol|shariah|bank|it\b|pharma/i.test(s.officialName)) continue;
+    }
+
+    const amcRank = AMC_WHITELIST.findIndex((a) => a.match.test(s.amcFull));
+    if (amcRank === -1) continue;
+
+    const list = byCategory.get(rule.slug) ?? [];
+    const name = displayName(s.officialName, [s.amcFull, AMC_WHITELIST[amcRank].short]);
+    // One fund per AMC per category (segregated-portfolio duplicates etc.)
+    if (list.some((f) => f.amc === AMC_WHITELIST[amcRank].short && f.name === name)) continue;
+    list.push({
+      schemeCode: s.code,
+      category: rule.slug,
+      amc: AMC_WHITELIST[amcRank].short,
+      amcRank,
+      name,
+      isin: s.isin,
+      nav: s.nav,
+      asOf: s.asOf,
+    });
+    byCategory.set(rule.slug, list);
+  }
+
+  const out: DiscoveredFund[] = [];
+  for (const rule of CATEGORY_RULES) {
+    const list = (byCategory.get(rule.slug) ?? [])
+      .sort((a, b) => a.amcRank - b.amcRank)
+      .slice(0, rule.cap);
+    out.push(...list);
+  }
+  return out.slice(0, limit);
+}
+
+/** Gold & silver ETFs, discovered by name — no FoFs, no hardcoded codes. */
+function discoverMetalETFs(schemes: AmfiScheme[], cap = 24): DiscoveredFund[] {
+  const out: DiscoveredFund[] = [];
+  const seen = new Set<string>();
+  for (const s of schemes) {
+    const n = s.officialName;
+    if (!/\b(etf|bees)\b/i.test(n)) continue;
+    if (/fof|fund of fund/i.test(n)) continue;
+    const isGold = /\bgold\b/i.test(n);
+    const isSilver = /\bsilver\b/i.test(n);
+    if (isGold === isSilver) continue; // neither, or a combined product
+    if (seen.has(s.code)) continue;
+    seen.add(s.code);
+    const amcRank = AMC_WHITELIST.findIndex((a) => a.match.test(s.amcFull));
+    out.push({
+      schemeCode: s.code,
+      category: isGold ? "gold-etf" : "silver-etf",
+      amc: amcRank >= 0 ? AMC_WHITELIST[amcRank].short : s.amcFull || "—",
+      amcRank: amcRank >= 0 ? amcRank : AMC_WHITELIST.length,
+      name: displayName(n, [s.amcFull, amcRank >= 0 ? AMC_WHITELIST[amcRank].short : undefined]),
+      isin: s.isin,
+      nav: s.nav,
+      asOf: s.asOf,
+    });
+  }
+  return out
+    .sort((a, b) => (a.category === b.category ? a.amcRank - b.amcRank : a.category.localeCompare(b.category)))
+    .slice(0, cap);
+}
+
+// ─── Public API ─────────────────────────────────────────────────────
+
+/** Top ~100 Direct-Growth funds across the tracked SEBI categories,
+ *  with NAV + 6M/1Y/2Y/3Y/5Y/10Y returns + rating/expense. */
+export async function getTopMutualFunds(limit = TOP_FUND_LIMIT): Promise<MFLiveRow[]> {
+  const schemes = await fetchAmfiSchemes();
+  const funds = discoverTopFunds(schemes, limit);
+  return enrichFunds(funds);
+}
+
+/** Every major Indian gold & silver ETF (discovered live from AMFI). */
+export async function getMetalETFs(): Promise<MFLiveRow[]> {
+  const schemes = await fetchAmfiSchemes();
+  const etfs = discoverMetalETFs(schemes);
+  return enrichFunds(etfs);
+}
+
+async function enrichFunds(funds: DiscoveredFund[]): Promise<MFLiveRow[]> {
+  const [returnsList, enrichList] = await Promise.all([
+    mapLimit(funds, 12, (f) => fetchSchemeReturns(f.schemeCode)),
+    mapLimit(funds, 12, (f) => (f.isin ? fetchKuveraEnrichment(f.isin) : Promise.resolve(null))),
+  ]);
+
+  return funds.map((f, i): MFLiveRow => {
+    const ret = returnsList[i];
+    const enrich = enrichList[i];
+    return {
+      schemeCode: f.schemeCode,
+      category: f.category,
+      amc: f.amc,
+      name: f.name,
+      nav: f.nav ?? ret?.currentNav ?? null,
+      asOf: f.asOf ?? ret?.currentDate ?? null,
+      return6m: ret?.return6m ?? null,
+      // Kuvera's published 1/3/5Y CAGRs backstop MFAPI outages.
+      return1y: ret?.return1y ?? enrich?.return1y ?? null,
+      return2y: ret?.return2y ?? null,
+      return3y: ret?.return3y ?? enrich?.return3y ?? null,
+      return5y: ret?.return5y ?? enrich?.return5y ?? null,
+      return10y: ret?.return10y ?? null,
+      crisilRating: enrich?.crisilRating ?? null,
+      expenseRatio: enrich?.expenseRatio ?? null,
+      sparkline30d: ret?.sparkline30d ?? [],
+      found: true,
+    };
+  });
+}
+
+/** Bounded-concurrency map — ~100 funds × 2 upstreams needs a polite pool. */
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<(R | null)[]> {
+  const results: (R | null)[] = new Array(items.length).fill(null);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      try {
+        results[i] = await fn(items[i]);
+      } catch {
+        results[i] = null;
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+// ─── Kuvera enrichment (rating, expense ratio, fallback returns) ────
 
 export interface MFEnrichment {
   crisilRating: number | null;
   expenseRatio: number | null;
-}
-
-async function fetchEnrichmentMap(isins: string[]): Promise<Map<string, MFEnrichment>> {
-  const out = new Map<string, MFEnrichment>();
-  if (isins.length === 0) return out;
-  const results = await Promise.allSettled(isins.map((i) => fetchKuveraEnrichment(i)));
-  results.forEach((r, idx) => {
-    if (r.status === "fulfilled" && r.value) out.set(isins[idx], r.value);
-  });
-  return out;
+  return1y: number | null;
+  return3y: number | null;
+  return5y: number | null;
 }
 
 async function fetchKuveraEnrichment(isin: string): Promise<MFEnrichment | null> {
   try {
     const res = await fetch(`${KUVERA_PROXY_BASE}/${encodeURIComponent(isin)}`, {
       next: { revalidate: HISTORY_REVALIDATE, tags: ["kuvera", `kuvera:${isin}`] },
-      headers: {
-        Accept: "application/json",
-        // Some proxies reject the default server UA — present a browser-like one.
-        "User-Agent": "Mozilla/5.0 (compatible; PlanMyCashflows/1.0; +https://planmycashflows.com)",
-      },
+      headers: { Accept: "application/json", "User-Agent": BROWSER_UA },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
@@ -290,10 +394,15 @@ async function fetchKuveraEnrichment(isin: string): Promise<MFEnrichment | null>
     // Kuvera returns either a single object or a one-element array.
     const fund = (Array.isArray(body) ? body[0] : body) as Record<string, unknown> | undefined;
     if (!fund || typeof fund !== "object") return null;
-    const crisilRating = pickNumber(fund.crisil_rating ?? fund.fund_rating);
-    const expenseRatio = pickNumber(fund.expense_ratio);
-    if (crisilRating == null && expenseRatio == null) return null;
-    return { crisilRating, expenseRatio };
+    const returns = (fund.returns ?? {}) as Record<string, unknown>;
+    const out: MFEnrichment = {
+      crisilRating: pickNumber(fund.crisil_rating ?? fund.fund_rating),
+      expenseRatio: pickNumber(fund.expense_ratio),
+      return1y: pickNumber(returns.year_1),
+      return3y: pickNumber(returns.year_3),
+      return5y: pickNumber(returns.year_5),
+    };
+    return Object.values(out).some((v) => v != null) ? out : null;
   } catch {
     return null;
   }
@@ -309,25 +418,19 @@ function pickNumber(v: unknown): number | null {
   return null;
 }
 
+// ─── MFAPI historical returns ───────────────────────────────────────
+
 interface SchemeReturns {
   currentNav: number;
   currentDate: string;
-  schemeName?: string;
   return6m: number | null;
   return1y: number | null;
+  return2y: number | null;
   return3y: number | null;
   return5y: number | null;
+  return10y: number | null;
   /** Oldest-first NAV history, ~30 points. */
   sparkline30d: number[];
-}
-
-async function fetchReturnsMap(codes: string[]): Promise<Map<string, SchemeReturns>> {
-  const out = new Map<string, SchemeReturns>();
-  const results = await Promise.allSettled(codes.map((c) => fetchSchemeReturns(c)));
-  results.forEach((r, i) => {
-    if (r.status === "fulfilled" && r.value) out.set(codes[i], r.value);
-  });
-  return out;
 }
 
 interface MFAPIResponse {
@@ -346,15 +449,15 @@ async function fetchSchemeReturns(schemeCode: string): Promise<SchemeReturns | n
   try {
     const res = await fetch(`${MFAPI_BASE}/${schemeCode}`, {
       next: { revalidate: HISTORY_REVALIDATE, tags: ["mfapi", `mfapi:${schemeCode}`] },
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", "User-Agent": BROWSER_UA },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const body: MFAPIResponse = await res.json();
     if (!body.data || body.data.length === 0) return null;
 
-    // Parse dates and NAVs once — the four return windows below all walk
-    // the same pre-parsed array instead of re-parsing per lookup.
+    // Parse dates and NAVs once — the return windows below all walk the
+    // same pre-parsed array instead of re-parsing per lookup.
     const history: NavPoint[] = [];
     for (const row of body.data) {
       const ts = parseMFAPIDate(row.date);
@@ -370,11 +473,12 @@ async function fetchSchemeReturns(schemeCode: string): Promise<SchemeReturns | n
     return {
       currentNav,
       currentDate: body.data[0].date,
-      schemeName: body.meta?.scheme_name,
       return6m: computeSimpleReturn(history, currentTs, currentNav, 183),
       return1y: computeCAGR(history, currentTs, currentNav, 365),
+      return2y: computeCAGR(history, currentTs, currentNav, 2 * 365),
       return3y: computeCAGR(history, currentTs, currentNav, 3 * 365),
       return5y: computeCAGR(history, currentTs, currentNav, 5 * 365),
+      return10y: computeCAGR(history, currentTs, currentNav, 10 * 365),
       sparkline30d: history.slice(0, 30).map((p) => p.nav).reverse(),
     };
   } catch {
@@ -398,16 +502,20 @@ function findPastNav(history: NavPoint[], targetTs: number): NavPoint | null {
   return null;
 }
 
-/** Annualised CAGR over `daysBack` days. */
+/** Annualised CAGR over `daysBack` days. Requires the history to actually
+ *  reach at least ~90% of the window so a 4-year-old fund doesn't report
+ *  a fake "10Y" return computed from its inception NAV. */
 function computeCAGR(
   history: NavPoint[],
   currentTs: number,
   currentNav: number,
   daysBack: number,
 ): number | null {
-  const past = findPastNav(history, currentTs - daysBack * 24 * 60 * 60 * 1000);
+  const past = findPastNav(history, currentTs - daysBack * DAY_MS);
   if (!past) return null;
-  const years = (currentTs - past.ts) / (365.25 * 24 * 60 * 60 * 1000);
+  const actualDays = (currentTs - past.ts) / DAY_MS;
+  if (actualDays < daysBack * 0.9) return null;
+  const years = actualDays / 365.25;
   if (years <= 0.1) return null;
   return (Math.pow(currentNav / past.nav, 1 / years) - 1) * 100;
 }
@@ -419,7 +527,8 @@ function computeSimpleReturn(
   currentNav: number,
   daysBack: number,
 ): number | null {
-  const past = findPastNav(history, currentTs - daysBack * 24 * 60 * 60 * 1000);
+  const past = findPastNav(history, currentTs - daysBack * DAY_MS);
   if (!past) return null;
+  if ((currentTs - past.ts) / DAY_MS < daysBack * 0.9) return null;
   return (currentNav / past.nav - 1) * 100;
 }

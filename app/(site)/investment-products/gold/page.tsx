@@ -4,7 +4,7 @@ import { goldData } from "@/lib/product-data";
 import { GoldGraph } from "@/components/ProductGraphs";
 import { LiveMetalsSection } from "@/components/markets/LiveMetalsSection";
 import { GoldSilverETFTable } from "@/components/markets/GoldSilverETFTable";
-import { getTrackedMFNAVs, TRACKED_METAL_ETFS } from "@/lib/mutual-funds";
+import { getMetalETFs } from "@/lib/mutual-funds";
 
 export const metadata: Metadata = {
   title: "Gold & Silver — Physical, ETF, Sovereign Gold Bond (SGB) Compared",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const revalidate = 21600;
 
 export default async function Page() {
-  const etfRows = await getTrackedMFNAVs(TRACKED_METAL_ETFS);
+  const etfRows = await getMetalETFs();
   return (
     <InvestmentProductPage
       data={{ ...goldData, graphic: <GoldGraph /> }}

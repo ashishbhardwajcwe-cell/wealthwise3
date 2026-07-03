@@ -90,11 +90,11 @@ export function Th<K extends string>({
   const active = sortBy === k;
   const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
   return (
-    <th className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}>
+    <th className={`px-4 py-3 whitespace-nowrap ${align === "right" ? "text-right" : "text-left"}`}>
       <span className={`inline-flex items-center gap-1.5 ${align === "right" ? "justify-end" : ""}`}>
         <button
           onClick={() => onSort(k)}
-          className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
+          className={`inline-flex items-center gap-1 whitespace-nowrap text-[10px] uppercase tracking-wider hover:text-[var(--color-navy)] ${
             active ? "text-[var(--color-navy)] font-bold" : "text-[var(--color-slate)] font-semibold"
           }`}
         >
@@ -117,7 +117,7 @@ export function PlainTh({
 }) {
   const alignClass = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
   return (
-    <th className={`px-4 py-3 ${alignClass} font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider`}>
+    <th className={`px-4 py-3 whitespace-nowrap ${alignClass} font-semibold text-[var(--color-slate)] text-[10px] uppercase tracking-wider`}>
       {children}
     </th>
   );

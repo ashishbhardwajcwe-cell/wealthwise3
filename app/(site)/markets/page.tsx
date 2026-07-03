@@ -11,7 +11,7 @@ import { MFLiveTable } from "@/components/markets/MFLiveTable";
 import { GoldSilverETFTable } from "@/components/markets/GoldSilverETFTable";
 import { StructuredData, breadcrumbSchema, collectionPageSchema } from "@/components/StructuredData";
 import { getTopCryptoInINR, getCoinUsdPrices, getCoinLongTermReturns } from "@/lib/crypto";
-import { getTrackedMFNAVs, TRACKED_METAL_ETFS } from "@/lib/mutual-funds";
+import { getTopMutualFunds, getMetalETFs } from "@/lib/mutual-funds";
 
 export const metadata: Metadata = {
   title: "Markets — Live Crypto, Stocks, Mutual Funds, Gold & Silver",
@@ -35,14 +35,14 @@ export default async function Page() {
   // Fetch everything in parallel — total page render is bounded by the slowest source.
   const [coins, mfRows, etfRows] = await Promise.all([
     getTopCryptoInINR(100),
-    getTrackedMFNAVs(),
-    getTrackedMFNAVs(TRACKED_METAL_ETFS),
+    getTopMutualFunds(),
+    getMetalETFs(),
   ]);
 
   const ids = coins.map((c) => c.id);
   const [usdPrices, longTerm] = await Promise.all([
     ids.length > 0 ? getCoinUsdPrices(ids) : Promise.resolve({}),
-    getCoinLongTermReturns(ids, 30),
+    getCoinLongTermReturns(coins.map((c) => ({ id: c.id, symbol: c.symbol })), 30),
   ]);
 
   const enrichedCoins = coins.map((c) => {

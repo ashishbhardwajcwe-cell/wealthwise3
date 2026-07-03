@@ -3,7 +3,7 @@ import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { mutualFundsData } from "@/lib/product-data";
 import { MutualFundsGraph } from "@/components/ProductGraphs";
 import { MFLiveTable } from "@/components/markets/MFLiveTable";
-import { getTrackedMFNAVs } from "@/lib/mutual-funds";
+import { getTopMutualFunds } from "@/lib/mutual-funds";
 
 export const metadata: Metadata = {
   title: "Mutual Funds in India — Direct vs Regular, Tax, How to Pick",
@@ -15,11 +15,16 @@ export const metadata: Metadata = {
 export const revalidate = 21600;
 
 export default async function Page() {
-  const rows = await getTrackedMFNAVs();
+  const rows = await getTopMutualFunds();
   return (
     <InvestmentProductPage
       data={{ ...mutualFundsData, graphic: <MutualFundsGraph /> }}
-      liveSection={<MFLiveTable rows={rows} />}
+      liveSection={
+        <MFLiveTable
+          rows={rows}
+          title="Top 100 mutual funds we track"
+        />
+      }
     />
   );
 }

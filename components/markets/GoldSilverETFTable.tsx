@@ -12,7 +12,7 @@ import {
 import { downloadCsv } from "@/lib/csv-export";
 import { useWatchlist } from "@/lib/use-watchlist";
 
-type SortKey = "name" | "amc" | "category" | "nav" | "return6m" | "return1y" | "return3y" | "return5y";
+type SortKey = "name" | "amc" | "category" | "nav" | "return6m" | "return1y" | "return2y" | "return3y" | "return5y" | "return10y";
 
 const TEXT_KEYS = ["name", "amc", "category"] as const;
 
@@ -63,7 +63,7 @@ export function GoldSilverETFTable({ rows }: Props) {
   }
 
   function exportCsv() {
-    const headers = ["ETF", "AMC", "Metal", "NAV (INR)", "6M %", "1Y CAGR %", "3Y CAGR %", "5Y CAGR %", "As of", "Scheme code"];
+    const headers = ["ETF", "AMC", "Metal", "NAV (INR)", "6M %", "1Y CAGR %", "2Y CAGR %", "3Y CAGR %", "5Y CAGR %", "10Y CAGR %", "As of", "Scheme code"];
     downloadCsv(`auris-gold-silver-etfs-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
       switch (h) {
         case "ETF":         return r.name;
@@ -72,8 +72,10 @@ export function GoldSilverETFTable({ rows }: Props) {
         case "NAV (INR)":   return r.nav?.toFixed(4) ?? "";
         case "6M %":        return r.return6m?.toFixed(2) ?? "";
         case "1Y CAGR %":   return r.return1y?.toFixed(2) ?? "";
+        case "2Y CAGR %":   return r.return2y?.toFixed(2) ?? "";
         case "3Y CAGR %":   return r.return3y?.toFixed(2) ?? "";
         case "5Y CAGR %":   return r.return5y?.toFixed(2) ?? "";
+        case "10Y CAGR %":  return r.return10y?.toFixed(2) ?? "";
         case "As of":       return r.asOf ?? "";
         case "Scheme code": return r.schemeCode;
         default:            return "";
@@ -146,16 +148,18 @@ export function GoldSilverETFTable({ rows }: Props) {
                 <Th label="Metal"   k="category" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="NAV (₹)" k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Net Asset Value per ETF unit, published daily by AMFI." />
                 <Th label="6M"      k="return6m" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Simple percent change over the trailing 6 months." />
-                <Th label="1Y CAGR" k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 1 year." />
-                <Th label="3Y CAGR" k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 3 years." />
-                <Th label="5Y CAGR" k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 5 years. Silver ETFs only launched in 2022, so most show no 5Y." />
+                <Th label="1Y"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 1 year." />
+                <Th label="2Y"  k="return2y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 2 years." />
+                <Th label="3Y"  k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 3 years." />
+                <Th label="5Y"  k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 5 years. Silver ETFs only launched in 2022, so most show no 5Y." />
+                <Th label="10Y" k="return10y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 10 years — only the oldest gold ETFs have that much history." />
                 <PlainTh align="center">30d</PlainTh>
                 <PlainTh align="right">As of</PlainTh>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-12 text-center text-[var(--color-slate)]">No ETFs match the filter.</td></tr>
+                <tr><td colSpan={13} className="px-4 py-12 text-center text-[var(--color-slate)]">No ETFs match the filter.</td></tr>
               ) : filtered.map((r) => {
                 const sparklineUp =
                   r.sparkline30d.length >= 2 &&
@@ -182,14 +186,16 @@ export function GoldSilverETFTable({ rows }: Props) {
                     </td>
                     <ReturnCell value={r.return6m} />
                     <ReturnCell value={r.return1y} />
+                    <ReturnCell value={r.return2y} />
                     <ReturnCell value={r.return3y} />
                     <ReturnCell value={r.return5y} />
+                    <ReturnCell value={r.return10y} />
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
                         <Sparkline points={r.sparkline30d} positive={sparklineUp} />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums">{r.asOf ?? "—"}</td>
+                    <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums whitespace-nowrap">{r.asOf ?? "—"}</td>
                   </tr>
                 );
               })}
@@ -216,8 +222,10 @@ function getValue(r: MFLiveRow, key: SortKey): string | number | null {
     case "nav":      return r.nav;
     case "return6m": return r.return6m;
     case "return1y": return r.return1y;
+    case "return2y": return r.return2y;
     case "return3y": return r.return3y;
     case "return5y": return r.return5y;
+    case "return10y": return r.return10y;
   }
 }
 

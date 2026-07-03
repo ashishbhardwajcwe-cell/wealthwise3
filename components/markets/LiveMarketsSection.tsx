@@ -10,15 +10,16 @@ import { TradingViewScreener } from "./TradingViewScreener";
 type Market = "india" | "us";
 
 // TradingView's free embed widgets do NOT have a licence for NSE
-// real-time data ("This symbol is only available on TradingView"
-// notification). BSE quotes are open. Every Indian large-cap is dual-
-// listed, so we use BSE:<TICKER> across the board and BSE:SENSEX
-// as the headline index instead of NSE:NIFTY. BSE-only indices
-// (BANKEX, MIDCAP, SMLCAP) cover banking / mid-cap / small-cap.
+// real-time *stock* data, so individual stocks use BSE:<TICKER> (every
+// Indian large-cap is dual-listed) with BSE:SENSEX as the headline index.
+// The old BSE index codes for breadth (BSE:BANKEX / BSE:MIDCAP /
+// BSE:SMLCAP) stopped resolving on TradingView ("Invalid symbol"), so
+// the breadth cards use the NSE index symbols below — swap them here if
+// TradingView ever renames them.
 const INDIA_TICKERS = [
   { proName: "BSE:SENSEX",      title: "Sensex" },
   { proName: "BSE:BSE500",      title: "BSE 500" },
-  { proName: "BSE:BANKEX",      title: "Bankex" },
+  { proName: "NSE:BANKNIFTY",   title: "Bank Nifty" },
   { proName: "BSE:RELIANCE",    title: "Reliance" },
   { proName: "BSE:TCS",         title: "TCS" },
   { proName: "BSE:HDFCBANK",    title: "HDFC Bank" },
@@ -150,17 +151,17 @@ export function LiveMarketsSection() {
         {/* Block 2 — secondary indices */}
         <Block
           eyebrow="Across the curve"
-          title={isIndia ? "Bankex, Midcap & Smallcap" : "Dow, Russell & VIX"}
+          title={isIndia ? "Bank Nifty, Midcap & Smallcap" : "Dow, Russell & VIX"}
           subtitle={isIndia
-            ? "Banking, mid-caps and small-caps — where the rotations show up first. BSE indices since NSE data requires a paid TradingView subscription."
+            ? "Banking, mid-caps and small-caps — where the rotations show up first."
             : "Broad-market and volatility context."}
         >
           <div className="grid md:grid-cols-3 gap-5">
             {isIndia ? (
               <>
-                <MiniCard label="S&P BSE Bankex" symbol="BSE:BANKEX" />
-                <MiniCard label="S&P BSE Midcap" symbol="BSE:MIDCAP" />
-                <MiniCard label="S&P BSE Smallcap" symbol="BSE:SMLCAP" />
+                <MiniCard label="Nifty Bank" symbol="NSE:BANKNIFTY" />
+                <MiniCard label="Nifty Midcap 100" symbol="NSE:CNXMIDCAP" />
+                <MiniCard label="Nifty Smallcap 100" symbol="NSE:CNXSMALLCAP" />
               </>
             ) : (
               <>

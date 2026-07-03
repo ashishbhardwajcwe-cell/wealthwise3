@@ -6,17 +6,21 @@
  */
 
 // A paid CoinGecko key (env COINGECKO_API_KEY) switches the client to the Pro
-// host + auth header, which unlocks full daily history (days=max&interval=daily)
-// and a commercial licence. On the free/Demo tier that history call is capped to
-// the last 365 days and silently mislabels ~1Y data as 3Y/5Y/10Y — so without a
-// key we skip it entirely and the UI hides those columns (see getCoinLongTermReturns).
+// host + auth header. Live market data works fine on the free tier; multi-year
+// history does NOT (free market_chart is capped to 365 days), so long-term
+// returns are computed from CryptoCompare's free daily-history API instead —
+// see getCoinLongTermReturns.
 const COINGECKO_PRO_KEY = process.env.COINGECKO_API_KEY?.trim() || "";
 const COINGECKO_BASE = COINGECKO_PRO_KEY
   ? "https://pro-api.coingecko.com/api/v3"
   : "https://api.coingecko.com/api/v3";
 
-/** True when a paid CoinGecko key is configured — unlocks 3Y/5Y/10Y history. */
-export const CRYPTO_LONG_TERM_ENABLED = Boolean(COINGECKO_PRO_KEY);
+const CRYPTOCOMPARE_BASE = "https://min-api.cryptocompare.com/data/v2";
+
+const BROWSER_UA =
+  "Mozilla/5.0 (compatible; PlanMyCashflows/1.0; +https://planmycashflows.com)";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function cgHeaders(): Record<string, string> {
   const h: Record<string, string> = { Accept: "application/json" };
@@ -40,8 +44,9 @@ export interface CoinMarketRow {
   change7dPct: number | null;
   change30dPct: number | null;
   change1yPct: number | null;
-  /** Total percent change over the trailing 3 / 5 / 10 years (NOT annualised
+  /** Total percent change over the trailing 2 / 3 / 5 / 10 years (NOT annualised
    *  — matches crypto convention; the volatility makes annualisation noisy). */
+  change2yPct: number | null;
   change3yPct: number | null;
   change5yPct: number | null;
   change10yPct: number | null;
@@ -105,7 +110,8 @@ export async function getTopCryptoInINR(limit: number = 100): Promise<CoinMarket
       change7dPct: r.price_change_percentage_7d_in_currency,
       change30dPct: r.price_change_percentage_30d_in_currency,
       change1yPct: r.price_change_percentage_1y_in_currency,
-      // 3Y/5Y/10Y are filled in by getCoinLongTermReturns — separate call.
+      // 2Y/3Y/5Y/10Y are filled in by getCoinLongTermReturns — separate call.
+      change2yPct: null,
       change3yPct: null,
       change5yPct: null,
       change10yPct: null,
@@ -140,97 +146,110 @@ export async function getCoinUsdPrices(ids: string[]): Promise<Record<string, nu
 }
 
 export interface LongTermReturns {
+  change2yPct: number | null;
   change3yPct: number | null;
   change5yPct: number | null;
   change10yPct: number | null;
 }
 
 /**
- * Fetch 3Y / 5Y / 10Y returns for the supplied coin ids. Each coin's
- * full history comes from a single `market_chart?days=max` call, from
- * which we extract the closest price at -3y, -5y, -10y and compute
- * simple percent change vs the latest entry.
+ * 2Y / 3Y / 5Y / 10Y total returns for the supplied coins, computed from
+ * CryptoCompare's free daily-history API (`histoday?allData=true` — the
+ * full price history in one call, no API key required). CoinGecko's free
+ * tier caps history at 365 days, which is why this doesn't come from the
+ * same source as the live quotes.
  *
  * Strategy:
  *  - Promise.allSettled — one failed coin doesn't kill the batch.
  *  - AbortSignal.timeout(8000) — keep total render time bounded.
- *  - 24h Next.js ISR cache per coin URL — call CoinGecko at most once
- *    per coin per day per region.
+ *  - 24h Next.js ISR cache per coin — one upstream call per coin per day.
+ *  - INR pairs preferred; USD used when the INR pair has no deep history.
  *
- * Free-tier rate limits matter — pass a small `limit` (default 25) so
- * the cold start does not exhaust the per-minute budget.
+ * Pass a small `limit` (default 30) — long histories are meaningful for
+ * the large caps and each coin costs an upstream call on cold cache.
  */
 export async function getCoinLongTermReturns(
-  ids: string[],
-  limit: number = 25,
+  coins: Array<{ id: string; symbol: string }>,
+  limit: number = 30,
 ): Promise<Map<string, LongTermReturns>> {
   const out = new Map<string, LongTermReturns>();
-  // Free/Demo CoinGecko caps market_chart history to 365 days and ignores
-  // interval=daily, which makes 3Y/5Y/10Y silently wrong (they collapse to the
-  // 1Y figure). Only attempt the long-history call when a paid key unlocks it.
-  if (!CRYPTO_LONG_TERM_ENABLED) return out;
-  const subset = ids.slice(0, limit);
+  const subset = coins.slice(0, limit);
   if (subset.length === 0) return out;
 
   const results = await Promise.allSettled(
-    subset.map((id) => fetchCoinHistory(id)),
+    subset.map((c) => fetchCoinHistoryReturns(c.symbol)),
   );
   results.forEach((r, i) => {
-    if (r.status === "fulfilled" && r.value) out.set(subset[i], r.value);
+    if (r.status === "fulfilled" && r.value) out.set(subset[i].id, r.value);
   });
   return out;
 }
 
-interface MarketChartResponse {
-  prices?: Array<[number, number]>; // [tsMs, priceInr]
+interface CryptoCompareHistoDay {
+  Response?: string;
+  Data?: { Data?: Array<{ time: number; close: number }> };
 }
 
-async function fetchCoinHistory(id: string): Promise<LongTermReturns | null> {
+async function fetchCoinHistoryReturns(symbol: string): Promise<LongTermReturns | null> {
+  const history =
+    (await fetchHistoDay(symbol, "INR")) ?? (await fetchHistoDay(symbol, "USD"));
+  if (!history || history.length < 2) return null;
+
+  // Oldest-first daily closes; last entry is the latest.
+  const latest = history[history.length - 1];
+  if (!latest.close || latest.close <= 0) return null;
+
+  return {
+    change2yPct: totalReturn(history, latest, 2 * 365),
+    change3yPct: totalReturn(history, latest, 3 * 365),
+    change5yPct: totalReturn(history, latest, 5 * 365),
+    change10yPct: totalReturn(history, latest, 10 * 365),
+  };
+}
+
+async function fetchHistoDay(
+  symbol: string,
+  tsym: "INR" | "USD",
+): Promise<Array<{ time: number; close: number }> | null> {
   try {
     const url =
-      `${COINGECKO_BASE}/coins/${encodeURIComponent(id)}/market_chart` +
-      `?vs_currency=inr&days=max&interval=daily`;
+      `${CRYPTOCOMPARE_BASE}/histoday` +
+      `?fsym=${encodeURIComponent(symbol.toUpperCase())}` +
+      `&tsym=${tsym}&allData=true`;
     const res = await fetch(url, {
-      next: { revalidate: HISTORY_REVALIDATE, tags: ["crypto:history", `crypto:history:${id}`] },
-      headers: cgHeaders(),
+      next: { revalidate: HISTORY_REVALIDATE, tags: ["crypto:history", `crypto:history:${symbol}:${tsym}`] },
+      headers: { Accept: "application/json", "User-Agent": BROWSER_UA },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
-    const body: MarketChartResponse = await res.json();
-    const prices = body.prices;
-    if (!prices || prices.length < 2) return null;
-
-    const latest = prices[prices.length - 1];
-    const currentTs = latest[0];
-    const currentPrice = latest[1];
-    if (!currentPrice || currentPrice <= 0) return null;
-
-    return {
-      change3yPct: simpleReturn(prices, currentTs, currentPrice, 3 * 365),
-      change5yPct: simpleReturn(prices, currentTs, currentPrice, 5 * 365),
-      change10yPct: simpleReturn(prices, currentTs, currentPrice, 10 * 365),
-    };
+    const body: CryptoCompareHistoDay = await res.json();
+    if (body.Response !== "Success") return null;
+    const data = (body.Data?.Data ?? []).filter((p) => p.close > 0);
+    // A pair with under ~1.5 years of candles can't support any long column.
+    return data.length >= 540 ? data : null;
   } catch {
     return null;
   }
 }
 
-/** Find the price closest to `currentTs - daysBack` days and compute simple % change. */
-function simpleReturn(
-  prices: Array<[number, number]>,
-  currentTs: number,
-  currentPrice: number,
+/** Total percent change vs the close nearest `daysBack` days ago; null when
+ *  the history doesn't actually reach (~90% of) that far back — a coin
+ *  launched in 2022 must not report a "10Y" return from its listing price. */
+function totalReturn(
+  history: Array<{ time: number; close: number }>,
+  latest: { time: number; close: number },
   daysBack: number,
 ): number | null {
-  const targetTs = currentTs - daysBack * 24 * 60 * 60 * 1000;
-  // History is oldest-first; first entry whose ts >= targetTs is the closest match.
-  let pastPrice: number | null = null;
-  for (const [ts, price] of prices) {
-    if (ts >= targetTs && price > 0) {
-      pastPrice = price;
+  const targetSec = latest.time - (daysBack * DAY_MS) / 1000;
+  let past: { time: number; close: number } | null = null;
+  for (const point of history) {
+    if (point.time >= targetSec) {
+      past = point;
       break;
     }
   }
-  if (pastPrice == null) return null;
-  return (currentPrice / pastPrice - 1) * 100;
+  if (!past || past.close <= 0) return null;
+  const actualDays = (latest.time - past.time) / 86400;
+  if (actualDays < daysBack * 0.9) return null;
+  return (latest.close / past.close - 1) * 100;
 }
