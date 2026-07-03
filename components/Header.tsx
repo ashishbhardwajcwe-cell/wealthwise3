@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X, ExternalLink, ChevronDown } from "lucide-react";
 import { getNamedIcon } from "@/components/nav-icons";
@@ -45,38 +45,45 @@ function isActive(pathname: string, match: string | string[]): boolean {
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const [products, setProducts] = useState(false);
-  const [planners, setPlanners] = useState(false);
-  const [forMenu, setForMenu] = useState(false);
-  const [resources, setResources] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const pathname = usePathname() || "/";
+
+  // Close the mobile drawer and any open dropdown whenever the route
+  // changes — otherwise the menu stays open across navigations.
+  useEffect(() => {
+    setOpen(false);
+    setOpenMenu(null);
+  }, [pathname]);
+
+  const menuProps = (id: string) => ({
+    open: openMenu === id,
+    setOpen: (v: boolean) => setOpenMenu(v ? id : null),
+  });
 
   return (
     <header className="sticky top-0 z-50 glass-nav">
-      <div className="container-wide flex items-center justify-between gap-4 h-16">
+      <div className="container-wide flex items-center justify-between gap-3 h-16">
         <Link
           href="/"
-          className="flex items-center gap-2.5 shrink-0 mr-1 transition-transform hover:scale-[1.02]"
+          className="flex items-center gap-2.5 shrink-0 transition-transform hover:scale-[1.02]"
           aria-label="PlanMyCashflows — Home"
         >
-          <Image src="/auris-logo.png" alt="PlanMyCashflows" width={34} height={34} priority className="rounded-md" />
+          <Image src="/auris-logo.png" alt="" width={34} height={34} priority className="rounded-md" />
           <span className="text-base font-semibold tracking-tight whitespace-nowrap" style={{ fontFamily: "var(--font-display)" }}>
             PlanMy<span className="text-[var(--color-gold-dim)]">Cashflows</span>
           </span>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1.5">
+        <nav className="hidden lg:flex items-center gap-0.5" aria-label="Primary">
           <DropdownNavItem
             label="Products"
-            open={products}
-            setOpen={setProducts}
+            {...menuProps("products")}
             active={isActive(pathname, "/investment-products")}
             items={investmentProducts.map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone, emoji: p.emoji }))}
           />
           <DropdownNavItem
             label="Planners"
-            open={planners}
-            setOpen={setPlanners}
+            {...menuProps("planners")}
             active={isActive(pathname, ["/plan", "/ai-wealth-planner", "/guided"])}
             items={plannersMenu}
             width="w-[26rem]"
@@ -85,15 +92,13 @@ export function Header() {
           <NavLink href="/equity/analysis" active={isActive(pathname, "/equity")}>Research</NavLink>
           <DropdownNavItem
             label="For"
-            open={forMenu}
-            setOpen={setForMenu}
+            {...menuProps("for")}
             active={isActive(pathname, "/for")}
             items={audiences.map((a) => ({ href: `/for/${a.slug}`, label: a.name, desc: a.short, icon: a.icon, tone: a.tone, emoji: a.emoji }))}
           />
           <DropdownNavItem
             label="Resources"
-            open={resources}
-            setOpen={setResources}
+            {...menuProps("resources")}
             active={isActive(pathname, ["/blog", "/resources", "/about"])}
             items={resourcesMenu}
             width="w-[24rem]"
@@ -101,9 +106,10 @@ export function Header() {
           <NavLink href="/pricing" active={isActive(pathname, "/pricing")}>Pricing</NavLink>
         </nav>
 
-        <div className="hidden lg:flex items-center gap-3 shrink-0">
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
           <CurrencySwitcher />
           <AccountButton />
+          <span className="h-5 w-px bg-[var(--color-silver)]/50" aria-hidden />
           <a
             href={siteConfig.appDeepLink}
             target="_blank"
@@ -115,7 +121,12 @@ export function Header() {
           </a>
         </div>
 
-        <button aria-label="Toggle menu" className="lg:hidden p-2" onClick={() => setOpen(!open)}>
+        <button
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          className="lg:hidden p-2"
+          onClick={() => setOpen(!open)}
+        >
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
@@ -133,6 +144,7 @@ export function Header() {
               target="_blank"
               rel="noreferrer"
               className="px-2 py-3 text-base font-semibold text-[var(--color-gold-dim)] border-b border-[var(--color-silver)]/30 inline-flex items-center gap-1.5"
+              onClick={() => setOpen(false)}
             >
               AI Wealth Planner (app) <ExternalLink className="w-3.5 h-3.5" />
             </a>
@@ -192,8 +204,22 @@ function DropdownNavItem({
   width?: string;
 }) {
   return (
-    <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button className="nav-pill" data-active={active ? "true" : undefined}>
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setOpen(false);
+      }}
+    >
+      <button
+        className="nav-pill"
+        data-active={active ? "true" : undefined}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        // Click / Enter / Space toggle so the menu works without a mouse.
+        onClick={() => setOpen(!open)}
+      >
         {label}
         <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
       </button>
@@ -226,11 +252,11 @@ function DropdownNavItem({
                 </div>
               );
               return item.external ? (
-                <a key={item.href} href={item.href} target="_blank" rel="noreferrer" className={cn("block")}>
+                <a key={item.href} href={item.href} target="_blank" rel="noreferrer" className="block">
                   {content}
                 </a>
               ) : (
-                <Link key={item.href} href={item.href} className={cn("block")}>
+                <Link key={item.href} href={item.href} className="block">
                   {content}
                 </Link>
               );

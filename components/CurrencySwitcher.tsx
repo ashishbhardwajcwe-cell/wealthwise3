@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Coins, Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useCurrency, type CurrencyCode } from "./CurrencyProvider";
 
 const CURRENCIES: { code: CurrencyCode; label: string; symbol: string }[] = [
@@ -22,14 +22,20 @@ export function CurrencySwitcher() {
       className="relative"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
+      onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
     >
+      {/* Quiet text trigger — the bar already carries one boxed element (the
+          gold CTA); everything else stays calm text. */}
       <button
-        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[var(--color-slate)] hover:text-[var(--color-navy)] rounded-md border border-[var(--color-silver)]/30 hover:border-[var(--color-gold)]"
+        className="inline-flex items-center gap-1 px-2 py-1.5 text-[13px] font-semibold text-[var(--color-slate)] hover:text-[var(--color-navy)] hover:bg-[var(--color-sand)]/60 rounded-md transition-colors whitespace-nowrap"
         aria-label="Change currency"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen(!open)}
       >
-        <Coins className="w-3.5 h-3.5" />
         <span>{active.symbol}</span>
         <span>{active.code}</span>
+        <ChevronDown className="w-3 h-3 opacity-60" />
       </button>
       {open && (
         <div className="absolute right-0 top-full pt-2 w-56 z-50">

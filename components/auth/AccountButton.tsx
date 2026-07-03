@@ -57,8 +57,19 @@ export function AccountButton({ variant = "desktop" }: { variant?: "desktop" | "
   }
 
   return (
-    <div className="relative" onMouseEnter={() => setMenuOpen(true)} onMouseLeave={() => setMenuOpen(false)}>
-      <button className="flex items-center gap-2 text-sm font-semibold text-[var(--color-navy)] hover:text-[var(--color-gold-dim)]">
+    <div
+      className="relative"
+      onMouseEnter={() => setMenuOpen(true)}
+      onMouseLeave={() => setMenuOpen(false)}
+      onKeyDown={(e) => { if (e.key === "Escape") setMenuOpen(false); }}
+    >
+      <button
+        className="flex items-center gap-1.5 px-1.5 py-1 rounded-md text-sm font-semibold text-[var(--color-navy)] hover:bg-[var(--color-sand)]/60 transition-colors"
+        aria-label={`Account menu for ${displayName}`}
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+        onClick={() => setMenuOpen(!menuOpen)}
+      >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full" />
@@ -67,8 +78,10 @@ export function AccountButton({ variant = "desktop" }: { variant?: "desktop" | "
             {displayName[0]?.toUpperCase()}
           </span>
         )}
-        <span className="max-w-[8rem] truncate">{displayName}</span>
-        <ChevronDown className="w-3.5 h-3.5" />
+        {/* The full name eats ~8rem of bar width — show it only where the
+            bar has room to spare; the avatar + menu carry it elsewhere. */}
+        <span className="hidden xl:inline max-w-[7rem] truncate">{displayName}</span>
+        <ChevronDown className="w-3.5 h-3.5 opacity-60" />
       </button>
 
       {menuOpen && (

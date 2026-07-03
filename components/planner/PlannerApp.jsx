@@ -576,7 +576,7 @@ const Landing = ({ onGetStarted, onAuth }) => (
           <span style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:"2px", textTransform:"uppercase" }}>Your Journey</span>
         </div>
         <h2 style={{ fontFamily:DISPLAY, fontSize:"clamp(28px,3.8vw,42px)", fontWeight:700, color:T.navy, lineHeight:1.12, letterSpacing:"-1px" }}>Wherever You Are,<br/>We Meet You There</h2>
-        <p style={{ fontSize:15, color:T.slate, maxWidth:500, margin:"14px auto 0", lineHeight:1.75 }}>Whether you're an HNI building a legacy or a professional starting out — expert guidance matched to your exact stage of life.</p>
+        <p style={{ fontSize:15, color:T.slate, maxWidth:500, margin:"14px auto 0", lineHeight:1.75 }}>Whether you&apos;re an HNI building a legacy or a professional starting out — expert guidance matched to your exact stage of life.</p>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px,1fr))", gap:20 }}>
         {[
@@ -612,7 +612,7 @@ const Landing = ({ onGetStarted, onAuth }) => (
           ].map(t => (
             <div key={t.name} className="hover-lift" style={{ background:T.white, border:`1px solid ${T.silver}30`, borderRadius:16, padding:"32px 28px" }}>
               <div style={{ color:T.gold, fontSize:15, letterSpacing:"2px", marginBottom:14 }}>{t.stars}</div>
-              <p style={{ fontFamily:DISPLAY, fontSize:17, fontStyle:"italic", color:T.slate, lineHeight:1.7, marginBottom:20 }}>"{t.quote}"</p>
+              <p style={{ fontFamily:DISPLAY, fontSize:17, fontStyle:"italic", color:T.slate, lineHeight:1.7, marginBottom:20 }}>&ldquo;{t.quote}&rdquo;</p>
               <div style={{ fontSize:14, fontWeight:700, color:T.navy }}>{t.name}</div>
               <div style={{ fontSize:12, color:"#9CA3AF" }}>{t.role}</div>
             </div>
@@ -708,7 +708,7 @@ const demoData = {
 const DemoBanner = ({ onSignIn }) => (
   <div className="no-print" style={{ background:`linear-gradient(90deg, ${T.gold}22, ${T.goldLight}18, ${T.gold}22)`, borderBottom:`1px solid ${T.gold}30`, padding:"10px 24px", display:"flex", alignItems:"center", justifyContent:"center", gap:16, flexWrap:"wrap" }}>
     <span style={{ fontSize:13, fontWeight:600, color:T.navy }}>
-      👀 You're exploring a <strong>Demo</strong> — data is sample only and won't be saved.
+      👀 You&apos;re exploring a <strong>Demo</strong> — data is sample only and won&apos;t be saved.
     </span>
     <button onClick={onSignIn} className="btn-gold" style={{ padding:"6px 20px", borderRadius:8, fontSize:13, fontWeight:700 }}>
       Sign In to Save Your Real Plan →
@@ -2068,7 +2068,7 @@ const GuidedBudgetCard = ({ data }) => {
         <span style={{ fontSize:22 }}>💸</span>
         <h3 style={{ fontFamily:DISPLAY, fontSize:22, fontWeight:700, color:T.navy }}>Your Monthly Money Plan</h3>
       </div>
-      <p style={{ fontSize:13, color:T.steel, marginBottom:16 }}>Give every rupee a job — here's where your {fmt(income)}/month goes.</p>
+      <p style={{ fontSize:13, color:T.steel, marginBottom:16 }}>Give every rupee a job — here&apos;s where your {fmt(income)}/month goes.</p>
       <div style={{ display:"flex", height:26, borderRadius:8, overflow:"hidden", marginBottom:14, background:`${T.silver}20` }}>
         {segs.map((s,i)=><div key={i} title={`${s.label}: ${fmt(s.val)}`} style={{ width:`${s.val/denom*100}%`, background:s.color }} />)}
       </div>
@@ -2083,7 +2083,7 @@ const GuidedBudgetCard = ({ data }) => {
       </div>
       <div style={{ marginTop:16, padding:14, borderRadius:12, background: overAssigned?`${T.ruby}0D`:`${T.emerald}0D`, border:`1px solid ${overAssigned?T.ruby:T.emerald}25`, fontSize:14, color:T.navy, lineHeight:1.6 }}>
         {overAssigned
-          ? <>⚠️ You're spending about <strong>{fmt(spent-income)}/month</strong> more than you earn. Trim lifestyle costs or grow income before adding new goals.</>
+          ? <>⚠️ You&apos;re spending about <strong>{fmt(spent-income)}/month</strong> more than you earn. Trim lifestyle costs or grow income before adding new goals.</>
           : <>✅ Savings rate <strong>{savingsRate}%</strong> · <strong>{fmt(leftover)}/month</strong> still unassigned — put it to work via SIPs or toward your goals below.</>}
       </div>
     </div>
@@ -2147,7 +2147,7 @@ const ZeroBudget = ({ data, n }) => {
         <div style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", fontSize:14, color:T.slate }}><span>💸 Loan EMIs (fixed)</span><span style={{ fontWeight:700, color:T.navy }}>{fmt(emis)}</span></div>
         <div style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", fontSize:14, color:T.slate }}><span>📈 Investing (SIP / RD)</span><span style={{ fontWeight:700, color:T.emerald }}>{fmt(sip)}</span></div>
       </div>
-      <p style={{ fontSize:12, color:T.steel, marginTop:12, lineHeight:1.6 }}>💡 <strong>True Expenses:</strong> big yearly bills (insurance, festivals, vacations, repairs) are divided into monthly set-asides so they never blindside you — that's YNAB rule #2.</p>
+      <p style={{ fontSize:12, color:T.steel, marginTop:12, lineHeight:1.6 }}>💡 <strong>True Expenses:</strong> big yearly bills (insurance, festivals, vacations, repairs) are divided into monthly set-asides so they never blindside you — that&apos;s YNAB rule #2.</p>
     </div>
   );
 };
@@ -2179,7 +2179,7 @@ const DebtPayoff = ({ data }) => {
   if (!loans.length) return (
     <div style={{ background:T.white, borderRadius:16, padding:32, textAlign:"center", boxShadow:"0 2px 16px rgba(0,0,0,0.04)" }}>
       <div style={{ fontSize:40 }}>🎉</div>
-      <h3 style={{ fontFamily:DISPLAY, fontSize:24, fontWeight:700, color:T.emerald, marginTop:8 }}>You're debt-free!</h3>
+      <h3 style={{ fontFamily:DISPLAY, fontSize:24, fontWeight:700, color:T.emerald, marginTop:8 }}>You&apos;re debt-free!</h3>
       <p style={{ color:T.slate, marginTop:6 }}>Nothing to pay down — channel that freedom into investing for your goals.</p>
     </div>
   );
@@ -2219,7 +2219,7 @@ const DebtPayoff = ({ data }) => {
         <MetricCard icon="⏱️" label="Time saved" value={ym(monthsSaved)} sub="vs minimums only" color={T.emerald} />
         <MetricCard icon="💸" label="Interest saved" value={fmt(interestSaved)} sub={`total interest ${fmt(withExtra.interest)}`} color={T.gold} />
       </div>
-      <p style={{ fontSize:12, color:T.steel, marginTop:14, lineHeight:1.6 }}>Educational estimate based on the balances, rates and EMIs you entered. As each loan clears, its EMI rolls into the next ("rollover"). Confirm exact figures with your lender.</p>
+      <p style={{ fontSize:12, color:T.steel, marginTop:14, lineHeight:1.6 }}>Educational estimate based on the balances, rates and EMIs you entered. As each loan clears, its EMI rolls into the next (&ldquo;rollover&rdquo;). Confirm exact figures with your lender.</p>
     </div>
   );
 };
@@ -2459,7 +2459,7 @@ const GuidedPlanWizard = ({ onExit, onAuthClick }) => {
               {(answers.home==="owned"||answers.home==="loan") && <Field label="Value of your home" type="number" prefix="₹" value={numbers.as_homevalue||""} onChange={setN("as_homevalue")} />}
             </G2>
             {(!hasA("savings")&&!hasA("fd")&&!hasA("mf")&&!hasA("stocks")&&!hasA("epf")&&!hasA("gold")&&!hasA("crypto")&&!hasA("realestate")) &&
-              <p style={{ fontSize:12.5, color:T.steel, fontStyle:"italic" }}>You didn't select any asset types earlier — that's fine, we'll plan from your savings rate.</p>}
+              <p style={{ fontSize:12.5, color:T.steel, fontStyle:"italic" }}>You didn&apos;t select any asset types earlier — that&apos;s fine, we&apos;ll plan from your savings rate.</p>}
           </Card>
 
           {answers.hasLoans==="yes" && (

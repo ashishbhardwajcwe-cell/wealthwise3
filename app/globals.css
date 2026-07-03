@@ -35,6 +35,11 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Smooth anchor scrolling (TOC, section links) for those who allow motion */
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
   body {
     background: var(--color-offwhite);
     color: var(--color-navy);
@@ -251,31 +256,31 @@
     box-shadow: 0 4px 20px rgba(10, 22, 40, 0.07);
   }
 
-  /* Uniform nav "heads" — each a distinct bordered pill (segmented control look)
-     so the tabs read as separate options rather than continuous text. */
+  /* Nav links — quiet text, not boxes. A row of bordered pills next to a
+     currency chip, account chip and CTA read as ten competing boxes; letting
+     the links sit as calm text and reserving the "box" treatment for the
+     single gold CTA is what makes the bar feel organised. The active page
+     gets a short gold underline instead of a filled pill. */
   .nav-pill {
     position: relative;
     display: inline-flex; align-items: center; gap: 0.3rem;
-    padding: 0.45rem 0.7rem; border-radius: 0.6rem;
-    font-size: 0.8125rem; font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
-    color: var(--color-navy);
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(196, 205, 213, 0.55);
-    box-shadow: 0 1px 2px rgba(10, 22, 40, 0.03);
-    transition: color .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    padding: 0.5rem 0.7rem; border-radius: 0.5rem;
+    font-size: 0.875rem; font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
+    color: rgb(10 22 40 / 0.78);
+    transition: color .15s ease, background .15s ease;
   }
   .nav-pill:hover {
-    color: var(--color-gold-dim);
-    background: #fff;
-    border-color: rgba(201, 168, 76, 0.55);
-    box-shadow: 0 6px 16px rgba(10, 22, 40, 0.1);
-    transform: translateY(-1px);
+    color: var(--color-navy);
+    background: rgb(245 239 224 / 0.65);
   }
   .nav-pill[data-active="true"] {
     color: var(--color-navy);
-    background: linear-gradient(180deg, #ffffff, var(--color-sand));
-    border-color: var(--color-gold);
-    box-shadow: 0 4px 14px rgba(201, 168, 76, 0.22);
+  }
+  .nav-pill[data-active="true"]::after {
+    content: "";
+    position: absolute; left: 0.7rem; right: 0.7rem; bottom: 0.125rem;
+    height: 2px; border-radius: 1px;
+    background: var(--color-gold);
   }
 
   /* Glass card — frosted variant of card-soft */
