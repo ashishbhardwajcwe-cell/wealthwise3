@@ -14,7 +14,7 @@ import {
 import { downloadCsv } from "@/lib/csv-export";
 import { useWatchlist } from "@/lib/use-watchlist";
 
-type SortKey = "name" | "amc" | "category" | "nav" | "return6m" | "return1y" | "return3y" | "return5y";
+type SortKey = "name" | "amc" | "category" | "nav" | "return6m" | "return1y" | "return2y" | "return3y" | "return5y" | "return10y";
 
 const TEXT_KEYS = ["name", "amc", "category"] as const;
 
@@ -74,7 +74,7 @@ export function MFLiveTable({
   }
 
   function exportCsv() {
-    const headers = ["Fund", "AMC", "Category", "CRISIL Rating", "NAV (INR)", "6M %", "1Y CAGR %", "3Y CAGR %", "5Y CAGR %", "Expense %", "As of", "Scheme code"];
+    const headers = ["Fund", "AMC", "Category", "CRISIL Rating", "NAV (INR)", "6M %", "1Y CAGR %", "2Y CAGR %", "3Y CAGR %", "5Y CAGR %", "10Y CAGR %", "Expense %", "As of", "Scheme code"];
     downloadCsv(`auris-mutual-funds-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
       switch (h) {
         case "Fund":        return r.name;
@@ -84,8 +84,10 @@ export function MFLiveTable({
         case "NAV (INR)":   return r.nav?.toFixed(4) ?? "";
         case "6M %":        return r.return6m?.toFixed(2) ?? "";
         case "1Y CAGR %":   return r.return1y?.toFixed(2) ?? "";
+        case "2Y CAGR %":   return r.return2y?.toFixed(2) ?? "";
         case "3Y CAGR %":   return r.return3y?.toFixed(2) ?? "";
         case "5Y CAGR %":   return r.return5y?.toFixed(2) ?? "";
+        case "10Y CAGR %":  return r.return10y?.toFixed(2) ?? "";
         case "Expense %":   return r.expenseRatio?.toFixed(2) ?? "";
         case "As of":       return r.asOf ?? "";
         case "Scheme code": return r.schemeCode;
@@ -103,7 +105,7 @@ export function MFLiveTable({
           <p className="text-sm text-[var(--color-slate)] mt-2">
             {subtitle ?? (
               <>
-                {rows.length} hand-picked funds across {usedCategories.length} categories. NAVs from AMFI India daily feed; returns from MFAPI historical NAVs.
+                Top {rows.length} Direct-Growth funds from the largest AMCs across {usedCategories.length} SEBI categories. NAVs from AMFI India&apos;s daily feed; returns computed from historical NAVs.
                 {latestAsOf && <span> NAV as of {latestAsOf}. Click any column to sort.</span>}
               </>
             )}
@@ -169,9 +171,11 @@ export function MFLiveTable({
                 </PlainTh>
                 <Th label="NAV (₹)"  k="nav"      sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Net Asset Value — the per-unit price of the fund as published daily by AMFI." />
                 <Th label="6M"       k="return6m" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Simple percent change over the trailing 6 months (not annualised — the window is shorter than a year)." />
-                <Th label="1Y CAGR"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Compound Annual Growth Rate over the trailing 1 year. Annualised return as if it compounded smoothly." />
-                <Th label="3Y CAGR"  k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 3 years — a more honest read than 1Y." />
-                <Th label="5Y CAGR"  k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised return over the trailing 5 years — the timeframe SEBI suggests for equity funds." />
+                <Th label="1Y"  k="return1y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Compound Annual Growth Rate over the trailing 1 year. Annualised return as if it compounded smoothly." />
+                <Th label="2Y"  k="return2y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 2 years." />
+                <Th label="3Y"  k="return3y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 3 years — a more honest read than 1Y." />
+                <Th label="5Y"  k="return5y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 5 years — the timeframe SEBI suggests for equity funds." />
+                <Th label="10Y" k="return10y" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" tip="Annualised CAGR over the trailing 10 years. Shown only for funds that have actually existed that long." />
                 <PlainTh align="center">
                   <span className="inline-flex items-center gap-1">Expense <InfoTip text="Total Expense Ratio — the annual fee the AMC charges, already reflected in the NAV. Via Kuvera, shown where available." /></span>
                 </PlainTh>
@@ -183,7 +187,7 @@ export function MFLiveTable({
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={13} className="px-4 py-12 text-center text-[var(--color-slate)]">No funds match the filter.</td></tr>
+                <tr><td colSpan={15} className="px-4 py-12 text-center text-[var(--color-slate)]">No funds match the filter.</td></tr>
               ) : filtered.map((r) => {
                 const sparklineUp =
                   r.sparkline30d.length >= 2 &&
@@ -207,15 +211,17 @@ export function MFLiveTable({
                     </td>
                     <ReturnCell value={r.return6m} />
                     <ReturnCell value={r.return1y} />
+                    <ReturnCell value={r.return2y} />
                     <ReturnCell value={r.return3y} />
                     <ReturnCell value={r.return5y} />
+                    <ReturnCell value={r.return10y} />
                     <ExpenseCell value={r.expenseRatio} />
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
                         <Sparkline points={r.sparkline30d} positive={sparklineUp} />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums">{r.asOf ?? "—"}</td>
+                    <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums whitespace-nowrap">{r.asOf ?? "—"}</td>
                   </tr>
                 );
               })}
@@ -242,8 +248,10 @@ function getValue(r: MFLiveRow, key: SortKey): string | number | null {
     case "nav":      return r.nav;
     case "return6m": return r.return6m;
     case "return1y": return r.return1y;
+    case "return2y": return r.return2y;
     case "return3y": return r.return3y;
     case "return5y": return r.return5y;
+    case "return10y": return r.return10y;
   }
 }
 

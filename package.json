@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "import:pms": "node scripts/import-pms.mjs",
+    "import:aif": "node scripts/import-aif.mjs",
     "postbuild": "next-sitemap"
   },
   "dependencies": {

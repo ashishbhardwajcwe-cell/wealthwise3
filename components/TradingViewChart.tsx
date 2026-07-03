@@ -54,7 +54,7 @@ export function TradingViewChart({ symbol, interval = "1Y", height = 400, captio
         interval: intervalMap[interval] ?? "W",
         timezone: "Asia/Kolkata",
         theme: "light",
-        style: "1",
+        style: "2", // 2 = line chart (1 = candles) — line reads better for index/long-range views
         locale: "en",
         toolbar_bg: "#fafaf7",
         enable_publishing: false,

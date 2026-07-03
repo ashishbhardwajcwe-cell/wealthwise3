@@ -49,6 +49,12 @@ export const aifFund = defineType({
       ],
     }),
     defineField({ name: "asOfDate", title: "Data as of", type: "date", validation: (r) => r.required() }),
+    defineField({
+      name: "source",
+      title: "Data source",
+      type: "string",
+      description: "Where the figures came from, e.g. 'Manager quarterly letter, Q1 FY27' — required for compliance.",
+    }),
     defineField({ name: "notes", type: "text", rows: 3 }),
   ],
   preview: {
