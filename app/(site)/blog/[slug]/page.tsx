@@ -5,6 +5,7 @@ import { StructuredData, articleSchema } from "@/components/StructuredData";
 import { PortableContent } from "@/components/PortableContent";
 import { PostLayout } from "@/components/blog/PostLayout";
 import { getBlogPost, getAllBlogSlugs, getAllBlogCards } from "@/lib/blog";
+import { getEngagementCounts } from "@/lib/supabase-server";
 import { urlFor } from "@/sanity/client";
 import { siteConfig } from "@/lib/site-config";
 
@@ -62,7 +63,10 @@ export default async function BlogPostPage({ params }: Props) {
   const result = await getBlogPost(slug);
   if (!result) notFound();
 
-  const allCards = await getAllBlogCards();
+  const [allCards, engagement] = await Promise.all([
+    getAllBlogCards(),
+    getEngagementCounts(slug),
+  ]);
 
   if (result.kind === "sanity") {
     const post = result.post;
@@ -92,6 +96,8 @@ export default async function BlogPostPage({ params }: Props) {
           heroImageUrl={heroImageUrl}
           heroImageAlt={post.heroImage?.alt}
           related={related}
+          initialLikes={engagement.likes}
+          initialComments={engagement.comments}
         >
           <PortableContent value={post.body} />
         </PostLayout>
@@ -104,6 +110,8 @@ export default async function BlogPostPage({ params }: Props) {
             date,
             image: post.ogImage?.asset?.url ?? heroImageUrl ?? undefined,
             url: `${siteConfig.url}/blog/${slug}`,
+            commentCount: engagement.comments,
+            likeCount: engagement.likes,
           })}
         />
       </>
@@ -125,6 +133,8 @@ export default async function BlogPostPage({ params }: Props) {
         date={post.date}
         readTime={post.readTime}
         related={related}
+        initialLikes={engagement.likes}
+        initialComments={engagement.comments}
       >
         <LegacyBlogContent content={post.content} />
       </PostLayout>
@@ -136,6 +146,8 @@ export default async function BlogPostPage({ params }: Props) {
           author: post.author,
           date: post.date,
           url: `${siteConfig.url}/blog/${post.slug}`,
+          commentCount: engagement.comments,
+          likeCount: engagement.likes,
         })}
       />
     </>

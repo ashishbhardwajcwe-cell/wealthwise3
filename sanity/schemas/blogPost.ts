@@ -8,6 +8,7 @@ export const blogPost = defineType({
     { name: "content", title: "Content", default: true },
     { name: "meta", title: "Metadata" },
     { name: "seo", title: "SEO & Social" },
+    { name: "submission", title: "Guest submission" },
   ],
   fields: [
     defineField({
@@ -201,6 +202,54 @@ export const blogPost = defineType({
       type: "boolean",
       group: "meta",
       initialValue: false,
+    }),
+    // --- Guest submission tracking (set by /api/submissions, read-only) ---
+    // Drafts created from reader submissions carry these fields; review the
+    // draft, assign a real Author, then Publish to approve. The contributor's
+    // status page flips to "published" automatically via submissionId.
+    defineField({
+      name: "isGuestSubmission",
+      title: "Guest submission",
+      type: "boolean",
+      group: "submission",
+      initialValue: false,
+      readOnly: true,
+      description: "Set automatically when a reader submits via /blog/contribute",
+    }),
+    defineField({
+      name: "guestAuthorName",
+      title: "Submitted author name",
+      type: "string",
+      group: "submission",
+      readOnly: true,
+      description: "Create/assign an Author document with this name before publishing",
+      hidden: ({ document }) => !document?.isGuestSubmission,
+    }),
+    defineField({
+      name: "guestAuthorBio",
+      title: "Submitted author bio",
+      type: "text",
+      rows: 3,
+      group: "submission",
+      readOnly: true,
+      hidden: ({ document }) => !document?.isGuestSubmission,
+    }),
+    defineField({
+      name: "submitterEmail",
+      title: "Submitter email",
+      type: "string",
+      group: "submission",
+      readOnly: true,
+      hidden: ({ document }) => !document?.isGuestSubmission,
+    }),
+    defineField({
+      name: "submissionId",
+      title: "Submission ID",
+      type: "string",
+      group: "submission",
+      readOnly: true,
+      description: "Links back to the blog_submissions row in Supabase",
+      hidden: ({ document }) => !document?.isGuestSubmission,
     }),
     defineField({
       name: "seoTitle",

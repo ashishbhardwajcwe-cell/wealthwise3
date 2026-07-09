@@ -5,6 +5,8 @@ import { ReadingProgress } from "@/components/ReadingProgress";
 import { TableOfContents } from "@/components/TableOfContents";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { ShareButtons } from "@/components/ShareButtons";
+import { EngagementBar } from "@/components/blog/EngagementBar";
+import { CommentsSection } from "@/components/blog/CommentsSection";
 import type { BlogCardData } from "@/lib/blog";
 import { siteConfig } from "@/lib/site-config";
 
@@ -31,6 +33,9 @@ export interface PostLayoutProps {
   heroImageUrl?: string | null;
   heroImageAlt?: string;
   related: BlogCardData[];
+  /** Server-fetched engagement counts (SEO + no hydration pop). */
+  initialLikes?: number;
+  initialComments?: number;
   children: React.ReactNode;
 }
 
@@ -56,6 +61,8 @@ export function PostLayout({
   heroImageUrl,
   heroImageAlt,
   related,
+  initialLikes,
+  initialComments,
   children,
 }: PostLayoutProps) {
   return (
@@ -94,6 +101,8 @@ export function PostLayout({
                 <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" /> {readTime}</span>
               )}
             </div>
+
+            <EngagementBar slug={slug} initialLikes={initialLikes} initialComments={initialComments} />
           </div>
         </div>
 
@@ -147,6 +156,17 @@ export function PostLayout({
               </div>
 
               <AuthorBio authorName={author} authorRole={authorRole} />
+
+              {/* Contributor CTA */}
+              <div className="mt-6 text-sm text-[var(--color-slate)]">
+                Have a perspective worth publishing?{" "}
+                <Link href="/blog/contribute" className="font-semibold text-[var(--color-gold-dim)] hover:underline">
+                  Write for the Journal →
+                </Link>
+              </div>
+
+              {/* Reader discussion */}
+              <CommentsSection slug={slug} />
             </div>
 
             {/* Reserved right rail (empty on most screens, holds floating CTAs in future) */}

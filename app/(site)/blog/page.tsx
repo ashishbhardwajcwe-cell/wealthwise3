@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, PenLine } from "lucide-react";
 import { BlogCard } from "@/components/BlogCard";
 import { getAllBlogCards, getFeaturedOrLatest, BLOG_CATEGORIES } from "@/lib/blog";
 
@@ -37,16 +37,24 @@ export default async function BlogIndexPage() {
                 In-depth essays on what actually compounds — investing, tax, planning, the boring discipline.
               </p>
             </div>
-            <a
-              href="/rss.xml"
-              className="text-xs font-semibold text-[var(--color-gold-dim)] hover:underline inline-flex items-center gap-1.5 flex-shrink-0"
-              title="Subscribe via RSS"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20A2.18 2.18 0 0 1 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z" />
-              </svg>
-              RSS
-            </a>
+            <div className="flex items-center gap-4 flex-shrink-0">
+              <Link
+                href="/blog/contribute"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--color-gold)]/50 text-sm font-semibold text-[var(--color-gold-dim)] hover:bg-[var(--color-gold)]/10 transition-colors"
+              >
+                <PenLine className="w-4 h-4" /> Write for us
+              </Link>
+              <a
+                href="/rss.xml"
+                className="text-xs font-semibold text-[var(--color-gold-dim)] hover:underline inline-flex items-center gap-1.5"
+                title="Subscribe via RSS"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20A2.18 2.18 0 0 1 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z" />
+                </svg>
+                RSS
+              </a>
+            </div>
           </div>
         </div>
       </header>
@@ -187,6 +195,32 @@ export default async function BlogIndexPage() {
           </div>
         </section>
       )}
+
+      {/* Contributor CTA */}
+      <section className="py-12 md:py-16 border-t border-[var(--color-silver)]/30">
+        <div className="container-wide">
+          <div className="rounded-2xl gradient-navy text-[var(--color-cream)] p-8 md:p-12 flex items-center justify-between gap-8 flex-wrap">
+            <div className="max-w-2xl">
+              <div className="text-xs uppercase tracking-wider font-semibold text-[var(--color-gold-light)] mb-2">
+                Become a contributor
+              </div>
+              <h2 className="text-[var(--color-cream)]" style={{ fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
+                Have a perspective worth publishing?
+              </h2>
+              <p className="mt-3 text-sm md:text-base text-[var(--color-silver)] leading-relaxed">
+                We publish editor-reviewed guest essays on investing, tax, planning, and NRI finance —
+                with your byline, bio, and links. No fees, no fluff.
+              </p>
+            </div>
+            <Link
+              href="/blog/contribute"
+              className="btn-primary px-8 py-3 rounded-lg inline-flex items-center gap-2 flex-shrink-0"
+            >
+              <PenLine className="w-4 h-4" /> Write for the Journal
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Empty state if no posts at all */}
       {allPosts.length === 0 && (
