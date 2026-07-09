@@ -11,6 +11,16 @@ export const deskStructure: StructureResolver = (S) =>
             .title("Editorial")
             .items([
               S.documentTypeListItem("blogPost").title("Blog Posts"),
+              // Reader submissions arrive as drafts flagged isGuestSubmission.
+              // Review → assign an Author → Publish to approve; delete to decline.
+              S.listItem()
+                .title("Guest Submissions (review queue)")
+                .child(
+                  S.documentList()
+                    .title("Guest Submissions")
+                    .filter('_type == "blogPost" && isGuestSubmission == true')
+                    .apiVersion("2024-09-01"),
+                ),
               S.documentTypeListItem("stockAnalysis").title("Stock Analyses"),
               S.documentTypeListItem("author").title("Authors"),
               S.documentTypeListItem("category").title("Categories"),

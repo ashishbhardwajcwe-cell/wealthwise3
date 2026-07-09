@@ -33,8 +33,12 @@ export function articleSchema(opts: {
   date: string;
   image?: string;
   url: string;
+  /** Visible reader comments — emitted as commentCount + discussionUrl. */
+  commentCount?: number;
+  /** Reader likes — emitted as an interactionStatistic (LikeAction). */
+  likeCount?: number;
 }) {
-  return {
+  const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: opts.title,
@@ -44,6 +48,18 @@ export function articleSchema(opts: {
     image: opts.image,
     url: opts.url,
   };
+  if (opts.commentCount && opts.commentCount > 0) {
+    schema.commentCount = opts.commentCount;
+    schema.discussionUrl = `${opts.url}#comments`;
+  }
+  if (opts.likeCount && opts.likeCount > 0) {
+    schema.interactionStatistic = {
+      "@type": "InteractionCounter",
+      interactionType: { "@type": "LikeAction" },
+      userInteractionCount: opts.likeCount,
+    };
+  }
+  return schema;
 }
 
 export function breadcrumbSchema(items: { name: string; url: string }[]) {
