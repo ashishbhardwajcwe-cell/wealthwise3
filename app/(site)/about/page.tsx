@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { Bot, Eye, GraduationCap, Scale } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { CTASection } from "@/components/CTASection";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "About PlanMyCashflows — Founder Story, Team, Mission",
+  title: "About PlanMyCashflows — Our Mission",
   description:
-    "PlanMyCashflows was founded by Col Ashish Bhardwaj after 20 years in the Indian Army. Read the story, meet the team, and understand the mission.",
+    "PlanMyCashflows is an AI-powered, education-first platform helping Indian investors discover, compare and understand PMS and AIF. Learn about our mission and approach.",
 };
 
 export default function AboutPage() {
@@ -14,76 +15,120 @@ export default function AboutPage() {
     <>
       <Hero
         eyebrow="About"
-        title="From 20 years in olive greens to building a wealth firm."
-        subtitle="PlanMyCashflows was founded in 2026 by Col Ashish Bhardwaj after two decades in the Indian Army. The mission is simple: bring the rigour, calm, and discipline of military planning to financial planning."
+        title="Making PMS & AIF understandable for India's serious investors."
+        subtitle="PlanMyCashflows is an AI-powered, education-first platform that helps affluent professionals, business owners, HNIs, UHNIs and NRIs discover, compare and understand Portfolio Management Services and Alternative Investment Funds."
       />
 
-      <section className="py-20">
-        <div className="container-narrow prose-article">
-          <h2>The founder story</h2>
-          <p>
-            Ashish joined the Indian Military Academy at 18 and was commissioned into the Army Corps of Signals. Over the next two decades he served across the country —
-            from high-altitude postings in the Himalayas to instructional duty at the Military College of Telecommunication Engineering.
-          </p>
-          <p>
-            Through that time, like most officers, he managed his own money — first into LIC endowment plans because that&apos;s what officers did, then mutual funds when his
-            wife (a chartered accountant) pointed out the maths. By his mid-thirties he was advising fellow officers on tax, investments, and post-service planning,
-            because the institutional financial advice available to defence officers was either commission-driven or generic.
-          </p>
-          <p>
-            After completing his NISM certifications and applying for SEBI RIA registration, he left the Army in 2026 to build PlanMyCashflows — a firm explicitly designed
-            for the kind of advice he wanted when he was in uniform: clear, honest, mathematical, and free of product-pushing.
-          </p>
+      {/* Why we exist */}
+      <section className="py-20 md:py-28">
+        <div className="container-narrow">
+          <div className="max-w-3xl mx-auto text-center mb-10 reveal">
+            <span className="eyebrow">Why we exist</span>
+            <h2 className="mt-3 text-balance">Alternatives are growing fast. Understanding them hasn&apos;t kept up.</h2>
+          </div>
+          <div className="max-w-3xl mx-auto space-y-5 text-[var(--color-slate)] leading-relaxed reveal">
+            <p>
+              India&apos;s alternative-investment ecosystem — PMS and AIF — is expanding at a remarkable pace, with
+              new fund houses, categories and strategies launching every year. Yet for most investors these products
+              remain opaque: scattered information, jargon-heavy factsheets, and sales pitches that start with a
+              product rather than with you. Choosing well requires comparing across managers — something few
+              investors have the time or the tools to do.
+            </p>
+            <p>
+              We believe investors deserve better: unbiased, education-first discovery across fund houses, in plain
+              English, with clear information on structures, minimums, risks and costs before any commitment. That
+              is what PlanMyCashflows is built to provide — clarity first, conversation second, and never any
+              pressure.
+            </p>
+          </div>
+        </div>
+      </section>
 
-          <h2>Mission</h2>
-          <p>
-            We believe wealth planning in India is broken. Most retail investors are sold products by people earning commissions on those products.
-            Most high-net-worth investors get glossy decks and hand-holding but not actual planning. And most defence officers, NRIs, and salaried professionals
-            with complex situations are left to figure it out alone.
-          </p>
-          <p>
-            PlanMyCashflows is building a different kind of firm — one where the planning tools (CashFlow Planner app), the educational content (this site), and the
-            advisory layer (1:1 sessions, full plans) are aligned with the investor&apos;s interests, not the distributor&apos;s.
-          </p>
+      {/* Our approach */}
+      <section className="bg-[var(--color-parchment)]">
+        <div className="container-wide py-20 md:py-28">
+          <div className="max-w-3xl mx-auto text-center mb-12 reveal">
+            <span className="eyebrow">Our approach</span>
+            <h2 className="mt-3 text-balance">Four principles behind everything we publish</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 reveal">
+            <ApproachCard
+              icon={<GraduationCap className="w-5 h-5" />}
+              title="Education-first"
+              copy="Plain-English explainers, guides and comparisons help you understand products before you commit. No pressure, no jargon."
+            />
+            <ApproachCard
+              icon={<Scale className="w-5 h-5" />}
+              title="Unbiased curation"
+              copy="We bring together strategies from multiple fund houses so you can compare on the merits — not on who's selling hardest."
+            />
+            <ApproachCard
+              icon={<Eye className="w-5 h-5" />}
+              title="Transparency"
+              copy="Straightforward information on structures, minimums, features and how we're compensated — so you always know where you stand."
+            />
+            <ApproachCard
+              icon={<Bot className="w-5 h-5" />}
+              title="Technology"
+              copy="AI-assisted tools help you discover and shortlist relevant PMS and AIF strategies faster, matched to your objectives."
+            />
+          </div>
+        </div>
+      </section>
 
-          <h2>Team</h2>
-          <p>
-            <strong>Col Ashish Bhardwaj</strong> — Founder. Ex-Indian Army (20 years). NISM-certified Investment Adviser (Levels I &amp; II), Mutual Fund Distributor.
-            SEBI RIA application in process.
-          </p>
-          <p>
-            <strong>Diganta Das</strong> — Co-founder. Tech and product lead. Previously built and operated SaaS products across fintech and education.
-          </p>
-          <p>
-            <strong>Advisors and consultants</strong> — A small network of chartered accountants, lawyers, and ex-AMC investment professionals who support specific engagements.
-          </p>
-
-          <h2>Company facts</h2>
-          <ul>
-            <li>Legal entity: {siteConfig.legalName}</li>
-            <li>CIN: {siteConfig.cin}</li>
-            <li>Incorporated: 2026 · India</li>
-            <li>Registered office: Gurugram, Haryana</li>
-            <li>Contact: <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a></li>
-            <li>NISM Investment Adviser Levels I &amp; II: Certified</li>
-            <li>AMFI Mutual Fund Distributor: Registered (ARN pending)</li>
-            <li>SEBI RIA: Application in process</li>
-          </ul>
-
-          <h2>Press &amp; media</h2>
-          <p>
-            For interviews, comments, or media requests, please email <a href="mailto:press@planmycashflows.com">press@planmycashflows.com</a>.
-            A press kit (logos, founder photos, company facts) is available on request.
+      {/* What we are — and what we're not */}
+      <section className="py-20 md:py-28">
+        <div className="container-narrow">
+          <div className="max-w-3xl mx-auto text-center mb-10 reveal">
+            <span className="eyebrow">Where we stand</span>
+            <h2 className="mt-3 text-balance">What we are — and what we&apos;re not</h2>
+          </div>
+          <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-6 reveal">
+            <div className="glass-card">
+              <h3 className="text-lg font-semibold mb-3">We are</h3>
+              <p className="text-sm text-[var(--color-slate)] leading-relaxed">
+                An information and distribution platform. We help you discover, compare and understand third-party
+                PMS and AIF products from SEBI-registered managers, and our team helps you complete the process with
+                the relevant fund house when you&apos;re ready.
+              </p>
+            </div>
+            <div className="glass-card">
+              <h3 className="text-lg font-semibold mb-3">We are not</h3>
+              <p className="text-sm text-[var(--color-slate)] leading-relaxed">
+                A fund manager or an investment adviser. We do not manage money, run our own fund, or provide
+                personalised investment advice. All products are managed by their respective SEBI-registered
+                managers, and all investment decisions remain yours.
+              </p>
+            </div>
+          </div>
+          <p className="max-w-3xl mx-auto mt-8 text-sm text-[var(--color-slate)] text-center reveal">
+            For interviews, comments, or media requests, please email{" "}
+            <a href="mailto:press@planmycashflows.com" className="font-semibold text-[var(--color-gold-dim)]">
+              press@planmycashflows.com
+            </a>
+            .
           </p>
         </div>
       </section>
 
       <CTASection
-        title="Want to work together?"
-        subtitle="The fastest way to evaluate fit is a free 30-minute call. Book a slot or run the AI Wealth Planner first."
-        primaryCta={{ label: "Book a call", href: "/contact" }}
-        secondaryCta={{ label: "Open the Wealth Planner", href: "/plan" }}
+        title="Ready to explore alternatives?"
+        subtitle="Browse curated PMS and AIF strategies, or book a no-obligation call with our team."
+        primaryCta={{ label: "Explore PMS & AIF Strategies", href: "/#strategies" }}
+        secondaryCta={{ label: "Book a Call", href: siteConfig.topmateUrl }}
       />
     </>
+  );
+}
+
+function ApproachCard({ icon, title, copy }: { icon: React.ReactNode; title: string; copy: string }) {
+  return (
+    <div className="glass-card">
+      <div className="w-10 h-10 rounded-lg bg-[var(--color-sand)]/70 text-[var(--color-gold-dim)] flex items-center justify-center mb-4">
+        {icon}
+      </div>
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p className="text-sm text-[var(--color-slate)] leading-relaxed">{copy}</p>
+    </div>
   );
 }
