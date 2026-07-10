@@ -23,7 +23,7 @@ export function Footer() {
               </div>
             </div>
             <p className="text-sm text-[var(--color-silver)] max-w-xs mb-6">
-              Wealth that compounds. Plans that hold under fire.
+              Discover, compare and understand PMS &amp; AIF, the education-first way.
             </p>
             <NewsletterSignup />
           </div>
@@ -38,6 +38,11 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link href="/#how-it-works" className="text-[var(--color-silver)] hover:text-white">
+                  How It Works
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -57,6 +62,7 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-[var(--color-gold-light)] mb-4">Resources</h4>
             <ul className="space-y-2 text-sm">
+              <li><Link href="/blog" className="text-[var(--color-silver)] hover:text-white">Education Hub</Link></li>
               <li><Link href="/resources/calculators" className="text-[var(--color-silver)] hover:text-white">Calculators</Link></li>
               <li><Link href="/resources/glossary" className="text-[var(--color-silver)] hover:text-white">Glossary</Link></li>
               <li><Link href="/resources/downloads" className="text-[var(--color-silver)] hover:text-white">Free PDFs</Link></li>
@@ -74,6 +80,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><Link href="/about" className="text-[var(--color-silver)] hover:text-white">About</Link></li>
               <li><Link href="/contact" className="text-[var(--color-silver)] hover:text-white">Contact</Link></li>
+              <li><Link href="/financial-planning" className="text-[var(--color-silver)] hover:text-white">Financial Planning</Link></li>
               <li><Link href="/pricing" className="text-[var(--color-silver)] hover:text-white">Pricing</Link></li>
               <li><Link href="/wealthwise" className="text-[var(--color-silver)] hover:text-white">CashFlow Planner App</Link></li>
             </ul>
@@ -112,18 +119,21 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/10 text-xs text-[var(--color-silver)]/80 space-y-2">
-          <p>
-            © {new Date().getFullYear()} {siteConfig.legalName} · CIN: {siteConfig.cin}
-          </p>
-          <p>
-            NISM-certified · DPDP compliant · AMFI Registration: pending · SEBI RIA Registration: pending
+        <div className="mt-12 pt-8 border-t border-white/10 text-xs text-[var(--color-silver)]/80 space-y-3">
+          <p className="max-w-4xl">
+            <strong>Disclaimer:</strong> The information, tools, comparisons and content on this website are provided solely for informational and
+            educational purposes and do not constitute investment advice, a recommendation, or a solicitation or offer to buy or sell any security
+            or investment product. PlanMyCashflows is an information and distribution platform that facilitates access to third-party Portfolio
+            Management Services (PMS) and Alternative Investment Funds (AIF) managed by their respective SEBI-registered managers. PlanMyCashflows
+            is not a SEBI-registered investment adviser and does not provide personalised investment advice.
           </p>
           <p className="max-w-4xl">
-            The content on this site is for educational purposes only and does not constitute investment, legal, or tax advice. Investments in
-            securities and other instruments are subject to market risks. Past performance is not indicative of future returns. Please consult a
-            SEBI-registered investment adviser, a chartered accountant, and a tax professional in your jurisdiction before making investment decisions.
+            Investments in securities markets are subject to market risks. Read all scheme-related and offer documents carefully before investing.
+            Past performance is not indicative of future returns and is not a guarantee of future results. PMS and AIF products involve higher
+            minimum investments, higher risk, and lower liquidity than traditional products, and may not be suitable for all investors. Please
+            consult your own financial, legal and tax advisers before making any investment decision.
           </p>
+          <p>© {new Date().getFullYear()} PlanMyCashflows. All rights reserved.</p>
         </div>
       </div>
     </footer>

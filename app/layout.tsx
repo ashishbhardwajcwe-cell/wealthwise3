@@ -27,14 +27,13 @@ export const metadata: Metadata = {
     "AI financial planner",
     "PMS",
     "AIF",
+    "alternative investments India",
     "mutual funds",
     "NRI investing",
-    "defence officer financial planning",
-    "SEBI RIA",
   ],
-  authors: [{ name: "Col Ashish Bhardwaj" }],
-  creator: siteConfig.legalName,
-  publisher: siteConfig.legalName,
+  authors: [{ name: siteConfig.name }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
   openGraph: {
     type: "website",
     locale: "en_IN",
@@ -59,7 +58,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en-IN" className={`${inter.variable} ${playfair.variable}`}>
       <body>{children}</body>
     </html>
   );
