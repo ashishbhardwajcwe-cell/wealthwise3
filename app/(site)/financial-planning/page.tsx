@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck, BarChart3, Compass, Sparkles, ListChecks, Layers, ExternalLink } from "lucide-react";
 import { Hero } from "@/components/Hero";
@@ -9,7 +10,14 @@ import { HomeMarketsTeaser } from "@/components/markets/HomeMarketsTeaser";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
 import { FounderPortrait, UnifiedPlanDiagram } from "@/components/Illustrations";
 
-export default function HomePage() {
+export const metadata: Metadata = {
+  title: "Financial Planning",
+  description:
+    "AI-powered financial planning and global wealth management — planners, guided plans and the full CashFlow Planner app, for professionals, families and NRIs.",
+  alternates: { canonical: "/financial-planning" },
+};
+
+export default function FinancialPlanningPage() {
   return (
     <>
       {/* Hero */}
@@ -18,7 +26,7 @@ export default function HomePage() {
         subtitle="AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity."
         primaryCta={{ label: "Open the AI Wealth Planner", href: siteConfig.appDeepLink }}
         secondaryCta={{ label: "Book a call", href: siteConfig.topmateUrl }}
-        trustLine={`Run by ${siteConfig.legalName} (CIN: ${siteConfig.cin}) · NISM-certified · DPDP compliant`}
+        trustLine="NISM-certified · DPDP compliant · Education-first"
       />
 
       {/* What we cover — 9 products */}
