@@ -34,11 +34,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             "@context": "https://schema.org",
             "@type": "Organization",
             name: siteConfig.name,
-            legalName: siteConfig.legalName,
             url: siteConfig.url,
             email: siteConfig.email,
             logo: `${siteConfig.url}/auris-logo.png`,
-            identifier: siteConfig.cin,
             sameAs: Object.values(siteConfig.social),
           }),
         }}

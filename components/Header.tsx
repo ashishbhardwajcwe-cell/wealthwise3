@@ -24,6 +24,7 @@ interface NavMenuItem {
 }
 
 const plannersMenu: NavMenuItem[] = [
+  { href: "/financial-planning", label: "Financial Planning", desc: "Our financial-planning and wealth-management hub", icon: "Compass", tone: "#1E3A8A", emoji: "🧭" },
   { href: "/plan", label: "All planners — overview", desc: "Compare snapshot, guided plan and the full app side-by-side", icon: "LayoutGrid", tone: "#334155", emoji: "🗂️" },
   { href: "/ai-wealth-planner", label: "AI Snapshot", desc: "60-second personalised snapshot · No signup", icon: "Sparkles", tone: "#D97706", emoji: "✨" },
   { href: "/guided", label: "Guided Plan", desc: "10-minute YNAB-style Q&A · No signup", icon: "ListChecks", tone: "#0F766E", emoji: "✅" },
@@ -84,7 +85,7 @@ export function Header() {
           <DropdownNavItem
             label="Planners"
             {...menuProps("planners")}
-            active={isActive(pathname, ["/plan", "/ai-wealth-planner", "/guided"])}
+            active={isActive(pathname, ["/plan", "/ai-wealth-planner", "/guided", "/financial-planning"])}
             items={plannersMenu}
             width="w-[26rem]"
           />
@@ -136,6 +137,7 @@ export function Header() {
           <div className="container-wide py-4 flex flex-col gap-1">
             <MobileLink href="/investment-products/mutual-funds">Investment Products</MobileLink>
             <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Wealth Planners</div>
+            <MobileLink href="/financial-planning">Financial Planning</MobileLink>
             <MobileLink href="/plan">All planners — overview</MobileLink>
             <MobileLink href="/ai-wealth-planner">AI Snapshot · 60 sec</MobileLink>
             <MobileLink href="/guided">Guided Plan · 10 min</MobileLink>
