@@ -71,7 +71,6 @@ export const GUIDED_QUESTIONS: Question[] = [
     options: [
       { icon: "🏢", label: "Salaried — private", value: "private" },
       { icon: "🏛️", label: "Salaried — government", value: "govt" },
-      { icon: "🎖️", label: "Defence services", value: "defence" },
       { icon: "💻", label: "Self-employed / freelance", value: "self" },
       { icon: "🏭", label: "Business owner", value: "business" },
       { icon: "🏖️", label: "Retired", value: "retired" },

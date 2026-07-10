@@ -19,7 +19,7 @@ export const BLOG_POSTS: BlogPost[] = [
     tags: ["PMS", "HNI", "Equity"],
     date: "2026-05-22",
     readTime: "14 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: `
 Portfolio Management Services (PMS) in India have grown from a niche product for the ultra-rich into a ₹30+ lakh crore industry serving 100,000+ HNI investors. With the SEBI minimum at ₹50 lakhs and over 400 registered PMS providers, choosing well matters more than ever.
 
@@ -102,7 +102,7 @@ If you're considering your first PMS, start with the **PlanMyCashflows AI Wealth
     tags: ["Mutual Funds", "PMS"],
     date: "2026-05-18",
     readTime: "10 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: `
 "Should I stop my SIPs and move to PMS?" is one of the most common questions we hear from HNI investors. The honest answer is almost always: **no, you should run them in parallel — with different roles**.
 
@@ -156,75 +156,6 @@ If you can't say yes to all five, stay with mutual funds. If you can, PMS is a l
     `,
   },
   {
-    slug: "defence-officer-financial-independence-checklist",
-    title: "The defence officer's complete financial independence checklist",
-    excerpt: "A practical 12-point framework for officers transitioning to civilian life — built from interviews with 40+ retired colonels and group captains.",
-    category: "Defence",
-    tags: ["Defence", "Retirement", "Transition"],
-    date: "2026-05-12",
-    readTime: "18 min",
-    author: "Col Ashish Bhardwaj",
-    content: `
-After interviewing 40+ retired colonels, group captains, and naval captains over the last two years, certain patterns emerge in who navigates the transition to civilian life well — and who struggles. This checklist captures the framework that the well-navigators used.
-
-## The 12-point framework
-
-### 1. Calculate your actual post-retirement income
-
-Most officers underestimate the cliff. Take basic + DA in service, multiply by 50% (pension % varies by category), add commutation reduction, add any DSOP/AGIF maturity income annuitised. That's your starting number. It's often 30-50% of in-service income.
-
-### 2. Decide commutation early
-
-The DA-Pension Commutation decision is binary: you take a lump sum now in exchange for a reduced pension for 15 years. The IRR of commutation is roughly 8-9%, which is attractive vs FD but loses to equity over the same period. The right choice depends on your existing corpus and your ability to invest the lump sum well.
-
-### 3. Plan healthcare beyond ECHS
-
-ECHS is excellent but has gaps — empanelled hospital availability, certain procedures, civilian family members. Build a personal health insurance policy of ₹15-25L as a top-up while you're still in service (premiums rise sharply post-retirement).
-
-### 4. Stop buying LIC
-
-If you've been buying LIC endowment "as savings", convert to paid-up now or surrender (run the maths on each policy). The 4-5% return is dramatically worse than equity. Use the freed premiums for goal-aligned investments.
-
-### 5. Build a second-career income stream
-
-The officers who navigate retirement best have 50-70% of in-service income post-retirement, not 30-50%. The differential comes from second careers — corporate roles (PSU boards, private security, defence consulting), small businesses (resort, school, real estate brokerage), or freelance (training, consulting).
-
-### 6. Right-size your home
-
-The biggest mistake retiring officers make is buying or upgrading to a too-large home using AGIF/DSOP money. House size grows but income shrinks. Many regret the high maintenance costs and the inflexibility. Conservative housing decision = better retirement.
-
-### 7. Move LIC, NSC, KVP to equity
-
-If you have NSC/KVP at sub-7% returns and equity at 11-13% historical, the math is clear. Move at maturity (don't break for the small penalty cost). Over 20 years post-retirement, 4% additional return on ₹50L is the difference between ₹1.1 Cr and ₹2.6 Cr.
-
-### 8. Set up an emergency fund for the first 18 months
-
-The transition gap (pension fixation, AGIF maturity, second career setup) often takes 12-18 months. Keep ₹15-25L in FDs/liquid funds for this period. Once stabilised, redeploy to long-term assets.
-
-### 9. Write your will
-
-70% of officers we've worked with don't have a will. Without one, even nominated bank accounts and demat holdings can face procedural delays for the spouse. A simple ₹15,000 will from a lawyer solves this completely.
-
-### 10. Brief your spouse
-
-Most spouses know "Papa handles the money." When something happens to Papa, this becomes a nightmare. Brief your spouse on every account, every advisor contact, the financial logic, and what to do in the first 90 days. We help structure a "continuity binder" for this.
-
-### 11. Set up an asset allocation that fits retirement
-
-In-service: aggressive (80% equity makes sense). Post-retirement: shift to 50-60% equity / 40-50% debt over 3-5 years. Equity is still needed for inflation hedging over 25+ years of retirement, but the volatility tolerance shifts.
-
-### 12. Stay away from "guaranteed" schemes
-
-Retiring officers are heavily targeted by frauds dressed as "ex-servicemen schemes", "unlisted shares of defence companies", or "guaranteed 18% returns." Without exception, anything offering guaranteed double-digit returns is either fraud or about to collapse. The right plan doesn't need 18% returns to succeed.
-
-## Want a personalised checklist?
-
-The 12-point framework above is generic. Your specific situation — service category, current corpus, dependents, second-career prospects — drives the priorities. We build personalised transition plans for officers in their last 18 months of service.
-
-[Book a call →](/contact)
-    `,
-  },
-  {
     slug: "ltcg-125-lakh-exemption-most-underused-tax-tool",
     title: "The ₹1.25 lakh LTCG exemption — the most under-used tax tool in India",
     excerpt: "Every Indian equity investor can harvest ₹1.25 lakhs of long-term capital gains tax-free every year. Most don't. Here's how to set up the workflow.",
@@ -232,7 +163,7 @@ The 12-point framework above is generic. Your specific situation — service cat
     tags: ["Tax", "LTCG", "Harvesting"],
     date: "2026-05-01",
     readTime: "9 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: `
 Every year, Indian equity investors leave thousands of rupees of tax savings on the table. The reason: they don't actively harvest the ₹1.25 lakh LTCG exemption that's available to them every single financial year.
 
@@ -314,7 +245,7 @@ The CashFlow Planner app automates this — every March it identifies which unit
     tags: ["AIF", "HNI"],
     date: "2026-04-25",
     readTime: "11 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: "AIFs (Alternative Investment Funds) are SEBI-regulated pooled vehicles for sophisticated investors — minimum ₹1 Cr. The three categories serve very different purposes. [Read the full AIF guide →](/investment-products/aif)",
   },
   {
@@ -325,19 +256,8 @@ The CashFlow Planner app automates this — every March it identifies which unit
     tags: ["Crypto", "BTC", "Tax"],
     date: "2026-04-18",
     readTime: "12 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: "India has one of the world's harshest crypto tax regimes — 30% flat on gains, 1% TDS on transactions, no loss set-off. Despite this, a small allocation (5-10%) to BTC and ETH can still make sense. [Read the full crypto guide →](/investment-products/cryptocurrency)",
-  },
-  {
-    slug: "why-i-left-military-career-to-start-wealth-firm",
-    title: "Why I left a 20-year military career to start a wealth firm",
-    excerpt: "After two decades in the Indian Army, the choice to leave wasn't easy. The reason was clear: the financial advice ecosystem in India is broken.",
-    category: "Founder",
-    tags: ["Story", "Founder"],
-    date: "2026-04-10",
-    readTime: "8 min",
-    author: "Col Ashish Bhardwaj",
-    content: "I was 38 when my wife asked me what we'd do if I died. I had vague answers and no plan. That conversation started a five-year exploration into how Indian families actually plan (or fail to plan) their wealth. By the time I left the Army, the gap I wanted to fill was obvious. [Read more on the About page →](/about)",
   },
   {
     slug: "nri-investing-india-2026-rulebook",
@@ -347,7 +267,7 @@ The CashFlow Planner app automates this — every March it identifies which unit
     tags: ["NRI", "Tax", "FEMA"],
     date: "2026-03-28",
     readTime: "15 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: "NRIs investing in India navigate three regulatory regimes (Indian FEMA + Indian tax + resident-country tax) and one operational regime (NRO/NRE/FCNR mechanics). This guide covers the practical rulebook for 2026. [See the NRI landing page →](/for/nri)",
   },
   {
@@ -358,7 +278,7 @@ The CashFlow Planner app automates this — every March it identifies which unit
     tags: ["AI", "Tools"],
     date: "2026-03-15",
     readTime: "10 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: "AI is dramatically lowering the cost of basic financial planning — what used to cost ₹50k from a planner can now be approximated in 60 seconds. But there are sharp limits to what LLMs can and should do in financial advice. [Try the AI Wealth Planner →](/ai-wealth-planner)",
   },
   {
@@ -369,7 +289,7 @@ The CashFlow Planner app automates this — every March it identifies which unit
     tags: ["Real Estate", "Equity"],
     date: "2026-03-01",
     readTime: "13 min",
-    author: "Col Ashish Bhardwaj",
+    author: "PlanMyCashflows Research",
     content: "Indian households have 60-70% of net worth in real estate. Is this rational? The 20-year data and honest math suggest most families would be better off with less real estate and more equity. [Read the real estate guide →](/investment-products/real-estate)",
   },
 ];
@@ -379,8 +299,6 @@ export const BLOG_CATEGORIES = [
   "Planning",
   "Tax",
   "NRI",
-  "Defence",
   "Market Commentary",
   "Tools & Apps",
-  "Founder",
 ];

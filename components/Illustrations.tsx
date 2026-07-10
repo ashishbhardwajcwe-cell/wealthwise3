@@ -4,55 +4,6 @@
  * intentional (not "image coming soon") so the site doesn't feel half-built.
  */
 
-export function FounderPortrait({ variant }: { variant: "uniform" | "civilian" }) {
-  const accent = variant === "uniform" ? "#3B5249" : "#5A6B80";
-  const accent2 = variant === "uniform" ? "#6B7C6F" : "#8899AA";
-  return (
-    <svg viewBox="0 0 240 320" className="w-full h-full" role="img" aria-label={`Col Ashish Bhardwaj — ${variant}`}>
-      <defs>
-        <linearGradient id={`bg-${variant}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0F2035" />
-          <stop offset="100%" stopColor="#142D4C" />
-        </linearGradient>
-        <linearGradient id={`portrait-${variant}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={accent2} />
-          <stop offset="100%" stopColor={accent} />
-        </linearGradient>
-      </defs>
-      <rect width="240" height="320" fill={`url(#bg-${variant})`} rx="12" />
-
-      {/* Subtle gold corner */}
-      <path d="M 0 0 L 60 0 L 0 60 Z" fill="#C9A84C" opacity="0.08" />
-
-      {/* Silhouette — shoulders */}
-      <path d="M 30 320 Q 30 230 60 215 L 90 200 L 150 200 L 180 215 Q 210 230 210 320 Z" fill={`url(#portrait-${variant})`} />
-
-      {/* Silhouette — head */}
-      <circle cx="120" cy="155" r="42" fill={`url(#portrait-${variant})`} />
-
-      {/* Uniform: collar accents */}
-      {variant === "uniform" && (
-        <>
-          <path d="M 95 210 L 120 230 L 145 210" stroke="#C9A84C" strokeWidth="3" fill="none" opacity="0.6" />
-          <circle cx="120" cy="240" r="3" fill="#C9A84C" opacity="0.7" />
-        </>
-      )}
-
-      {/* Civilian: subtle lapel */}
-      {variant === "civilian" && (
-        <>
-          <path d="M 95 215 L 120 245 L 145 215" stroke="#FFFDF5" strokeWidth="2" fill="none" opacity="0.25" />
-        </>
-      )}
-
-      {/* Caption */}
-      <text x="120" y="305" textAnchor="middle" fill="#C9A84C" fontSize="11" fontFamily="serif" letterSpacing="2" opacity="0.7">
-        {variant === "uniform" ? "20 YEARS · INDIAN ARMY" : "FOUNDER · PLANMYCASHFLOWS WEALTH"}
-      </text>
-    </svg>
-  );
-}
-
 export function AppScreenshot({ title, kind }: { title: string; kind: "dashboard" | "goals" | "harvest" | "scenarios" | "insurance" | "drift" }) {
   return (
     <svg viewBox="0 0 320 200" className="w-full h-full" role="img" aria-label={`CashFlow Planner — ${title}`}>

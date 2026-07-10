@@ -13,11 +13,6 @@ const DOWNLOAD_CATALOG: Record<string, { title: string; url: string; pages: numb
     url: "https://planmycashflows.com/resources/guides/financial-health-check",
     pages: 8,
   },
-  "defence-transition-planner": {
-    title: "The defence officer's transition financial planner",
-    url: "https://planmycashflows.com/resources/guides/defence-transition-planner",
-    pages: 24,
-  },
   "nri-india-cheatsheet": {
     title: "NRI investing in India: 2026 cheat sheet",
     url: "https://planmycashflows.com/resources/guides/nri-india-cheatsheet",
@@ -109,10 +104,10 @@ function downloadHtml(item: { title: string; url: string; pages: number }) {
         On the guide page, you'll also find a "Save as PDF" button if you'd like to keep an offline copy.
       </p>
       <p>I'll also send you our weekly note every Friday. Reply "unsubscribe" anytime to stop.</p>
-      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, PlanMyCashflows</span></p>
+      <p style="margin-top: 32px;">— The PlanMyCashflows Team</p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
       <p style="font-size: 12px; color: #5A6B80;">
-        Auris Pvt Ltd (CIN: U70200HR2026PTC141922). Educational content only. Not investment advice.
+        PlanMyCashflows. Educational content only. Not investment advice.
       </p>
     </div>
   </body>
@@ -131,10 +126,9 @@ Read your guide: ${item.url}
 
 I'll also send you our weekly note every Friday. Reply "unsubscribe" anytime.
 
-— Col Ashish Bhardwaj
-Founder, PlanMyCashflows
+— The PlanMyCashflows Team
 
 ---
-Auris Pvt Ltd (CIN: U70200HR2026PTC141922).
+PlanMyCashflows.
 Educational content only. Not investment advice.`;
 }

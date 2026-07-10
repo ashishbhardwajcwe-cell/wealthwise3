@@ -8,7 +8,7 @@ import { getAllBlogCards, getFeaturedOrLatest, BLOG_CATEGORIES } from "@/lib/blo
 export const metadata: Metadata = {
   title: "Blog — PlanMyCashflows",
   description:
-    "In-depth essays on wealth management, taxation, financial planning, defence officer transition, and NRI investing — by Col Ashish Bhardwaj.",
+    "In-depth essays on wealth management, taxation, financial planning, PMS & AIF, and NRI investing — by PlanMyCashflows Research.",
 };
 
 export const revalidate = 60;

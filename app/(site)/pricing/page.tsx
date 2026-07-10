@@ -21,7 +21,6 @@ export default function PricingPage() {
         { label: "Basic portfolio tracking (3 accounts)", on: true },
         { label: "All calculators and glossary", on: true },
         { label: "Newsletter & weekly note", on: true },
-        { label: "1:1 advisory", on: false },
         { label: "Tax harvesting automation", on: false },
         { label: "Unlimited accounts", on: false },
       ],
@@ -53,10 +52,10 @@ export default function PricingPage() {
       features: [
         { label: "Everything in Premium", on: true },
         { label: "PMS, AIF, unlisted shares tracking", on: true },
-        { label: "Cross-border / NRI tax planning", on: true },
-        { label: "2x annual 1:1 review with Ashish", on: true },
-        { label: "Custom asset allocation models", on: true },
-        { label: "Estate & succession framework", on: true },
+        { label: "Cross-border / NRI tax planning tools", on: true },
+        { label: "2x annual 1:1 planner walkthrough with our team", on: true },
+        { label: "Custom asset-allocation model templates", on: true },
+        { label: "Estate & succession planning framework (educational)", on: true },
         { label: "Priority email/WhatsApp support", on: true },
         { label: "Family-office equivalent reporting", on: true },
       ],
@@ -65,15 +64,15 @@ export default function PricingPage() {
       name: "Enterprise",
       monthly: null,
       annual: null,
-      tagline: "Family offices & defence units (custom).",
+      tagline: "Family offices & institutions (custom).",
       cta: { label: "Contact sales", href: "/contact" },
       features: [
         { label: "Everything in HNI", on: true },
         { label: "Multi-user, multi-family accounts", on: true },
-        { label: "Defence unit / regiment plans", on: true },
+        { label: "Multi-team organisation plans", on: true },
         { label: "Quarterly in-person reviews", on: true },
         { label: "Bespoke reporting & dashboards", on: true },
-        { label: "Direct line to founder", on: true },
+        { label: "Direct line to the senior team", on: true },
         { label: "SLAs & dedicated success manager", on: true },
         { label: "White-glove onboarding", on: true },
       ],
@@ -84,8 +83,8 @@ export default function PricingPage() {
     <>
       <Hero
         eyebrow="Pricing"
-        title="Honest, transparent, no hidden commissions"
-        subtitle="We do not earn commissions on the products you invest in. Our revenue is your subscription. That alignment is the whole point."
+        title="Pricing for our planning tools"
+        subtitle="Simple subscriptions for the CashFlow Planner app and tools. Distribution of third-party PMS and AIF products is compensated by fund houses as disclosed — never as a markup to you."
       />
 
       <section className="py-12">

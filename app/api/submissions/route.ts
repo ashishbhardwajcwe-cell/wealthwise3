@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
             `Hi ${input.authorName},\n\n` +
             `Thanks for submitting "${input.title}" to the PlanMyCashflows Journal.\n\n` +
             `Our editor reviews every submission personally. If it's a fit, we'll edit it together and publish it with your byline. You can track the status anytime at ${siteConfig.url}/blog/contribute.\n\n` +
-            `— Col Ashish Bhardwaj\nFounder, PlanMyCashflows`,
+            `— The PlanMyCashflows Team`,
         }),
       );
     }

@@ -4,14 +4,14 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Grievance Redressal",
-  description: "How to escalate concerns with PlanMyCashflows. SEBI-required grievance redressal mechanism.",
+  description: "How to escalate concerns with PlanMyCashflows — our grievance redressal mechanism and escalation routes.",
 };
 
 export default function GrievanceRedressalPage() {
   return (
     <LegalPage
       title="Grievance Redressal"
-      subtitle="How to raise concerns and escalation routes. SEBI-mandated mechanism for regulated entities."
+      subtitle="How to raise concerns, and the escalation routes available to you."
       lastUpdated="28 May 2026"
       sections={[
         {
@@ -26,18 +26,18 @@ export default function GrievanceRedressalPage() {
           heading: "Level 2 — Grievance officer",
           content: [
             "If you are not satisfied with the Level 1 response, escalate to our Grievance Officer:",
-            "**Grievance Officer:** Diganta Das",
+            "**Grievance Officer, PlanMyCashflows**",
             `**Email:** grievance@planmycashflows.com`,
             "**Response time:** 5 business days",
             "Please include your original message thread, the date of your initial contact, and a brief summary of why the response was unsatisfactory.",
           ],
         },
         {
-          heading: "Level 3 — Founder escalation",
+          heading: "Level 3 — Management escalation",
           content: [
-            "Unresolved grievances can be escalated to the founder directly:",
-            "**Founder:** Col Ashish Bhardwaj",
-            "**Email:** ashish@planmycashflows.com",
+            "Unresolved grievances can be escalated to senior management:",
+            "**Escalation Desk, PlanMyCashflows**",
+            "**Email:** escalations@planmycashflows.com",
             "**Response time:** 5 business days",
           ],
         },

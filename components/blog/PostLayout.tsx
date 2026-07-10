@@ -218,7 +218,7 @@ function AuthorBio({ authorName, authorRole }: { authorName: string; authorRole?
         <div>
           <h3 className="font-semibold text-[var(--color-navy)]" style={{ fontSize: "1.0625rem" }}>{authorName}</h3>
           <p className="text-sm text-[var(--color-slate)] mt-1 leading-relaxed">
-            {authorRole ?? "Founder of PlanMyCashflows. Ex-Indian Army (20 years). NISM-certified Investment Adviser. Writes about wealth management for Indian and global investors."}
+            {authorRole ?? "The research desk at PlanMyCashflows. Writes about wealth management, PMS and AIF for Indian and global investors."}
           </p>
         </div>
       </div>

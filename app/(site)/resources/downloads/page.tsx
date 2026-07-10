@@ -12,12 +12,6 @@ const DOWNLOADS = [
     pages: 8,
   },
   {
-    slug: "defence-transition-planner",
-    title: "The defence officer's transition financial planner",
-    desc: "A 24-page workbook covering pension election, AGIF deployment, healthcare transition, second-career planning. Built by Col Ashish from his own transition.",
-    pages: 24,
-  },
-  {
     slug: "nri-india-cheatsheet",
     title: "NRI investing in India: 2026 cheat sheet",
     desc: "FEMA rules, NRE vs NRO mechanics, GIFT City structures, DTAA usage, ESOP repatriation. The reference doc serious NRI investors keep open.",
