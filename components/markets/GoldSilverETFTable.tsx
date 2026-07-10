@@ -64,7 +64,7 @@ export function GoldSilverETFTable({ rows }: Props) {
 
   function exportCsv() {
     const headers = ["ETF", "AMC", "Metal", "NAV (INR)", "6M %", "1Y CAGR %", "2Y CAGR %", "3Y CAGR %", "5Y CAGR %", "10Y CAGR %", "As of", "Scheme code"];
-    downloadCsv(`auris-gold-silver-etfs-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
+    downloadCsv(`pmc-gold-silver-etfs-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
       switch (h) {
         case "ETF":         return r.name;
         case "AMC":         return r.amc;

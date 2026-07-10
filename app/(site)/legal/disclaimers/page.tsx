@@ -17,7 +17,8 @@ export default function DisclaimersPage() {
         {
           heading: "General investment disclaimer",
           content: [
-            `${siteConfig.name} is a brand of ${siteConfig.legalName} (CIN: ${siteConfig.cin}), a private limited company registered in India. The content on this site is for educational purposes only and does not constitute investment, legal, or tax advice.`,
+            // TODO: reinstate exact legal-entity wording here only if counsel confirms it is mandatory.
+            `This website is operated by the company behind ${siteConfig.name}, a private limited company registered in India. The content on this site is for educational purposes only and does not constitute investment, legal, or tax advice.`,
             "Investments in mutual funds, PMS, AIF, equities, cryptocurrencies, real estate, gold, and other financial instruments are subject to market risks. Past performance is not indicative of future returns. Please read all scheme-related documents carefully and consult a SEBI-registered investment adviser, chartered accountant, and tax professional in your jurisdiction before making investment decisions.",
             "PlanMyCashflows, its directors, employees, and contractors do not guarantee any returns and are not liable for any losses arising from decisions based on the content of this site.",
           ],
@@ -25,7 +26,7 @@ export default function DisclaimersPage() {
         {
           heading: "Specific product disclaimers",
           content: [
-            "**Mutual Funds:** Mutual fund investments are subject to market risks. AMFI Registration Number (ARN): pending. We do not currently recommend any specific scheme.",
+            "**Mutual Funds:** Mutual fund investments are subject to market risks. We do not currently recommend any specific scheme.",
             "**PMS:** Portfolio Management Services involve concentration risk and are intended for investors with prior equity experience and ₹50L+ to invest. Past performance of any PMS strategy does not guarantee future returns. SEBI verification of any PMS manager is the investor's responsibility.",
             "**AIF:** Alternative Investment Funds are intended for sophisticated investors. They involve illiquidity, leverage (in Cat III), and concentration risk. Private Placement Memorandum (PPM) disclosures should be reviewed carefully before investing.",
             "**Unlisted Shares:** Highly illiquid with significant valuation and execution risk. Platform-quoted prices may not reflect realisable value.",
@@ -63,11 +64,9 @@ export default function DisclaimersPage() {
         {
           heading: "Regulatory status",
           content: [
-            `**Auris Pvt Ltd** is a private limited company (CIN: ${siteConfig.cin}) registered in India.`,
-            "**NISM-Investment Adviser Levels I & II:** Certified.",
-            "**AMFI Mutual Fund Distributor ARN:** Pending.",
-            "**SEBI Registered Investment Adviser (RIA):** Application in process.",
-            "Until our SEBI RIA licence is live, we do not provide specific buy/sell recommendations. All content is educational.",
+            `This website is operated by the company behind PlanMyCashflows, a private limited company registered in India.`,
+            "PlanMyCashflows is not a SEBI-registered investment adviser.",
+            "We do not provide specific buy/sell recommendations. All content is educational. Registrations relevant to our distribution activities, when obtained, will be displayed on our SEBI Compliance page.",
           ],
         },
       ]}

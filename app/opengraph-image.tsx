@@ -2,13 +2,13 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "PlanMyCashflows — Wealth that compounds. Plans that hold under fire.";
+export const alt = "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OGImage() {
   // Load the logo from the public folder and inline it as a data URI.
-  const logoBuf = await readFile(join(process.cwd(), "public", "auris-logo.png"));
+  const logoBuf = await readFile(join(process.cwd(), "public", "pmc-logo.png"));
   const logoSrc = `data:image/png;base64,${logoBuf.toString("base64")}`;
 
   return new ImageResponse(
@@ -47,23 +47,23 @@ export default async function OGImage() {
           }}
         >
           <div style={{
-            fontSize: 76, lineHeight: 1.05, fontWeight: 600,
-            letterSpacing: -2, maxWidth: 980,
+            fontSize: 68, lineHeight: 1.05, fontWeight: 600,
+            letterSpacing: -2, maxWidth: 1000,
           }}>
-            Wealth that compounds.
+            Explore India&apos;s Leading
           </div>
           <div style={{
-            fontSize: 76, lineHeight: 1.05, fontWeight: 600,
-            letterSpacing: -2, color: "#C9A84C", maxWidth: 980,
+            fontSize: 68, lineHeight: 1.05, fontWeight: 600,
+            letterSpacing: -2, color: "#C9A84C", maxWidth: 1000,
           }}>
-            Plans that hold under fire.
+            PMS &amp; AIF Strategies
           </div>
           <div style={{
             fontSize: 26, color: "#C4CDD5", marginTop: 36,
             maxWidth: 920, lineHeight: 1.35, fontFamily: "sans-serif",
           }}>
-            AI-powered financial planning and global wealth management — for
-            professionals, families, and military officers.
+            Discover, compare and understand Portfolio Management Services and
+            Alternative Investment Funds — AI-powered, unbiased, education-first.
           </div>
         </div>
 
@@ -74,7 +74,7 @@ export default async function OGImage() {
           fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase",
         }}>
           <span>planmycashflows.com</span>
-          <span>NISM-certified · DPDP compliant</span>
+          <span>PMS · AIF · Education-first</span>
         </div>
       </div>
     ),

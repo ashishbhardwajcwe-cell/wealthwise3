@@ -69,7 +69,7 @@ export function Header() {
           className="flex items-center gap-2.5 shrink-0 transition-transform hover:scale-[1.02]"
           aria-label="PlanMyCashflows — Home"
         >
-          <Image src="/auris-logo.png" alt="" width={34} height={34} priority className="rounded-md" />
+          <Image src="/pmc-logo.png" alt="" width={34} height={34} priority className="rounded-md" />
           <span className="text-base font-semibold tracking-tight whitespace-nowrap" style={{ fontFamily: "var(--font-display)" }}>
             PlanMy<span className="text-[var(--color-gold-dim)]">Cashflows</span>
           </span>

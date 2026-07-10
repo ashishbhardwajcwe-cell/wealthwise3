@@ -15,12 +15,12 @@ export function AppFooter() {
       <div className="container-wide py-10">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="flex items-center gap-3">
-            <Image src="/auris-logo.png" alt="PlanMyCashflows" width={36} height={36} className="rounded-md" />
+            <Image src="/pmc-logo.png" alt="PlanMyCashflows" width={36} height={36} className="rounded-md" />
             <div>
               <div className="text-base font-semibold" style={{ fontFamily: "var(--font-display)" }}>
                 PlanMy<span className="text-[var(--color-gold)]">Cashflows</span>
               </div>
-              <p className="text-xs text-[var(--color-silver)]">Wealth that compounds. Plans that hold under fire.</p>
+              <p className="text-xs text-[var(--color-silver)]">Wealth that compounds. Plans that hold.</p>
             </div>
           </div>
           <SocialLinks size={36} />
@@ -36,7 +36,7 @@ export function AppFooter() {
             <a href={`mailto:${siteConfig.email}`} className="hover:text-white">{siteConfig.email}</a>
           </div>
           <p className="text-xs text-[var(--color-silver)]/80 shrink-0">
-            © {new Date().getFullYear()} {siteConfig.legalName} · CIN: {siteConfig.cin}
+            © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
           </p>
         </div>
 

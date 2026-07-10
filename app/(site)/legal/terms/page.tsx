@@ -40,7 +40,8 @@ export default function TermsPage() {
           content: [
             "Any projections, illustrations, or scenarios shown by the AI Wealth Planner, the CashFlow Planner app, or any content are based on assumptions clearly stated.",
             "Past performance of any asset class or strategy is not indicative of future returns. All investments carry the risk of loss including loss of principal.",
-            `${siteConfig.legalName}, its directors, employees, contractors, and agents do not guarantee any specific investment outcome.`,
+            // TODO: reinstate exact legal-entity wording here only if counsel confirms it is mandatory.
+            `${siteConfig.name}, its directors, employees, contractors, and agents do not guarantee any specific investment outcome.`,
           ],
         },
         {
@@ -52,14 +53,14 @@ export default function TermsPage() {
         {
           heading: "6. Intellectual property",
           content: [
-            `All content on ${siteConfig.url} including text, images, illustrations, code, and design — except where credited to third parties — is the property of ${siteConfig.legalName} and protected by Indian and international copyright law.`,
+            `All content on ${siteConfig.url} including text, images, illustrations, code, and design — except where credited to third parties — is the property of the company operating ${siteConfig.name} and protected by Indian and international copyright law.`,
             "You may share individual articles via links. You may not republish substantial content without written permission.",
           ],
         },
         {
           heading: "7. Limitation of liability",
           content: [
-            `To the maximum extent permitted by law, ${siteConfig.legalName} shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits, data, or use, arising from your use of the services.`,
+            `To the maximum extent permitted by law, the company operating ${siteConfig.name} shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits, data, or use, arising from your use of the services.`,
             "Our total liability for any claim arising from these terms or your use of the services shall not exceed the amount paid by you to us in the 12 months preceding the claim (which may be zero for free services).",
           ],
         },

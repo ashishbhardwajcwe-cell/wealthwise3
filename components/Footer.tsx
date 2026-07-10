@@ -12,7 +12,7 @@ export function Footer() {
           <div className="col-span-2">
             <div className="flex items-center gap-3 mb-3">
               <Image
-                src="/auris-logo.png"
+                src="/pmc-logo.png"
                 alt="PlanMyCashflows"
                 width={44}
                 height={44}
