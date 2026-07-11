@@ -328,6 +328,7 @@ export const unlistedSharesData: ProductPageData = {
   name: "Unlisted Shares",
   oneLine: "Pre-IPO and unlisted equity — owning shares of companies before they hit public markets. High potential, high illiquidity.",
   whatItIs: [
+    "PlanMyCashflows is an information and education platform for unlisted and pre-IPO shares — not a SEBI-recognised stock exchange or trading platform. We do not execute trades, run a secondary market or hold your money, and every price shown here is indicative only and is not an offer to buy or sell.",
     "Unlisted shares are equity in companies that aren't yet listed on the stock exchanges (NSE/BSE). This includes pre-IPO companies (often within 1–3 years of listing), private companies that may never list, and shares of public-sector unlisted entities (like NSE itself, which is unlisted despite running the exchange).",
     "In India, the unlisted shares market has matured rapidly since 2020. Platforms like UnlistedArena, Stockify, Precize, and Altius let retail investors access shares that were earlier limited to PE/VC funds. Typical ticket sizes range from ₹50,000 to ₹5,00,000 per investment. You hold the shares in your demat account just like listed stocks.",
     "Tax treatment is different from listed equity. Long-term holding (>24 months) qualifies for LTCG at 12.5% (with indexation removed post-Jul 2024). Short-term (<24 months) is taxed at your slab rate — which can be a brutal 30%+ for HNIs. There's no STT, no exchange transaction cost — but pricing is opaque and bid-ask spreads can be 5–15%.",
@@ -400,7 +401,7 @@ export const unlistedSharesData: ProductPageData = {
     },
   ],
   extraDisclaimer:
-    "Unlisted shares are highly illiquid and carry significant valuation and execution risk. Platform-quoted prices may not reflect realisable value. No content here is a recommendation to buy or sell any specific unlisted security.",
+    "Important — please read. PlanMyCashflows is not a stock exchange or trading platform recognised by SEBI under the Securities Contracts (Regulation) Act, 1956, and does not permit secondary-market trading on the platform. PlanMyCashflows is not a SEBI-registered investment adviser, broker or portfolio manager. All content — including company data, valuations and indicative prices — is for information and education only and is not investment, financial, legal or tax advice. Indicative prices are not an offer to buy or sell and may differ from any price at which a transaction is actually concluded. Investing in unlisted shares carries substantial risk, including total loss of capital, illiquidity, valuation uncertainty and no guarantee of any IPO or listing. Past performance does not indicate future results. Conduct your own due diligence and consult a SEBI-registered adviser before any investment. Visiting this site or contacting us creates no advisory, broker or fiduciary relationship.",
 };
 
 export const insuranceData: ProductPageData = {

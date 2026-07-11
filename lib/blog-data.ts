@@ -81,7 +81,7 @@ A better evaluation framework:
 
 After looking at hundreds of HNI portfolios, the same mistakes show up repeatedly:
 
-1. **Picking by last year's chart leader** — almost guaranteed to disappoint over 3+ years.
+1. **Picking by last year's chart leader** — almost certain to disappoint over 3+ years.
 2. **Not reading the disclosure document** — fees, conflicts, related-party transactions are all in there.
 3. **Adding too many PMSs** — owning 5 PMSs is rarely better than owning 2 well-chosen ones; the overlap is enormous in large-cap names.
 4. **Treating PMS as your full equity exposure** — it should typically be 30–50% of equity, with MFs / index funds as the base.
