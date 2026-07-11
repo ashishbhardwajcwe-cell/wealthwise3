@@ -23,11 +23,10 @@ interface NavMenuItem {
   external?: boolean;
 }
 
-// All major investment themes, PMS-first. Cryptocurrency is intentionally
-// not promoted in navigation (the page stays live and in the sitemap).
-const investMenu: NavMenuItem[] = investmentProducts
-  .filter((p) => p.slug !== "cryptocurrency")
-  .map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone, emoji: p.emoji }));
+// All major investment themes, PMS-first.
+const investMenu: NavMenuItem[] = investmentProducts.map((p) => ({
+  href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone, emoji: p.emoji,
+}));
 
 const learnMenu: NavMenuItem[] = [
   { href: "/blog", label: "Education Hub", desc: "Guides, explainers and analysis on PMS, AIF and more", icon: "BookOpen", tone: "#2563EB", emoji: "📰" },

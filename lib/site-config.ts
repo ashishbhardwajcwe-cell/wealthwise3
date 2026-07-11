@@ -41,13 +41,9 @@ export const investmentProducts = [
   { slug: "gold", name: "Gold & Silver", short: "Physical, ETF, SGB, silver ETF — the right way.", icon: "Coins", tone: "#A16207", emoji: "🪙" },
 ] as const;
 
-/**
- * Long-tail products grouped under "More products" in footer/nav lists.
- * Cryptocurrency is intentionally absent from navigation — the page stays
- * live and in the sitemap, but is not promoted in header/footer menus.
- */
+/** Long-tail products grouped under "More products" in footer/nav lists. */
 export const moreNavProducts = investmentProducts.filter((p) =>
-  ["direct-equity", "unlisted-shares", "insurance", "real-estate", "gold"].includes(p.slug),
+  ["direct-equity", "unlisted-shares", "cryptocurrency", "insurance", "real-estate", "gold"].includes(p.slug),
 );
 
 export const audiences = [
