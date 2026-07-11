@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, ExternalLink, ChevronDown } from "lucide-react";
 import { getNamedIcon } from "@/components/nav-icons";
 import { cn } from "@/lib/utils";
-import { siteConfig } from "@/lib/site-config";
+import { investmentProducts, siteConfig } from "@/lib/site-config";
 import { CurrencySwitcher } from "./CurrencySwitcher";
 import { AccountButton } from "./auth/AccountButton";
 
@@ -22,6 +22,12 @@ interface NavMenuItem {
   emoji?: string;
   external?: boolean;
 }
+
+// All major investment themes, PMS-first. Cryptocurrency is intentionally
+// not promoted in navigation (the page stays live and in the sitemap).
+const investMenu: NavMenuItem[] = investmentProducts
+  .filter((p) => p.slug !== "cryptocurrency")
+  .map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone, emoji: p.emoji }));
 
 const learnMenu: NavMenuItem[] = [
   { href: "/blog", label: "Education Hub", desc: "Guides, explainers and analysis on PMS, AIF and more", icon: "BookOpen", tone: "#2563EB", emoji: "📰" },
@@ -75,9 +81,20 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-0.5" aria-label="Primary">
+        <nav className="hidden lg:flex flex-1 items-center justify-center gap-1 xl:gap-2" aria-label="Primary">
           <NavLink href="/investment-products/pms" active={isActive(pathname, "/investment-products/pms")}>PMS</NavLink>
           <NavLink href="/investment-products/aif" active={isActive(pathname, "/investment-products/aif")}>AIF</NavLink>
+          <DropdownNavItem
+            label="Invest"
+            {...menuProps("invest")}
+            active={
+              isActive(pathname, "/investment-products") &&
+              !isActive(pathname, ["/investment-products/pms", "/investment-products/aif"])
+            }
+            items={investMenu}
+            width="w-[36rem]"
+            columns={2}
+          />
           <NavLink href="/compare" active={isActive(pathname, "/compare")}>Compare</NavLink>
           <DropdownNavItem
             label="Learn"
@@ -135,6 +152,12 @@ export function Header() {
             <MobileLink href="/investment-products/pms">PMS</MobileLink>
             <MobileLink href="/investment-products/aif">AIF</MobileLink>
             <MobileLink href="/compare">Compare</MobileLink>
+            <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Invest</div>
+            {investMenu
+              .filter((item) => !["/investment-products/pms", "/investment-products/aif"].includes(item.href))
+              .map((item) => (
+                <MobileLink key={item.href} href={item.href}>{item.label}</MobileLink>
+              ))}
             <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Learn</div>
             {learnMenu.map((item) => (
               <MobileLink key={item.href} href={item.href}>{item.label}</MobileLink>
@@ -193,6 +216,7 @@ function DropdownNavItem({
   active,
   items,
   width = "w-[28rem]",
+  columns = 1,
 }: {
   label: string;
   open: boolean;
@@ -200,6 +224,7 @@ function DropdownNavItem({
   active?: boolean;
   items: NavMenuItem[];
   width?: string;
+  columns?: 1 | 2;
 }) {
   return (
     <div
@@ -223,7 +248,7 @@ function DropdownNavItem({
       </button>
       {open && (
         <div className={`absolute top-full left-0 pt-2 ${width}`}>
-          <div className="glass-panel rounded-xl p-3 grid grid-cols-1 gap-1">
+          <div className={`glass-panel rounded-xl p-3 grid gap-1 ${columns === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
             {items.map((item) => {
               const Icon = getNamedIcon(item.icon);
               const content = (

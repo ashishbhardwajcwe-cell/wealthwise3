@@ -27,8 +27,8 @@ export const siteConfig = {
 
 // Order is deliberate: lead with the high-touch HNI products (PMS, AIF),
 // then the mass-market regulated core (Mutual Funds), then direct stocks,
-// then the long-tail alternatives. This sequence drives product grids
-// and footer lists (the header links PMS/AIF directly).
+// then the long-tail alternatives. This sequence drives the header's
+// Invest dropdown, product grids and footer lists.
 export const investmentProducts = [
   { slug: "pms", name: "PMS", short: "Personalised portfolios for ₹50L+ investors.", icon: "Briefcase", tone: "#4F46E5", emoji: "🏛️" },
   { slug: "aif", name: "AIF", short: "Category I, II, III alternatives for HNIs.", icon: "Layers", tone: "#7C3AED", emoji: "🧬" },
