@@ -1,51 +1,205 @@
 import type { Metadata } from "next";
-import { AudienceLanding } from "@/components/AudienceLanding";
+import Link from "next/link";
+import { ArrowRight, FileCheck2, Globe2, Landmark, ShieldAlert, Wallet } from "lucide-react";
+import { Hero } from "@/components/Hero";
+import { CTASection } from "@/components/CTASection";
+import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "Financial Planning for NRIs — Cross-Border, Multi-Currency",
+  title: "PMS & AIF for NRIs — Invest in India from Abroad",
   description:
-    "For NRIs in US, UK, UAE, Singapore: DTAA-aware planning, GIFT City structures, US tax for India-source income, return-to-India scenarios.",
+    "How NRIs invest in PMS and AIF in India: NRE vs NRO accounts, PIS/demat setup, ₹50 lakh and ₹1 crore minimums, DTAA with TRC/Form 10F, FATCA notes for US/Canada, repatriation and step-by-step onboarding.",
 };
 
-export default function Page() {
+export default function NriPage() {
   return (
-    <AudienceLanding
-      content={{
-        eyebrow: "For NRIs & Global Indians",
-        title: "Investing across borders, optimised for your tax residency.",
-        subtitle: "DTAA-aware planning, GIFT City structures, multi-currency portfolios, and a clear answer to the question every NRI eventually asks: where should the next rupee/dollar go?",
-        intro: [
-          "NRI financial planning sits at the intersection of three things most advisors don’t fully understand: Indian tax and product regulations (FEMA, RBI, SEBI), your resident-country tax (US PFIC rules, UK ISA limits, UAE corporate tax changes), and the practical operational realities of NRO/NRE/FCNR accounts.",
-          "We help NRIs in the US, UK, UAE, Singapore, and beyond build coherent portfolios across India and abroad — and stay compliant on both sides.",
-        ],
-        whatYouGet: [
-          "Where to invest: India equity via NRE mutual funds, GIFT City vehicles, direct equity, vs your resident-country options (401k/IRA, ISA, CPF SA, etc.)",
-          "US-specific: PFIC implications of Indian mutual funds, the case for direct stocks instead, Roth backdoor, 8938 and FBAR compliance reminders",
-          "UK-specific: ISA / SIPP vs Indian SIP, remittance basis vs arising basis, Tax Year overlap on India income",
-          "UAE-specific: leveraging the 9% corporate tax setup, golden visa property routes, when GIFT City wins",
-          "DTAA usage: avoiding double tax on dividends, interest, and capital gains across India-US, India-UK, India-UAE, India-Singapore",
-          "Return-to-India scenario planning: timing of remittance, RNOR status optimisation, ESOP repatriation strategy",
-        ],
-        commonSituations: [
-          {
-            title: "“I’m in the US and have Indian mutual funds — am I in trouble?”",
-            copy: "Indian MFs are PFICs for US tax purposes, and the punitive tax regime can wipe out gains. We help you understand whether to use QEF election, mark-to-market, or transition to direct Indian equity / India-domiciled US-compliant funds. This is the single biggest mistake we see in US-resident NRIs.",
-          },
-          {
-            title: "“I’m in Dubai, salary is tax-free, and I have idle cash”",
-            copy: "UAE residents have unique opportunities: GIFT City NRI investment vehicles (capital gains exempt for non-residents), Indian equity via NRE route, and post-2023 UAE corporate tax considerations if you have business income. We model whether to invest in India, hold in USD/AED, or split — based on your return-to-India horizon.",
-          },
-          {
-            title: "“I’m planning to return to India in 3 years”",
-            copy: "The 3 years before return are the most valuable from a tax-planning perspective — particularly the RNOR window post-return (up to 3 years of preferential treatment on foreign income). We map your remittance timing, asset relocation, ESOP exercise/sale strategy, and the order of unwinding accounts.",
-          },
-          {
-            title: "“My parents in India need a financial plan too”",
-            copy: "Many NRIs end up managing their parents’ finances — pension management, senior citizen FD optimisation, medical insurance gaps, succession planning. We can build coordinated plans across the NRI investor and their India-resident parents in a single household view.",
-          },
-        ],
-        ctaTitle: "Get a cross-border snapshot",
-      }}
-    />
+    <>
+      <Hero
+        eyebrow="For NRIs & Global Indians"
+        title="PMS & AIF for NRIs — invest in India's growth, compliantly."
+        subtitle="Portfolio Management Services and Alternative Investment Funds are open to NRIs — with the right accounts, the right paperwork and a process that is largely digital. Here is how it works, in plain English."
+        primaryCta={{ label: "Book a Call", href: siteConfig.topmateUrl }}
+        secondaryCta={{ label: "Explore PMS", href: "/investment-products/pms" }}
+      />
+
+      {/* NRE vs NRO */}
+      <section className="py-20 md:py-28">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto text-center mb-12 reveal">
+            <span className="eyebrow">Step zero</span>
+            <h2 className="mt-3 text-balance">NRE or NRO — where does the money come from?</h2>
+            <p className="mt-4 text-lg text-[var(--color-slate)] leading-relaxed">
+              NRIs invest in PMS and AIF through their NRE or NRO accounts, subject to KYC and FEMA compliance.
+              The choice determines how freely your money can move back out.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto reveal">
+            <div className="glass-card">
+              <div className="w-10 h-10 rounded-lg bg-[var(--color-navy)] text-[var(--color-gold)] flex items-center justify-center mb-4">
+                <Globe2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">NRE — fully repatriable</h3>
+              <p className="text-sm text-[var(--color-slate)] leading-relaxed">
+                Funds in a Non-Resident External account came from abroad, and both principal and gains can be
+                repatriated freely. Investing from NRE keeps the door fully open for money to return to your country
+                of residence.
+              </p>
+            </div>
+            <div className="glass-card">
+              <div className="w-10 h-10 rounded-lg bg-[var(--color-sand)]/70 text-[var(--color-gold-dim)] flex items-center justify-center mb-4">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">NRO — capped repatriation</h3>
+              <p className="text-sm text-[var(--color-slate)] leading-relaxed">
+                A Non-Resident Ordinary account holds India-source income (rent, dividends, sale proceeds).
+                Repatriation is capped at USD 1 million per financial year, with a chartered accountant&apos;s
+                certificate (Form 15CA/15CB) for the transfer.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Minimums + PIS/demat */}
+      <section className="bg-[var(--color-parchment)]">
+        <div className="container-wide py-20 md:py-28">
+          <div className="max-w-3xl mx-auto text-center mb-12 reveal">
+            <span className="eyebrow">The entry requirements</span>
+            <h2 className="mt-3 text-balance">Minimums and accounts you&apos;ll need</h2>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-5 max-w-4xl mx-auto reveal">
+            <div className="card-soft text-center">
+              <div className="text-2xl font-semibold text-[var(--color-navy)]" style={{ fontFamily: "var(--font-display)" }}>₹50 lakh</div>
+              <p className="text-sm text-[var(--color-slate)] mt-2 leading-relaxed">
+                SEBI-mandated minimum investment for a <strong>PMS</strong>, per portfolio manager.
+              </p>
+            </div>
+            <div className="card-soft text-center">
+              <div className="text-2xl font-semibold text-[var(--color-navy)]" style={{ fontFamily: "var(--font-display)" }}>₹1 crore</div>
+              <p className="text-sm text-[var(--color-slate)] mt-2 leading-relaxed">
+                SEBI-mandated minimum for an <strong>AIF</strong> (₹25 lakh for a fund&apos;s own employees/directors).
+              </p>
+            </div>
+            <div className="card-soft text-center">
+              <div className="text-2xl font-semibold text-[var(--color-navy)]" style={{ fontFamily: "var(--font-display)" }}>PIS + demat</div>
+              <p className="text-sm text-[var(--color-slate)] mt-2 leading-relaxed">
+                Equity-based <strong>PMS</strong> typically requires an NRI demat and bank setup (PIS route where
+                applicable); AIFs are pooled and usually need no demat.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tax: DTAA, TRC, FATCA */}
+      <section className="py-20 md:py-28">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto text-center mb-12 reveal">
+            <span className="eyebrow">Tax, treaties and paperwork</span>
+            <h2 className="mt-3 text-balance">DTAA, TRC and the FATCA question</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto reveal">
+            <div className="glass-card">
+              <div className="w-10 h-10 rounded-lg bg-[var(--color-navy)] text-[var(--color-gold)] flex items-center justify-center mb-4">
+                <Landmark className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">DTAA relief</h3>
+              <p className="text-sm text-[var(--color-slate)] leading-relaxed">
+                India&apos;s Double Taxation Avoidance Agreements can reduce the tax you pay on Indian income and
+                gains, depending on your country of residence. Category I and II AIFs are generally tax
+                pass-through; PMS gains are taxed in your hands like direct holdings.
+              </p>
+            </div>
+            <div className="glass-card">
+              <div className="w-10 h-10 rounded-lg bg-[var(--color-sand)]/70 text-[var(--color-gold-dim)] flex items-center justify-center mb-4">
+                <FileCheck2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">TRC + Form 10F</h3>
+              <p className="text-sm text-[var(--color-slate)] leading-relaxed">
+                To claim DTAA benefits you submit a Tax Residency Certificate from your country of residence along
+                with Form 10F. Without them, tax is deducted at the standard (higher) domestic rates.
+              </p>
+            </div>
+            <div className="glass-card">
+              <div className="w-10 h-10 rounded-lg bg-[var(--color-navy)] text-[var(--color-gold)] flex items-center justify-center mb-4">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">US / Canada (FATCA)</h3>
+              <p className="text-sm text-[var(--color-slate)] leading-relaxed">
+                Some managers have additional compliance requirements for US and Canada-based NRIs under FATCA, and
+                a few don&apos;t onboard them at all. We help you shortlist managers that do — before you start the
+                paperwork.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Repatriation */}
+      <section className="bg-[var(--color-parchment)]">
+        <div className="container-wide py-20 md:py-28">
+          <div className="max-w-3xl mx-auto text-center reveal">
+            <span className="eyebrow">Getting money home</span>
+            <h2 className="mt-3 text-balance">Repatriation, in one paragraph</h2>
+            <p className="mt-5 text-lg text-[var(--color-slate)] leading-relaxed">
+              Investments made from an NRE account are fully repatriable — principal and gains. Investments made
+              from an NRO account can be repatriated up to USD 1 million per financial year with a CA certificate.
+              Plan the account you invest from around whether — and when — you want the money back abroad.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Step-by-step onboarding */}
+      <section className="py-20 md:py-28">
+        <div className="container-wide">
+          <div className="max-w-3xl mx-auto text-center mb-12 reveal">
+            <span className="eyebrow">The process</span>
+            <h2 className="mt-3 text-balance">Onboarding, step by step</h2>
+            <p className="mt-4 text-lg text-[var(--color-slate)] leading-relaxed">
+              The process is largely digital and typically takes a couple of weeks end-to-end.
+            </p>
+          </div>
+          <ol className="max-w-2xl mx-auto space-y-4 reveal">
+            {[
+              ["Shortlist strategies", "Discover and compare PMS and AIF strategies that accept NRIs from your country of residence — we help you filter."],
+              ["KYC as an NRI", "Complete NRI KYC with passport, visa/residence proof, overseas address and PAN. FEMA declarations are part of the pack."],
+              ["Set up accounts", "Open or link your NRE/NRO bank account; for equity PMS, add the NRI demat (and PIS approval where applicable)."],
+              ["Sign and fund", "Execute the manager's agreement or fund documents digitally, then remit the corpus from the chosen account."],
+              ["Claim treaty benefits", "Submit your TRC and Form 10F so DTAA rates apply, and set the repatriation path that matches your plans."],
+            ].map(([title, copy], i) => (
+              <li key={title} className="flex items-start gap-4 bg-white rounded-xl border border-[var(--color-silver)]/40 p-5">
+                <span className="w-8 h-8 rounded-full bg-[var(--color-navy)] text-[var(--color-gold)] flex items-center justify-center shrink-0 text-sm font-semibold">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="text-base font-semibold">{title}</h3>
+                  <p className="text-sm text-[var(--color-slate)] mt-1 leading-relaxed">{copy}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="text-center mt-10 reveal">
+            <Link href="/investment-products/pms" className="inline-flex items-center gap-2 font-semibold text-[var(--color-gold-dim)]">
+              Start with the PMS guide <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <p className="text-xs text-[var(--color-slate)] italic text-center mt-10 max-w-3xl mx-auto">
+            This page is for information and education only and does not constitute investment, legal or tax advice.
+            PMS and AIF are subject to market risks; minimums, eligibility and tax treatment vary by product,
+            manager and your country of residence. Consult your own tax and legal advisers before investing.
+          </p>
+        </div>
+      </section>
+
+      <CTASection
+        title="Ready to explore PMS & AIF from abroad?"
+        subtitle="Book a no-obligation call — we'll map the NRE/NRO, KYC and treaty steps to your situation and shortlist managers that onboard NRIs from your country."
+        primaryCta={{ label: "Book a Call", href: siteConfig.topmateUrl }}
+        secondaryCta={{ label: "Explore PMS", href: "/investment-products/pms" }}
+      />
+    </>
   );
 }

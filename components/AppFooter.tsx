@@ -28,6 +28,9 @@ export function AppFooter() {
 
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-[var(--color-silver)]">
+            <Link href="/investment-products/pms" className="hover:text-white">PMS</Link>
+            <Link href="/investment-products/aif" className="hover:text-white">AIF</Link>
+            <Link href="/compare" className="hover:text-white">Compare</Link>
             <Link href="/pricing" className="hover:text-white">Pricing</Link>
             <Link href="/legal/privacy" className="hover:text-white">Privacy</Link>
             <Link href="/legal/terms" className="hover:text-white">Terms</Link>

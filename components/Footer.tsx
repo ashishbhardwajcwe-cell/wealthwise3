@@ -1,8 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import { siteConfig, investmentProducts, audiences, calculators } from "@/lib/site-config";
+import { siteConfig, audiences, calculators, moreNavProducts } from "@/lib/site-config";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { SocialLinks } from "@/components/SocialLinks";
+
+// The For column drops the software-professionals page (still reachable)
+// to match the four core audiences.
+const footerAudiences = audiences.filter((a) => a.slug !== "software-professionals");
 
 export function Footer() {
   return (
@@ -31,25 +35,28 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-[var(--color-gold-light)] mb-4">Products</h4>
             <ul className="space-y-2 text-sm">
-              {investmentProducts.slice(0, 6).map((p) => (
+              <li><Link href="/investment-products/pms" className="text-[var(--color-silver)] hover:text-white">PMS</Link></li>
+              <li><Link href="/investment-products/aif" className="text-[var(--color-silver)] hover:text-white">AIF</Link></li>
+              <li><Link href="/investment-products/mutual-funds" className="text-[var(--color-silver)] hover:text-white">Mutual Funds</Link></li>
+              <li><Link href="/compare" className="text-[var(--color-silver)] hover:text-white">Compare</Link></li>
+              <li><Link href="/#how-it-works" className="text-[var(--color-silver)] hover:text-white">How It Works</Link></li>
+            </ul>
+            <h4 className="text-xs font-semibold text-[var(--color-gold-light)]/80 mt-5 mb-3 uppercase tracking-wider">More products</h4>
+            <ul className="space-y-2 text-sm">
+              {moreNavProducts.map((p) => (
                 <li key={p.slug}>
                   <Link href={`/investment-products/${p.slug}`} className="text-[var(--color-silver)] hover:text-white">
                     {p.name}
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link href="/#how-it-works" className="text-[var(--color-silver)] hover:text-white">
-                  How It Works
-                </Link>
-              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold text-[var(--color-gold-light)] mb-4">For</h4>
             <ul className="space-y-2 text-sm">
-              {audiences.map((a) => (
+              {footerAudiences.map((a) => (
                 <li key={a.slug}>
                   <Link href={`/for/${a.slug}`} className="text-[var(--color-silver)] hover:text-white">
                     {a.name}

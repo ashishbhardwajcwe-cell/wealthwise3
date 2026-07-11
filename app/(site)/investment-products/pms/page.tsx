@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { pmsData } from "@/lib/product-data";
 import { PMSGraph } from "@/components/ProductGraphs";
@@ -19,6 +20,18 @@ export default async function Page() {
   return (
     <>
       <InvestmentProductPage data={{ ...pmsData, graphic: <PMSGraph /> }} />
+      <section className="py-10">
+        <div className="container-narrow">
+          <div className="card-soft flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm md:text-base text-[var(--color-slate)] leading-relaxed">
+              Wondering what fixed and performance fees do to your returns over a decade?
+            </p>
+            <Link href="/resources/calculators/pms-fees" className="btn-primary text-sm whitespace-nowrap">
+              Try the PMS Fee Calculator
+            </Link>
+          </div>
+        </div>
+      </section>
       {strategies.length > 0 ? (
         <PMSTable strategies={strategies} />
       ) : (

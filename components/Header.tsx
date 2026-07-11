@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, ExternalLink, ChevronDown } from "lucide-react";
 import { getNamedIcon } from "@/components/nav-icons";
 import { cn } from "@/lib/utils";
-import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
+import { siteConfig } from "@/lib/site-config";
 import { CurrencySwitcher } from "./CurrencySwitcher";
 import { AccountButton } from "./auth/AccountButton";
 
@@ -23,19 +23,19 @@ interface NavMenuItem {
   external?: boolean;
 }
 
+const learnMenu: NavMenuItem[] = [
+  { href: "/blog", label: "Education Hub", desc: "Guides, explainers and analysis on PMS, AIF and more", icon: "BookOpen", tone: "#2563EB", emoji: "📰" },
+  { href: "/blog/complete-guide-to-pms-india-2026", label: "PMS Guide", desc: "The complete guide to PMS in India", icon: "BookA", tone: "#4F46E5", emoji: "📗" },
+  { href: "/resources/calculators", label: "Calculators", desc: "PMS fees, SIP, retirement, FIRE and more", icon: "Calculator", tone: "#7C3AED", emoji: "🧮" },
+  { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained", icon: "BookA", tone: "#0F766E", emoji: "📖" },
+  { href: "/resources/downloads", label: "Free PDFs", desc: "Checklists and PDF playbooks", icon: "Download", tone: "#16A34A", emoji: "📥" },
+];
+
 const plannersMenu: NavMenuItem[] = [
   { href: "/financial-planning", label: "Financial Planning", desc: "Our financial-planning and wealth-management hub", icon: "Compass", tone: "#1E3A8A", emoji: "🧭" },
   { href: "/plan", label: "All planners — overview", desc: "Compare snapshot, guided plan and the full app side-by-side", icon: "LayoutGrid", tone: "#334155", emoji: "🗂️" },
   { href: "/ai-wealth-planner", label: "AI Snapshot", desc: "60-second personalised snapshot · No signup", icon: "Sparkles", tone: "#D97706", emoji: "✨" },
   { href: "/guided", label: "Guided Plan", desc: "10-minute YNAB-style Q&A · No signup", icon: "ListChecks", tone: "#0F766E", emoji: "✅" },
-];
-
-const resourcesMenu: NavMenuItem[] = [
-  { href: "/blog", label: "Blog", desc: "Guides, analysis and playbooks", icon: "BookOpen", tone: "#2563EB", emoji: "📰" },
-  { href: "/resources/calculators", label: "Calculators", desc: "SIP, retirement, FIRE, EMI and more", icon: "Calculator", tone: "#7C3AED", emoji: "🧮" },
-  { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained", icon: "BookA", tone: "#0F766E", emoji: "📖" },
-  { href: "/resources/downloads", label: "Free downloads", desc: "Checklists and PDF playbooks", icon: "Download", tone: "#16A34A", emoji: "📥" },
-  { href: "/about", label: "About", desc: "Our story, mission and the team", icon: "Info", tone: "#475569", emoji: "ℹ️" },
 ];
 
 /** A nav head is "active" when the current path falls under any of its prefixes. */
@@ -76,11 +76,15 @@ export function Header() {
         </Link>
 
         <nav className="hidden lg:flex items-center gap-0.5" aria-label="Primary">
+          <NavLink href="/investment-products/pms" active={isActive(pathname, "/investment-products/pms")}>PMS</NavLink>
+          <NavLink href="/investment-products/aif" active={isActive(pathname, "/investment-products/aif")}>AIF</NavLink>
+          <NavLink href="/compare" active={isActive(pathname, "/compare")}>Compare</NavLink>
           <DropdownNavItem
-            label="Products"
-            {...menuProps("products")}
-            active={isActive(pathname, "/investment-products")}
-            items={investmentProducts.map((p) => ({ href: `/investment-products/${p.slug}`, label: p.name, desc: p.short, icon: p.icon, tone: p.tone, emoji: p.emoji }))}
+            label="Learn"
+            {...menuProps("learn")}
+            active={isActive(pathname, ["/blog", "/resources"])}
+            items={learnMenu}
+            width="w-[26rem]"
           />
           <DropdownNavItem
             label="Planners"
@@ -89,22 +93,7 @@ export function Header() {
             items={plannersMenu}
             width="w-[26rem]"
           />
-          <NavLink href="/markets" active={isActive(pathname, "/markets")}>Markets</NavLink>
-          <NavLink href="/equity/analysis" active={isActive(pathname, "/equity")}>Research</NavLink>
-          <DropdownNavItem
-            label="For"
-            {...menuProps("for")}
-            active={isActive(pathname, "/for")}
-            items={audiences.map((a) => ({ href: `/for/${a.slug}`, label: a.name, desc: a.short, icon: a.icon, tone: a.tone, emoji: a.emoji }))}
-          />
-          <DropdownNavItem
-            label="Resources"
-            {...menuProps("resources")}
-            active={isActive(pathname, ["/blog", "/resources", "/about"])}
-            items={resourcesMenu}
-            width="w-[24rem]"
-          />
-          <NavLink href="/pricing" active={isActive(pathname, "/pricing")}>Pricing</NavLink>
+          <NavLink href="/about" active={isActive(pathname, "/about")}>About</NavLink>
         </nav>
 
         <div className="hidden lg:flex items-center gap-2 shrink-0">
@@ -115,10 +104,18 @@ export function Header() {
             href={siteConfig.appDeepLink}
             target="_blank"
             rel="noreferrer"
-            className="btn-primary text-sm py-2 px-3.5 whitespace-nowrap"
+            className="text-sm font-semibold text-[var(--color-navy)] hover:text-[var(--color-gold-dim)] transition-colors whitespace-nowrap inline-flex items-center gap-1"
             title="Open the AI Wealth Planner — goes straight to data entry"
           >
             AI Planner <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href={siteConfig.topmateUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-primary text-sm py-2 px-3.5 whitespace-nowrap"
+          >
+            Book a Call
           </a>
         </div>
 
@@ -135,37 +132,36 @@ export function Header() {
       {open && (
         <div className="lg:hidden glass border-t border-[var(--color-silver)]/40">
           <div className="container-wide py-4 flex flex-col gap-1">
-            <MobileLink href="/investment-products/mutual-funds">Investment Products</MobileLink>
-            <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Wealth Planners</div>
-            <MobileLink href="/financial-planning">Financial Planning</MobileLink>
-            <MobileLink href="/plan">All planners — overview</MobileLink>
-            <MobileLink href="/ai-wealth-planner">AI Snapshot · 60 sec</MobileLink>
-            <MobileLink href="/guided">Guided Plan · 10 min</MobileLink>
-            <a
-              href={siteConfig.appDeepLink}
-              target="_blank"
-              rel="noreferrer"
-              className="px-2 py-3 text-base font-semibold text-[var(--color-gold-dim)] border-b border-[var(--color-silver)]/30 inline-flex items-center gap-1.5"
-              onClick={() => setOpen(false)}
-            >
-              AI Wealth Planner (app) <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-            <MobileLink href="/markets">Markets</MobileLink>
-            <MobileLink href="/equity/analysis">Research</MobileLink>
-            <MobileLink href="/for/professionals">For You</MobileLink>
-            <MobileLink href="/blog">Blog</MobileLink>
-            <MobileLink href="/resources/calculators">Calculators</MobileLink>
+            <MobileLink href="/investment-products/pms">PMS</MobileLink>
+            <MobileLink href="/investment-products/aif">AIF</MobileLink>
+            <MobileLink href="/compare">Compare</MobileLink>
+            <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Learn</div>
+            {learnMenu.map((item) => (
+              <MobileLink key={item.href} href={item.href}>{item.label}</MobileLink>
+            ))}
+            <div className="pt-3 pb-1 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)] px-2">Planners</div>
+            {plannersMenu.map((item) => (
+              <MobileLink key={item.href} href={item.href}>{item.label}</MobileLink>
+            ))}
             <MobileLink href="/about">About</MobileLink>
-            <MobileLink href="/pricing">Pricing</MobileLink>
             <AccountButton variant="mobile" />
             <a
               href={siteConfig.appDeepLink}
               target="_blank"
               rel="noreferrer"
+              className="px-2 py-3 text-base font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1.5"
+              onClick={() => setOpen(false)}
+            >
+              AI Planner <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+            <a
+              href={siteConfig.topmateUrl}
+              target="_blank"
+              rel="noreferrer"
               className="btn-primary text-sm mt-3"
               onClick={() => setOpen(false)}
             >
-              Open the AI Wealth Planner
+              Book a Call
             </a>
           </div>
         </div>

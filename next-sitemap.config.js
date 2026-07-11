@@ -3,14 +3,18 @@
 // Per-path priority + changefreq overrides. Anything not listed
 // falls back to the global priority/changefreq below.
 const HIGH_PRIORITY_PATHS = {
-  "/":                 { priority: 1.0,  changefreq: "weekly" },
-  "/plan":             { priority: 0.95, changefreq: "weekly" },
-  "/markets":          { priority: 0.95, changefreq: "hourly" },
-  "/ai-wealth-planner":{ priority: 0.9,  changefreq: "weekly" },
-  "/guided":           { priority: 0.9,  changefreq: "weekly" },
-  "/pricing":          { priority: 0.85, changefreq: "weekly" },
-  "/about":            { priority: 0.8,  changefreq: "monthly" },
-  "/contact":          { priority: 0.75, changefreq: "monthly" },
+  "/":                                  { priority: 1.0,  changefreq: "weekly" },
+  "/investment-products/pms":           { priority: 0.95, changefreq: "weekly" },
+  "/investment-products/aif":           { priority: 0.9,  changefreq: "weekly" },
+  "/compare":                           { priority: 0.9,  changefreq: "weekly" },
+  "/ai-wealth-planner":                 { priority: 0.9,  changefreq: "weekly" },
+  "/guided":                            { priority: 0.9,  changefreq: "weekly" },
+  "/pricing":                           { priority: 0.85, changefreq: "weekly" },
+  "/resources/calculators/pms-fees":    { priority: 0.8,  changefreq: "monthly" },
+  "/plan":                              { priority: 0.8,  changefreq: "weekly" },
+  "/markets":                           { priority: 0.8,  changefreq: "hourly" },
+  "/about":                             { priority: 0.8,  changefreq: "monthly" },
+  "/contact":                           { priority: 0.75, changefreq: "monthly" },
 };
 
 module.exports = {

@@ -4,12 +4,13 @@ import { FeatureGrid } from "@/components/FeatureGrid";
 import { calculators } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "Free Financial Calculators — SIP, Lumpsum, Retirement, FIRE",
+  title: "Free Financial Calculators — PMS Fees, SIP, Retirement, FIRE",
   description:
-    "Seven free interactive calculators for Indian investors: SIP, lumpsum, retirement corpus, FIRE, tax harvesting, NRI tax, EMI.",
+    "Eight free interactive calculators for Indian investors: PMS fees, SIP, lumpsum, retirement corpus, FIRE, tax harvesting, NRI tax, EMI.",
 };
 
 const iconMap: Record<string, string> = {
+  "pms-fees": "Briefcase",
   sip: "TrendingUp",
   lumpsum: "DollarSign",
   retirement: "Sunset",
@@ -25,7 +26,7 @@ export default function CalculatorsIndexPage() {
       <Hero
         eyebrow="Resources"
         title="Calculators"
-        subtitle="Seven free interactive calculators for the most common Indian investor questions. Each shows you the maths and lets you tweak the inputs."
+        subtitle="Eight free interactive calculators for the most common Indian investor questions. Each shows you the maths and lets you tweak the inputs."
       />
       <FeatureGrid
         title="Pick a calculator"

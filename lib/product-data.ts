@@ -1,88 +1,5 @@
 import type { ProductPageData } from "@/components/InvestmentProductPage";
 
-export const mutualFundsData: ProductPageData = {
-  name: "Mutual Funds",
-  oneLine: "Diversified, professionally managed, regulated. The most accessible investment vehicle in India — for good reason.",
-  whatItIs: [
-    "A mutual fund pools money from many investors and buys a basket of stocks, bonds, gold, or other assets. A professional fund manager makes the buy/sell decisions, and you own units that reflect your share of the basket.",
-    "In India, mutual funds are regulated by SEBI and registered with AMFI. There are over 1,400 schemes across 40+ asset management companies — covering equity (large/mid/small cap, multi-cap, sectoral, thematic), debt (liquid, short-duration, dynamic bond), hybrid, ELSS for tax-saving, gold funds, and international funds.",
-    "You can invest a one-time lumpsum or set up a Systematic Investment Plan (SIP) — typically ₹500 per month minimum. The two big choices most investors miss: Direct vs Regular plans (Direct saves 0.5–1% per year in expense ratio), and Active vs Passive (index funds cost 0.1–0.5% vs 1–2% for active).",
-  ],
-  keyFacts: [
-    { label: "Minimum investment", value: "₹500 (SIP) / ₹5,000 (lumpsum)" },
-    { label: "Typical returns (equity)", value: "10–14% CAGR over 10+ yrs (historical)" },
-    { label: "Typical returns (debt)", value: "6–8% CAGR (historical)" },
-    { label: "Lock-in", value: "None (open-ended) · 3 yrs for ELSS" },
-    { label: "Taxation (equity)", value: "STCG 20% · LTCG 12.5% above ₹1.25L/yr" },
-    { label: "Taxation (debt, post-Apr 2023)", value: "At slab rate (no indexation)" },
-    { label: "Regulator", value: "SEBI-regulated products" },
-    { label: "Risk level", value: "Low to Very High (varies by scheme)" },
-  ],
-  pros: [
-    "Professionally managed and SEBI-regulated",
-    "Wide diversification at low ticket size",
-    "Liquid (most schemes redeem in T+1 or T+3)",
-    "Transparent (NAV published daily)",
-    "SIP enforces discipline — averaging costs over time",
-  ],
-  cons: [
-    "Most active funds underperform their benchmark over 10 yrs",
-    "Regular plan commissions silently eat 0.5–1% per year",
-    "Exit loads (typically 1% if redeemed within 1 yr) catch new investors",
-    "Debt fund taxation changed in 2023 — no longer the indexation benefit",
-    "Too much choice leads to over-diversification (15 funds doing the same thing)",
-  ],
-  whoShouldConsider:
-    "Consider mutual funds if you have ₹500+/month to invest, want to start before you have ₹50L+, value liquidity, and prefer a regulated structure. They're the right base layer for almost every investor in India.",
-  commonMistakes: [
-    "Buying Regular plans through your bank or app instead of Direct (costs you 0.5–1% per year — over 30 years that's a 25% smaller corpus).",
-    "Picking the fund that was #1 last year. Past performance leadership is the worst predictor of future returns.",
-    "Owning 12 different equity funds that all hold the same Nifty-50 stocks — you've paid 12 expense ratios for one index.",
-    "Stopping SIPs in market crashes. Those are the months your units cost the least.",
-    "Ignoring the ELSS deduction (₹1.5L u/s 80C) when you're in old tax regime and could save ₹15k–₹45k in tax per year.",
-  ],
-  howWeHelp:
-    "CashFlow Planner tracks every mutual fund you own across folios and AMCs, flags Regular plans that should be moved to Direct, identifies overlap and concentration, and runs tax-loss harvesting on the ₹1.25L LTCG exemption every March. Our education-first explainers help you understand what a goal-aligned scheme list looks like.",
-  faqs: [
-    {
-      question: "Direct vs Regular plans — does the 0.5% really matter?",
-      answer:
-        "Yes. On a ₹10L corpus growing at 12% for 20 years, Direct gives you ~₹96L while Regular (at 11.5%) gives ~₹87L — a ₹9L gap from the same fund. Always invest in Direct plans via platforms like Coin (Zerodha), Kuvera, MFCentral, or directly through AMC websites.",
-    },
-    {
-      question: "How many mutual funds should I own?",
-      answer:
-        "For most investors: 3–5 equity funds + 1–2 debt funds is plenty. One large-cap or index fund, one flexi-cap, one mid/small-cap if appetite allows, and one debt fund for short-term goals. More than that usually creates overlap without real diversification.",
-    },
-    {
-      question: "SIP or lumpsum?",
-      answer:
-        "If you have monthly income → SIP (rupee-cost averaging + discipline). If you have a lumpsum (bonus, inheritance, sale proceeds) → STP (Systematic Transfer Plan) from a liquid fund into your target equity fund over 6–12 months reduces timing risk vs deploying all at once.",
-    },
-    {
-      question: "What about ELSS for tax saving?",
-      answer:
-        "ELSS funds let you deduct up to ₹1.5L u/s 80C if you're in the old tax regime, with a 3-year lock-in (the shortest of any 80C option). They invest in equities, so returns are market-linked. Skip if you're in the new tax regime — there's no 80C benefit there.",
-    },
-    {
-      question: "Are international funds worth it?",
-      answer:
-        "Some allocation (5–15%) to US or global funds gives currency diversification and exposure to large global tech. But Indian mutual funds investing abroad are now taxed as debt funds (slab rate), making them less attractive vs Indian equity post-2023. Consider GIFT City or direct US brokerages for larger allocations.",
-    },
-    {
-      question: "How much should I invest in mutual funds vs other assets?",
-      answer:
-        "Depends on age, goals, and other assets. A reasonable starting framework: equity MF allocation = (100 - your age) % of investable surplus, with the rest split across debt, gold (5–10%), and emergency fund (6 months expenses). The AI Wealth Planner gives you a personalised number.",
-    },
-  ],
-  relatedPosts: [
-    { slug: "mutual-funds-vs-pms", title: "Mutual funds vs PMS: which is right for you?" },
-    { slug: "ltcg-125-lakh-exemption-most-underused-tax-tool", title: "The ₹1.25 lakh LTCG exemption — the most under-used tax tool in India" },
-  ],
-  extraDisclaimer:
-    "Mutual fund investments are subject to market risks. Read all scheme-related documents carefully. AMFI Registration: pending. We do not recommend any specific scheme.",
-};
-
 export const pmsData: ProductPageData = {
   name: "Portfolio Management Services (PMS)",
   oneLine: "Personalised portfolios for ₹50 lakh+ investors. You own the stocks directly in your demat — the manager does the picking.",
@@ -245,162 +162,87 @@ export const aifData: ProductPageData = {
     "AIFs are intended for sophisticated investors. They involve illiquidity, leverage (in Cat III), and concentration risk. PPM disclosures should be reviewed carefully. Past fund performance is not indicative of future fund performance.",
 };
 
-export const unlistedSharesData: ProductPageData = {
-  name: "Unlisted Shares",
-  oneLine: "Pre-IPO and unlisted equity — owning shares of companies before they hit public markets. High potential, high illiquidity.",
+export const mutualFundsData: ProductPageData = {
+  name: "Mutual Funds",
+  oneLine: "Diversified, professionally managed, regulated. The most accessible investment vehicle in India — for good reason.",
   whatItIs: [
-    "Unlisted shares are equity in companies that aren't yet listed on the stock exchanges (NSE/BSE). This includes pre-IPO companies (often within 1–3 years of listing), private companies that may never list, and shares of public-sector unlisted entities (like NSE itself, which is unlisted despite running the exchange).",
-    "In India, the unlisted shares market has matured rapidly since 2020. Platforms like UnlistedArena, Stockify, Precize, and Altius let retail investors access shares that were earlier limited to PE/VC funds. Typical ticket sizes range from ₹50,000 to ₹5,00,000 per investment. You hold the shares in your demat account just like listed stocks.",
-    "Tax treatment is different from listed equity. Long-term holding (>24 months) qualifies for LTCG at 12.5% (with indexation removed post-Jul 2024). Short-term (<24 months) is taxed at your slab rate — which can be a brutal 30%+ for HNIs. There's no STT, no exchange transaction cost — but pricing is opaque and bid-ask spreads can be 5–15%.",
+    "A mutual fund pools money from many investors and buys a basket of stocks, bonds, gold, or other assets. A professional fund manager makes the buy/sell decisions, and you own units that reflect your share of the basket.",
+    "In India, mutual funds are regulated by SEBI and registered with AMFI. There are over 1,400 schemes across 40+ asset management companies — covering equity (large/mid/small cap, multi-cap, sectoral, thematic), debt (liquid, short-duration, dynamic bond), hybrid, ELSS for tax-saving, gold funds, and international funds.",
+    "You can invest a one-time lumpsum or set up a Systematic Investment Plan (SIP) — typically ₹500 per month minimum. The two big choices most investors miss: Direct vs Regular plans (Direct saves 0.5–1% per year in expense ratio), and Active vs Passive (index funds cost 0.1–0.5% vs 1–2% for active).",
   ],
   keyFacts: [
-    { label: "Minimum investment", value: "₹50,000 typical (platform-dependent)" },
-    { label: "Typical returns", value: "Highly variable; 0% to multi-bagger" },
-    { label: "Liquidity", value: "Low — exit via platform secondary or post-IPO" },
-    { label: "Holding period for LTCG", value: "24 months" },
-    { label: "Tax (LTCG)", value: "12.5%" },
-    { label: "Tax (STCG)", value: "At your slab rate" },
-    { label: "Regulator", value: "Not directly — platforms are facilitators" },
-    { label: "Risk level", value: "Very High" },
+    { label: "Minimum investment", value: "₹500 (SIP) / ₹5,000 (lumpsum)" },
+    { label: "Typical returns (equity)", value: "10–14% CAGR over 10+ yrs (historical)" },
+    { label: "Typical returns (debt)", value: "6–8% CAGR (historical)" },
+    { label: "Lock-in", value: "None (open-ended) · 3 yrs for ELSS" },
+    { label: "Taxation (equity)", value: "STCG 20% · LTCG 12.5% above ₹1.25L/yr" },
+    { label: "Taxation (debt, post-Apr 2023)", value: "At slab rate (no indexation)" },
+    { label: "Regulator", value: "SEBI-regulated products" },
+    { label: "Risk level", value: "Low to Very High (varies by scheme)" },
   ],
   pros: [
-    "Access to companies before public markets price them in",
-    "Potential for high returns if a company IPOs successfully",
-    "Diversifies beyond listed equity universe",
-    "Tax treatment improves once held 24+ months",
-    "Builds early ownership in compelling private businesses",
+    "Professionally managed and SEBI-regulated",
+    "Wide diversification at low ticket size",
+    "Liquid (most schemes redeem in T+1 or T+3)",
+    "Transparent (NAV published daily)",
+    "SIP enforces discipline — averaging costs over time",
   ],
   cons: [
-    "Illiquid — you can be stuck for years, especially if IPO is delayed",
-    "Bid-ask spreads of 5–15% mean meaningful friction on entry and exit",
-    "Valuation opacity — no daily mark-to-market, prices set by platform demand",
-    "STCG at slab rate makes short holds extremely tax-inefficient",
-    "Information asymmetry — promoters often know more than buyers in secondary",
+    "Most active funds underperform their benchmark over 10 yrs",
+    "Regular plan commissions silently eat 0.5–1% per year",
+    "Exit loads (typically 1% if redeemed within 1 yr) catch new investors",
+    "Debt fund taxation changed in 2023 — no longer the indexation benefit",
+    "Too much choice leads to over-diversification (15 funds doing the same thing)",
   ],
   whoShouldConsider:
-    "Consider unlisted shares as a small (3–8%) allocation if your portfolio is already diversified, you can hold for 3+ years, and you understand the company you're buying (financials, sector, why it's likely to IPO). Don't allocate retirement or short-term goal money to unlisted.",
+    "Consider mutual funds if you have ₹500+/month to invest, want to start before you have ₹50L+, value liquidity, and prefer a regulated structure. They're the right base layer for almost every investor in India.",
   commonMistakes: [
-    "Buying based on the 'this will IPO at 3x' pitch from a platform RM. Most pre-IPO valuations crash 30–50% from grey-market prices when the actual IPO happens.",
-    "Ignoring the 24-month holding period and exiting in 6 months — your STCG eats most of the upside.",
-    "Concentrating in one or two hot names. Diversify across 4–6 unlisted holdings to manage single-company risk.",
-    "Not checking the company's financials, board, or auditor track record before investing.",
-    "Confusing 'pre-IPO' (likely listing soon) with 'unlisted forever' (private company that may never list).",
+    "Buying Regular plans through your bank or app instead of Direct (costs you 0.5–1% per year — over 30 years that's a 25% smaller corpus).",
+    "Picking the fund that was #1 last year. Past performance leadership is the worst predictor of future returns.",
+    "Owning 12 different equity funds that all hold the same Nifty-50 stocks — you've paid 12 expense ratios for one index.",
+    "Stopping SIPs in market crashes. Those are the months your units cost the least.",
+    "Ignoring the ELSS deduction (₹1.5L u/s 80C) when you're in old tax regime and could save ₹15k–₹45k in tax per year.",
   ],
   howWeHelp:
-    "We help you evaluate whether a specific unlisted opportunity fits your portfolio, vet the platform you're buying through (custody, settlement, KYC), and time the exit — pre-IPO, at IPO, or post-listing — for maximum after-tax outcome. CashFlow Planner tracks unlisted holdings alongside listed equity and flags upcoming IPO/event windows.",
+    "CashFlow Planner tracks every mutual fund you own across folios and AMCs, flags Regular plans that should be moved to Direct, identifies overlap and concentration, and runs tax-loss harvesting on the ₹1.25L LTCG exemption every March. Our education-first explainers help you understand what a goal-aligned scheme list looks like.",
   faqs: [
     {
-      question: "Are unlisted shares legal in India?",
+      question: "Direct vs Regular plans — does the 0.5% really matter?",
       answer:
-        "Yes, fully legal. They're transferred via off-market trades to your demat account. The transaction itself doesn't go through an exchange. Platforms like UnlistedArena, Stockify, and Precize are facilitators, not exchanges. Just ensure your KYC, PAN, and demat are in order.",
+        "Yes. On a ₹10L corpus growing at 12% for 20 years, Direct gives you ~₹96L while Regular (at 11.5%) gives ~₹87L — a ₹9L gap from the same fund. Always invest in Direct plans via platforms like Coin (Zerodha), Kuvera, MFCentral, or directly through AMC websites.",
     },
     {
-      question: "Which platforms should I use?",
+      question: "How many mutual funds should I own?",
       answer:
-        "Established platforms in India include UnlistedArena, Stockify, Precize, Altius, and Sharescart. Each has different inventories. Always verify the platform's track record, settlement process, and how they custody shares before transferring large amounts.",
+        "For most investors: 3–5 equity funds + 1–2 debt funds is plenty. One large-cap or index fund, one flexi-cap, one mid/small-cap if appetite allows, and one debt fund for short-term goals. More than that usually creates overlap without real diversification.",
     },
     {
-      question: "How is the price determined?",
+      question: "SIP or lumpsum?",
       answer:
-        "There's no exchange-determined price. Platforms set prices based on demand-supply, recent funding rounds, peer comparables, and (closer to IPO) grey-market premium. The same share can have 5–15% price differences across platforms on the same day. Always compare before buying.",
+        "If you have monthly income → SIP (rupee-cost averaging + discipline). If you have a lumpsum (bonus, inheritance, sale proceeds) → STP (Systematic Transfer Plan) from a liquid fund into your target equity fund over 6–12 months reduces timing risk vs deploying all at once.",
     },
     {
-      question: "What happens when the company IPOs?",
+      question: "What about ELSS for tax saving?",
       answer:
-        "Your unlisted shares typically have a 6-month post-IPO lock-in (for pre-IPO investors). After lock-in expires, you can sell on the exchange like any listed share. If you bought 24+ months before IPO, gains are taxed as LTCG at 12.5%.",
+        "ELSS funds let you deduct up to ₹1.5L u/s 80C if you're in the old tax regime, with a 3-year lock-in (the shortest of any 80C option). They invest in equities, so returns are market-linked. Skip if you're in the new tax regime — there's no 80C benefit there.",
     },
     {
-      question: "What if the company never IPOs?",
+      question: "Are international funds worth it?",
       answer:
-        "You're holding an illiquid private equity stake. You can sell back to the same platform (often at a discount), find a private buyer, or wait. Some companies do tender offers or buybacks. The risk of being stuck indefinitely is real — size your allocation accordingly.",
+        "Some allocation (5–15%) to US or global funds gives currency diversification and exposure to large global tech. But Indian mutual funds investing abroad are now taxed as debt funds (slab rate), making them less attractive vs Indian equity post-2023. Consider GIFT City or direct US brokerages for larger allocations.",
     },
     {
-      question: "Are there scams I should watch for?",
+      question: "How much should I invest in mutual funds vs other assets?",
       answer:
-        "Yes. Red flags: 'guaranteed' returns, pushy sales pressure, paying via UPI to a personal account (always pay to a legal entity), shares of companies you can't find on MCA records, or platforms with no physical office. Stick to established names and always verify the share transfer in your demat before paying.",
+        "Depends on age, goals, and other assets. A reasonable starting framework: equity MF allocation = (100 - your age) % of investable surplus, with the rest split across debt, gold (5–10%), and emergency fund (6 months expenses). The AI Wealth Planner gives you a personalised number.",
     },
+  ],
+  relatedPosts: [
+    { slug: "mutual-funds-vs-pms", title: "Mutual funds vs PMS: which is right for you?" },
+    { slug: "ltcg-125-lakh-exemption-most-underused-tax-tool", title: "The ₹1.25 lakh LTCG exemption — the most under-used tax tool in India" },
   ],
   extraDisclaimer:
-    "Unlisted shares are highly illiquid and carry significant valuation and execution risk. Platform-quoted prices may not reflect realisable value. No content here is a recommendation to buy or sell any specific unlisted security.",
-};
-
-export const cryptoData: ProductPageData = {
-  name: "Cryptocurrency",
-  oneLine: "Digital assets with real returns and brutal volatility — taxed harshly in India. A small allocation can make sense; treating it as your main investment usually doesn't.",
-  whatItIs: [
-    "Cryptocurrencies are digital assets running on decentralised blockchains. Bitcoin (BTC), launched in 2009, remains the largest and most established — often called digital gold. Ethereum (ETH) added programmable smart contracts, enabling DeFi, NFTs, and stablecoins. Beyond BTC and ETH, the market includes thousands of altcoins of widely varying quality.",
-    "In India, crypto is legal to buy, hold, and sell — but the regulatory environment is hostile. The 2022 budget introduced a flat 30% tax on crypto gains (no loss set-off, no indexation, no deductions other than cost of acquisition) and a 1% TDS on every transaction above ₹50,000/year. Effectively, India taxes crypto worse than any other asset class.",
-    "Indian exchanges (CoinDCX, CoinSwitch, WazirX, Mudrex) handle KYC, taxation, and reporting. NRIs and global Indians often use international exchanges (Coinbase, Kraken, Binance) where tax treatment depends on their country of residence. Self-custody (hardware wallets like Ledger or Trezor) eliminates exchange risk but adds operational responsibility.",
-  ],
-  keyFacts: [
-    { label: "Minimum investment", value: "₹100 (Indian exchanges)" },
-    { label: "Typical volatility", value: "Bitcoin can move 30–50% in a year" },
-    { label: "Tax in India (gains)", value: "30% flat, no loss set-off" },
-    { label: "TDS in India", value: "1% on every transaction > ₹50k/yr" },
-    { label: "Tax in US (LTCG, >1yr)", value: "0%, 15%, or 20% by income bracket" },
-    { label: "Suggested allocation", value: "5–10% max of investable portfolio" },
-    { label: "Regulator", value: "FIU-IND (AML compliance); RBI/SEBI hands-off on assets" },
-    { label: "Risk level", value: "Very High" },
-  ],
-  pros: [
-    "Bitcoin has historically outperformed every major asset class over 10-year periods",
-    "Uncorrelated (most of the time) with Indian equity",
-    "Liquid 24/7 across global exchanges",
-    "Programmable money + DeFi opens new financial primitives",
-    "Globally accessible — useful for NRIs holding multiple currencies",
-  ],
-  cons: [
-    "India's 30% tax + 1% TDS + no loss set-off is the worst tax regime among major economies",
-    "Volatility means 70–80% drawdowns happen periodically",
-    "No intrinsic cash flow — purely greater-fool dynamics in the short term",
-    "Exchange risk (FTX, WazirX issues) and custody risk are real",
-    "Many altcoins are outright scams or fail; concentrating outside BTC/ETH is dangerous",
-  ],
-  whoShouldConsider:
-    "Consider a 5–10% allocation to crypto (mostly BTC, some ETH) if you've built a solid base of equity, debt, and emergency fund, can stomach 70% drawdowns, and view it as a 10-year position. Don't consider crypto if you'd panic-sell in a crash, or if you're using leverage. NRIs in tax-friendlier jurisdictions can be more aggressive.",
-  commonMistakes: [
-    "Treating gains as 'just buy-sell income' and ignoring the 30% tax — quarterly advance tax obligations apply.",
-    "Trading frequently. Every trade triggers 1% TDS and 30% tax on gains. India's regime brutally punishes frequent traders.",
-    "Holding everything on an exchange. WazirX 2024 incident showed that exchange custody is not your custody.",
-    "Concentrating in altcoins for higher returns. >80% of altcoins from 2017–18 are worth essentially zero today.",
-    "Forgetting that crypto income must be reported in ITR Schedule VDA. Non-disclosure invites penalties.",
-  ],
-  howWeHelp:
-    "We help you size a sensible crypto allocation within your overall plan, choose between exchange custody and self-custody, and track cost basis for tax reporting. CashFlow Planner integrates with Indian and global exchanges to give you a unified portfolio view including crypto. We don't recommend specific coins.",
-  faqs: [
-    {
-      question: "Should I invest in crypto in India given the tax regime?",
-      answer:
-        "It can still make sense as a small (5–10%) long-term position because expected pre-tax returns are high enough to absorb 30% tax. But it's no longer a frequent-trading game — the 1% TDS + 30% tax + no loss set-off makes anything other than long-term holding uneconomical. NRIs in lower-tax jurisdictions have more flexibility.",
-    },
-    {
-      question: "Indian exchange or international?",
-      answer:
-        "For Indian residents, Indian exchanges are the practical choice — they handle KYC, TDS, and report to tax authorities, making compliance easier. NRIs can use global exchanges (Coinbase, Kraken) governed by their resident-country tax. Always pick exchanges with proof of reserves and regulatory licences.",
-    },
-    {
-      question: "What about self-custody (hardware wallets)?",
-      answer:
-        "For positions >₹10L or for long-term holdings, self-custody (Ledger or Trezor hardware wallets) eliminates exchange risk. But it adds operational complexity — seed phrase backup, transaction signing, and security hygiene. If you'll panic when you have to remember 24 words, stay on a reputable exchange.",
-    },
-    {
-      question: "Should I trust altcoins?",
-      answer:
-        "Most altcoins are speculative tokens with limited fundamental value. Of the top 100 cryptocurrencies in 2017, fewer than 20 remain in the top 100 today. We suggest concentrating crypto allocation in BTC (70%+) and ETH (20–30%), with at most a small experimental allocation to others.",
-    },
-    {
-      question: "How do I report crypto in my ITR?",
-      answer:
-        "Crypto income goes in Schedule VDA (Virtual Digital Assets) of ITR-2 or ITR-3. You report each transaction with date, cost of acquisition, sale value, and gain. There's no offset against other gains — each crypto gain is taxed at 30% standalone. Exchanges issue tax statements (P&L reports) to help with this.",
-    },
-    {
-      question: "Is GIFT City a way around crypto tax?",
-      answer:
-        "Not generally. The 30% tax applies to all Indian residents regardless of where the trade happens. GIFT City has some advantages for certain financial products but doesn't currently offer special crypto tax treatment for residents. Non-residents (NRIs investing through IFSC structures) have other considerations.",
-    },
-  ],
-  extraDisclaimer:
-    "Cryptocurrency is highly volatile and may result in loss of all invested capital. Cryptocurrency gains are taxed at 30% flat in India, with 1% TDS on transactions over ₹50,000 per year. Losses cannot be set off against gains in other asset classes. Self-custody carries operational risk; exchange custody carries counterparty risk.",
+    "Mutual fund investments are subject to market risks. Read all scheme-related documents carefully. AMFI Registration: pending. We do not recommend any specific scheme.",
 };
 
 export const directEquityData: ProductPageData = {
@@ -480,6 +322,85 @@ export const directEquityData: ProductPageData = {
   ],
   extraDisclaimer:
     "Direct equity investing involves significant risk including loss of principal. Past performance of any stock or the broader market does not guarantee future returns. Do your own research or consult a SEBI-registered investment adviser before making decisions.",
+};
+
+export const unlistedSharesData: ProductPageData = {
+  name: "Unlisted Shares",
+  oneLine: "Pre-IPO and unlisted equity — owning shares of companies before they hit public markets. High potential, high illiquidity.",
+  whatItIs: [
+    "Unlisted shares are equity in companies that aren't yet listed on the stock exchanges (NSE/BSE). This includes pre-IPO companies (often within 1–3 years of listing), private companies that may never list, and shares of public-sector unlisted entities (like NSE itself, which is unlisted despite running the exchange).",
+    "In India, the unlisted shares market has matured rapidly since 2020. Platforms like UnlistedArena, Stockify, Precize, and Altius let retail investors access shares that were earlier limited to PE/VC funds. Typical ticket sizes range from ₹50,000 to ₹5,00,000 per investment. You hold the shares in your demat account just like listed stocks.",
+    "Tax treatment is different from listed equity. Long-term holding (>24 months) qualifies for LTCG at 12.5% (with indexation removed post-Jul 2024). Short-term (<24 months) is taxed at your slab rate — which can be a brutal 30%+ for HNIs. There's no STT, no exchange transaction cost — but pricing is opaque and bid-ask spreads can be 5–15%.",
+  ],
+  keyFacts: [
+    { label: "Minimum investment", value: "₹50,000 typical (platform-dependent)" },
+    { label: "Typical returns", value: "Highly variable; 0% to multi-bagger" },
+    { label: "Liquidity", value: "Low — exit via platform secondary or post-IPO" },
+    { label: "Holding period for LTCG", value: "24 months" },
+    { label: "Tax (LTCG)", value: "12.5%" },
+    { label: "Tax (STCG)", value: "At your slab rate" },
+    { label: "Regulator", value: "Not directly — platforms are facilitators" },
+    { label: "Risk level", value: "Very High" },
+  ],
+  pros: [
+    "Access to companies before public markets price them in",
+    "Potential for high returns if a company IPOs successfully",
+    "Diversifies beyond listed equity universe",
+    "Tax treatment improves once held 24+ months",
+    "Builds early ownership in compelling private businesses",
+  ],
+  cons: [
+    "Illiquid — you can be stuck for years, especially if IPO is delayed",
+    "Bid-ask spreads of 5–15% mean meaningful friction on entry and exit",
+    "Valuation opacity — no daily mark-to-market, prices set by platform demand",
+    "STCG at slab rate makes short holds extremely tax-inefficient",
+    "Information asymmetry — promoters often know more than buyers in secondary",
+  ],
+  whoShouldConsider:
+    "Consider unlisted shares as a small (3–8%) allocation if your portfolio is already diversified, you can hold for 3+ years, and you understand the company you're buying (financials, sector, why it's likely to IPO). Don't allocate retirement or short-term goal money to unlisted.",
+  commonMistakes: [
+    "Buying based on the 'this will IPO at 3x' pitch from a platform RM. Most pre-IPO valuations crash 30–50% from grey-market prices when the actual IPO happens.",
+    "Ignoring the 24-month holding period and exiting in 6 months — your STCG eats most of the upside.",
+    "Concentrating in one or two hot names. Diversify across 4–6 unlisted holdings to manage single-company risk.",
+    "Not checking the company's financials, board, or auditor track record before investing.",
+    "Confusing 'pre-IPO' (likely listing soon) with 'unlisted forever' (private company that may never list).",
+  ],
+  howWeHelp:
+    "We help you evaluate whether a specific unlisted opportunity fits your portfolio, vet the platform you're buying through (custody, settlement, KYC), and time the exit — pre-IPO, at IPO, or post-listing — for maximum after-tax outcome. CashFlow Planner tracks unlisted holdings alongside listed equity and flags upcoming IPO/event windows.",
+  faqs: [
+    {
+      question: "Are unlisted shares legal in India?",
+      answer:
+        "Yes, fully legal. They're transferred via off-market trades to your demat account. The transaction itself doesn't go through an exchange. Platforms like UnlistedArena, Stockify, and Precize are facilitators, not exchanges. Just ensure your KYC, PAN, and demat are in order.",
+    },
+    {
+      question: "Which platforms should I use?",
+      answer:
+        "Established platforms in India include UnlistedArena, Stockify, Precize, Altius, and Sharescart. Each has different inventories. Always verify the platform's track record, settlement process, and how they custody shares before transferring large amounts.",
+    },
+    {
+      question: "How is the price determined?",
+      answer:
+        "There's no exchange-determined price. Platforms set prices based on demand-supply, recent funding rounds, peer comparables, and (closer to IPO) grey-market premium. The same share can have 5–15% price differences across platforms on the same day. Always compare before buying.",
+    },
+    {
+      question: "What happens when the company IPOs?",
+      answer:
+        "Your unlisted shares typically have a 6-month post-IPO lock-in (for pre-IPO investors). After lock-in expires, you can sell on the exchange like any listed share. If you bought 24+ months before IPO, gains are taxed as LTCG at 12.5%.",
+    },
+    {
+      question: "What if the company never IPOs?",
+      answer:
+        "You're holding an illiquid private equity stake. You can sell back to the same platform (often at a discount), find a private buyer, or wait. Some companies do tender offers or buybacks. The risk of being stuck indefinitely is real — size your allocation accordingly.",
+    },
+    {
+      question: "Are there scams I should watch for?",
+      answer:
+        "Yes. Red flags: 'guaranteed' returns, pushy sales pressure, paying via UPI to a personal account (always pay to a legal entity), shares of companies you can't find on MCA records, or platforms with no physical office. Stick to established names and always verify the share transfer in your demat before paying.",
+    },
+  ],
+  extraDisclaimer:
+    "Unlisted shares are highly illiquid and carry significant valuation and execution risk. Platform-quoted prices may not reflect realisable value. No content here is a recommendation to buy or sell any specific unlisted security.",
 };
 
 export const insuranceData: ProductPageData = {
@@ -718,4 +639,83 @@ export const goldData: ProductPageData = {
   ],
   extraDisclaimer:
     "Gold prices in INR are influenced by global gold prices, the USD/INR exchange rate, and Indian customs duty. Past gold returns do not guarantee future performance. SGB early redemption is at the prevailing gold price, which may be lower than your purchase price.",
+};
+
+export const cryptoData: ProductPageData = {
+  name: "Cryptocurrency",
+  oneLine: "Digital assets with real returns and brutal volatility — taxed harshly in India. A small allocation can make sense; treating it as your main investment usually doesn't.",
+  whatItIs: [
+    "Cryptocurrencies are digital assets running on decentralised blockchains. Bitcoin (BTC), launched in 2009, remains the largest and most established — often called digital gold. Ethereum (ETH) added programmable smart contracts, enabling DeFi, NFTs, and stablecoins. Beyond BTC and ETH, the market includes thousands of altcoins of widely varying quality.",
+    "In India, crypto is legal to buy, hold, and sell — but the regulatory environment is hostile. The 2022 budget introduced a flat 30% tax on crypto gains (no loss set-off, no indexation, no deductions other than cost of acquisition) and a 1% TDS on every transaction above ₹50,000/year. Effectively, India taxes crypto worse than any other asset class.",
+    "Indian exchanges (CoinDCX, CoinSwitch, WazirX, Mudrex) handle KYC, taxation, and reporting. NRIs and global Indians often use international exchanges (Coinbase, Kraken, Binance) where tax treatment depends on their country of residence. Self-custody (hardware wallets like Ledger or Trezor) eliminates exchange risk but adds operational responsibility.",
+  ],
+  keyFacts: [
+    { label: "Minimum investment", value: "₹100 (Indian exchanges)" },
+    { label: "Typical volatility", value: "Bitcoin can move 30–50% in a year" },
+    { label: "Tax in India (gains)", value: "30% flat, no loss set-off" },
+    { label: "TDS in India", value: "1% on every transaction > ₹50k/yr" },
+    { label: "Tax in US (LTCG, >1yr)", value: "0%, 15%, or 20% by income bracket" },
+    { label: "Suggested allocation", value: "5–10% max of investable portfolio" },
+    { label: "Regulator", value: "FIU-IND (AML compliance); RBI/SEBI hands-off on assets" },
+    { label: "Risk level", value: "Very High" },
+  ],
+  pros: [
+    "Bitcoin has historically outperformed every major asset class over 10-year periods",
+    "Uncorrelated (most of the time) with Indian equity",
+    "Liquid 24/7 across global exchanges",
+    "Programmable money + DeFi opens new financial primitives",
+    "Globally accessible — useful for NRIs holding multiple currencies",
+  ],
+  cons: [
+    "India's 30% tax + 1% TDS + no loss set-off is the worst tax regime among major economies",
+    "Volatility means 70–80% drawdowns happen periodically",
+    "No intrinsic cash flow — purely greater-fool dynamics in the short term",
+    "Exchange risk (FTX, WazirX issues) and custody risk are real",
+    "Many altcoins are outright scams or fail; concentrating outside BTC/ETH is dangerous",
+  ],
+  whoShouldConsider:
+    "Consider a 5–10% allocation to crypto (mostly BTC, some ETH) if you've built a solid base of equity, debt, and emergency fund, can stomach 70% drawdowns, and view it as a 10-year position. Don't consider crypto if you'd panic-sell in a crash, or if you're using leverage. NRIs in tax-friendlier jurisdictions can be more aggressive.",
+  commonMistakes: [
+    "Treating gains as 'just buy-sell income' and ignoring the 30% tax — quarterly advance tax obligations apply.",
+    "Trading frequently. Every trade triggers 1% TDS and 30% tax on gains. India's regime brutally punishes frequent traders.",
+    "Holding everything on an exchange. WazirX 2024 incident showed that exchange custody is not your custody.",
+    "Concentrating in altcoins for higher returns. >80% of altcoins from 2017–18 are worth essentially zero today.",
+    "Forgetting that crypto income must be reported in ITR Schedule VDA. Non-disclosure invites penalties.",
+  ],
+  howWeHelp:
+    "We help you size a sensible crypto allocation within your overall plan, choose between exchange custody and self-custody, and track cost basis for tax reporting. CashFlow Planner integrates with Indian and global exchanges to give you a unified portfolio view including crypto. We don't recommend specific coins.",
+  faqs: [
+    {
+      question: "Should I invest in crypto in India given the tax regime?",
+      answer:
+        "It can still make sense as a small (5–10%) long-term position because expected pre-tax returns are high enough to absorb 30% tax. But it's no longer a frequent-trading game — the 1% TDS + 30% tax + no loss set-off makes anything other than long-term holding uneconomical. NRIs in lower-tax jurisdictions have more flexibility.",
+    },
+    {
+      question: "Indian exchange or international?",
+      answer:
+        "For Indian residents, Indian exchanges are the practical choice — they handle KYC, TDS, and report to tax authorities, making compliance easier. NRIs can use global exchanges (Coinbase, Kraken) governed by their resident-country tax. Always pick exchanges with proof of reserves and regulatory licences.",
+    },
+    {
+      question: "What about self-custody (hardware wallets)?",
+      answer:
+        "For positions >₹10L or for long-term holdings, self-custody (Ledger or Trezor hardware wallets) eliminates exchange risk. But it adds operational complexity — seed phrase backup, transaction signing, and security hygiene. If you'll panic when you have to remember 24 words, stay on a reputable exchange.",
+    },
+    {
+      question: "Should I trust altcoins?",
+      answer:
+        "Most altcoins are speculative tokens with limited fundamental value. Of the top 100 cryptocurrencies in 2017, fewer than 20 remain in the top 100 today. We suggest concentrating crypto allocation in BTC (70%+) and ETH (20–30%), with at most a small experimental allocation to others.",
+    },
+    {
+      question: "How do I report crypto in my ITR?",
+      answer:
+        "Crypto income goes in Schedule VDA (Virtual Digital Assets) of ITR-2 or ITR-3. You report each transaction with date, cost of acquisition, sale value, and gain. There's no offset against other gains — each crypto gain is taxed at 30% standalone. Exchanges issue tax statements (P&L reports) to help with this.",
+    },
+    {
+      question: "Is GIFT City a way around crypto tax?",
+      answer:
+        "Not generally. The 30% tax applies to all Indian residents regardless of where the trade happens. GIFT City has some advantages for certain financial products but doesn't currently offer special crypto tax treatment for residents. Non-residents (NRIs investing through IFSC structures) have other considerations.",
+    },
+  ],
+  extraDisclaimer:
+    "Cryptocurrency is highly volatile and may result in loss of all invested capital. Cryptocurrency gains are taxed at 30% flat in India, with 1% TDS on transactions over ₹50,000 per year. Losses cannot be set off against gains in other asset classes. Self-custody carries operational risk; exchange custody carries counterparty risk.",
 };
