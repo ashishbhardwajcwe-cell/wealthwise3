@@ -156,13 +156,12 @@ export interface EducationTile {
 }
 
 /**
- * Education Hub teasers. Where a dedicated article doesn't exist yet the
- * tile points at the closest live page so nothing dead-ends.
+ * Education Hub teasers — every tile points at a dedicated article.
  */
 export const educationTiles: EducationTile[] = [
   { title: "What is PMS? A Beginner's Guide for Indian Investors", href: "/blog/complete-guide-to-pms-india-2026" },
-  { title: "AIF Categories I, II & III Explained", href: "/investment-products/aif" },
-  { title: "PMS vs AIF vs Mutual Funds: Which Is Right for You?", href: "#comparison" },
-  { title: "A Practical Guide for NRIs: Investing in PMS & AIF from Abroad", href: "/for/nri" },
-  { title: "Understanding Fees, Taxation & Risks in Alternatives", href: "/investment-products/pms" },
+  { title: "AIF Categories I, II & III Explained", href: "/blog/aif-category-1-2-3-explanation" },
+  { title: "PMS vs AIF vs Mutual Funds: Which Is Right for You?", href: "/blog/mutual-funds-vs-pms" },
+  { title: "A Practical Guide for NRIs: Investing in PMS & AIF from Abroad", href: "/blog/nri-investing-india-2026-rulebook" },
+  { title: "Understanding Fees, Taxation & Risks in Alternatives", href: "/blog/pms-aif-fees-taxation-risks" },
 ];
