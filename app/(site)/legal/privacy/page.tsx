@@ -73,7 +73,7 @@ export default function PrivacyPolicyPage() {
             "All data transmission is over HTTPS (TLS 1.2+).",
             "CashFlow Planner app data is encrypted at rest in our database.",
             "Access to user data is limited to engineers on a strict need-to-access basis, logged and audited.",
-            "We do not store payment card data; payments are processed via PCI-DSS compliant providers (Cashfree, Razorpay).",
+            "If and when we enable payments, they will be processed via PCI-DSS compliant providers; we do not store card data.",
           ],
         },
         {
