@@ -27,8 +27,8 @@ export const siteConfig = {
 
 // Order is deliberate: lead with the high-touch HNI products (PMS, AIF),
 // then the mass-market regulated core (Mutual Funds), then direct stocks,
-// then the long-tail alternatives. This sequence drives product grids
-// and footer lists (the header links PMS/AIF directly).
+// then the long-tail alternatives. This sequence drives the header's
+// Invest dropdown, product grids and footer lists.
 export const investmentProducts = [
   { slug: "pms", name: "PMS", short: "Personalised portfolios for ₹50L+ investors.", icon: "Briefcase", tone: "#4F46E5", emoji: "🏛️" },
   { slug: "aif", name: "AIF", short: "Category I, II, III alternatives for HNIs.", icon: "Layers", tone: "#7C3AED", emoji: "🧬" },
@@ -41,13 +41,9 @@ export const investmentProducts = [
   { slug: "gold", name: "Gold & Silver", short: "Physical, ETF, SGB, silver ETF — the right way.", icon: "Coins", tone: "#A16207", emoji: "🪙" },
 ] as const;
 
-/**
- * Long-tail products grouped under "More products" in footer/nav lists.
- * Cryptocurrency is intentionally absent from navigation — the page stays
- * live and in the sitemap, but is not promoted in header/footer menus.
- */
+/** Long-tail products grouped under "More products" in footer/nav lists. */
 export const moreNavProducts = investmentProducts.filter((p) =>
-  ["direct-equity", "unlisted-shares", "insurance", "real-estate", "gold"].includes(p.slug),
+  ["direct-equity", "unlisted-shares", "cryptocurrency", "insurance", "real-estate", "gold"].includes(p.slug),
 );
 
 export const audiences = [

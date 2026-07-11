@@ -264,8 +264,8 @@
   .nav-pill {
     position: relative;
     display: inline-flex; align-items: center; gap: 0.3rem;
-    padding: 0.5rem 0.7rem; border-radius: 0.5rem;
-    font-size: 0.875rem; font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
+    padding: 0.55rem 0.85rem; border-radius: 0.5rem;
+    font-size: 0.9375rem; font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
     color: rgb(10 22 40 / 0.78);
     transition: color .15s ease, background .15s ease;
   }
@@ -278,7 +278,7 @@
   }
   .nav-pill[data-active="true"]::after {
     content: "";
-    position: absolute; left: 0.7rem; right: 0.7rem; bottom: 0.125rem;
+    position: absolute; left: 0.85rem; right: 0.85rem; bottom: 0.125rem;
     height: 2px; border-radius: 1px;
     background: var(--color-gold);
   }
