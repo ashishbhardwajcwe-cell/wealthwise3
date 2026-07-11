@@ -8,6 +8,8 @@ export interface BlogPost {
   readTime: string;
   author: string;
   content: string;
+  /** Optional FAQ block — also emitted as FAQPage JSON-LD on the post page. */
+  faqs?: { question: string; answer: string }[];
 }
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -239,14 +241,100 @@ The CashFlow Planner app automates this — every March it identifies which unit
   },
   {
     slug: "aif-category-1-2-3-explanation",
-    title: "AIF Category I, II, III: a plain-English explanation",
-    excerpt: "Cut through the jargon. What each AIF category covers, what taxation looks like, and when each makes sense in an HNI portfolio.",
+    title: "AIF Categories I, II & III Explained",
+    excerpt: "What each AIF category actually invests in, the minimums and investor caps, how pass-through vs fund-level taxation works, and who each category suits.",
     category: "Investing",
-    tags: ["AIF", "HNI"],
-    date: "2026-04-25",
-    readTime: "11 min",
+    tags: ["AIF", "HNI", "Alternatives"],
+    date: "2026-07-11",
+    readTime: "8 min",
     author: "PlanMyCashflows Research",
-    content: "AIFs (Alternative Investment Funds) are SEBI-regulated pooled vehicles for sophisticated investors — minimum ₹1 Cr. The three categories serve very different purposes. [Read the full AIF guide →](/investment-products/aif)",
+    content: `
+An Alternative Investment Fund (AIF) is a SEBI-regulated pooled investment vehicle for sophisticated investors — money collected from a limited number of investors and deployed in strategies beyond everyday stocks, bonds and mutual funds. SEBI's AIF Regulations, introduced in 2012, split the universe into three categories, and the category a fund registers under determines what it may invest in, how much leverage it may use, and — importantly for you — how its income is taxed.
+
+This explainer walks through each category in plain English: what it covers, real-world examples, the entry requirements, the tax treatment, and the kind of investor each one tends to suit. It is education, not a recommendation — by the end you should be able to read a fund deck and immediately place it in the right mental box.
+
+## First, what every AIF has in common
+
+Before the categories diverge, the basics are shared. Every AIF is registered with SEBI and managed by a professional investment team. The SEBI-mandated minimum investment is **₹1 crore** per investor (₹25 lakh for the fund's own employees and directors), and each scheme is capped at **1,000 investors** (49 for Angel Funds). The fund's sponsor and manager must keep their own capital in the fund — a "skin in the game" requirement — and every scheme must publish a private placement memorandum (PPM) that spells out strategy, fees, risks and tenure.
+
+AIFs are typically closed-ended (Category III may be open-ended): you commit capital, the fund draws it down over time, and you get it back — with gains or losses — as investments mature. Liquidity is therefore very different from a mutual fund; lock-ins of five to ten years are common in Categories I and II.
+
+## Category I — funds the policy-maker wants to encourage
+
+Category I covers funds that invest in areas with positive spillovers for the economy: **venture capital funds** backing early-stage startups, **SME funds** financing small and mid-size enterprises, **infrastructure funds**, **angel funds**, and **social venture funds**. Because the government sees these as economically useful, Category I enjoys the friendliest regulatory treatment.
+
+An example: a venture capital AIF raising ₹500 crore to invest in seed and Series-A technology startups over four years, holding each position for five to eight years, and returning capital as portfolio companies are acquired or listed. Returns depend almost entirely on a handful of winners — the classic venture power-law.
+
+Category I funds may not use leverage except for temporary funding needs, and their tenure is fixed at launch (minimum three years). For investors, that means long, illiquid commitments with capital drawn down in tranches.
+
+## Category II — the private-markets workhorse
+
+Category II is the residual and, by commitments, the **largest category in India**. It covers funds that don't fit Category I and don't trade with leverage: **private equity funds**, **private credit and debt funds**, **real-estate funds**, **pre-IPO funds** and structured strategies. If you've been pitched an AIF at a wealth event, odds are it was Category II.
+
+Examples: a private credit fund lending to mid-market companies at fixed yields with quarterly payouts; a real-estate fund financing residential projects; a late-stage PE fund buying minority stakes in profitable unlisted companies. Cash-flow profiles vary — credit funds often distribute income along the way, while PE funds return lumpy capital as exits happen.
+
+Like Category I, leverage is restricted to temporary requirements, funds are closed-ended with a minimum three-year tenure, and lock-ins matching the underlying assets are the norm.
+
+## Category III — public markets, hedge-fund style
+
+Category III funds may employ **complex or leveraged strategies** in listed markets: long-short equity, market-neutral, arbitrage, derivatives-driven and quantitative approaches. They are India's closest cousin to hedge funds, and many are structured as open-ended vehicles with periodic (often monthly or quarterly) liquidity — far more liquid than Categories I and II.
+
+An example: a long-short equity fund that holds its highest-conviction stocks while shorting index futures to dampen market swings, aiming for equity-like returns with lower drawdowns. Leverage is permitted within SEBI's limits, which is precisely what makes the category more complex — the same tool that smooths returns can amplify losses.
+
+## The entry ticket, side by side
+
+All three categories share the ₹1 crore SEBI minimum and the 1,000-investor cap. Where they differ is liquidity and horizon: Category I and II commitments typically run five to ten years with capital drawn down over time, while Category III funds often allow periodic redemption. None of them suit money you may need at short notice.
+
+## Reading a fund deck: where the category shows up
+
+When a PPM lands in your inbox, the category is stated on the first page — and it frames everything that follows. Check three things against it: the **investment strategy** section should match the category's permitted universe (a "long-short listed equity" strategy in a Category II wrapper deserves questions); the **tenure and redemption terms** should match the liquidity you expect from the category; and the **leverage policy** should be explicit, especially for Category III. The categories exist precisely so this cross-checking takes minutes, not hours.
+
+## Taxation: pass-through vs fund-level
+
+This is the single most practical difference between the categories.
+
+**Category I and II AIFs have statutory pass-through status.** The fund itself does not pay tax on its investment income (business income is the exception); instead, income is taxed **in your hands** as if you had earned it directly — capital gains as capital gains, interest as interest — with the fund deducting 10% TDS on income credited to resident investors. You then reconcile the actual liability in your own return. For NRIs, applicable DTAA rates can apply, claimed via a Tax Residency Certificate and Form 10F.
+
+**Category III AIFs are taxed at the fund level.** The fund pays tax on its gains — often at the maximum marginal rate for business income — and what you receive is post-tax. There is no pass-through, which is why comparing a Category III fund's returns with a PMS or mutual fund requires care: the Category III number you see is typically already net of fund-level tax, while the others are pre-tax in your hands.
+
+Tax rules change with Finance Acts and depend on fund structure and your residency — treat this as a map, not a measurement, and confirm specifics with a tax adviser before committing.
+
+## Who does each category suit?
+
+**Category I** suits investors who want concentrated exposure to early-stage or infrastructure themes, can lock capital away for seven-plus years, and can absorb the possibility that individual bets go to zero. **Category II** suits investors building a private-markets allocation — credit for income, PE and real estate for growth — who value pass-through taxation and accept multi-year lock-ins. **Category III** suits investors who want sophisticated listed-market strategies with meaningful liquidity, and who understand that leverage and fund-level taxation change both the risk and the after-tax arithmetic.
+
+Across all three, the honest common denominator: these are ₹1-crore-plus commitments designed for people whose core portfolio is already in order.
+
+## Frequently asked questions
+
+### Can I invest less than ₹1 crore in an AIF?
+
+No. The ₹1 crore minimum is set by SEBI regulation and applies across all providers and categories. The only exceptions are employees and directors of the fund itself (₹25 lakh) and accredited investors under SEBI's accreditation framework, for whom certain flexibilities exist.
+
+### Which AIF category is the largest in India?
+
+Category II holds the majority of industry commitments — private equity, private credit and real-estate funds dominate India's AIF landscape.
+
+### Do AIF returns come with any guarantee?
+
+No. AIFs are market-linked vehicles; returns are not guaranteed, capital is at risk, and past performance is not indicative of future results. Any pitch that suggests otherwise should be treated as a red flag.
+
+### How do AIFs differ from PMS?
+
+A PMS holds securities directly in your own demat account with a ₹50 lakh minimum; an AIF pools money into a fund where you hold units, with a ₹1 crore minimum. PMS gains are taxed in your hands transaction by transaction; AIF taxation depends on category. [The full comparison lives here →](/blog/mutual-funds-vs-pms)
+
+### Where can I learn more before talking to anyone?
+
+Start with our [AIF product guide](/investment-products/aif) and the [PMS guide](/investment-products/pms) — then, if useful, our team can walk you through specific fund documents.
+
+This article is for information and education only and does not constitute investment advice, a recommendation, or an offer to invest. AIF investments are subject to market risks, including possible loss of capital; minimums, tenure and taxation vary by fund and can change with regulation. Read the private placement memorandum carefully and consult your own financial and tax advisers before investing.
+`,
+    faqs: [
+      { question: "Can I invest less than ₹1 crore in an AIF?", answer: "No. The ₹1 crore minimum is set by SEBI regulation and applies across all providers and categories. The only exceptions are employees and directors of the fund itself (₹25 lakh) and accredited investors under SEBI's accreditation framework, for whom certain flexibilities exist." },
+      { question: "Which AIF category is the largest in India?", answer: "Category II holds the majority of industry commitments — private equity, private credit and real-estate funds dominate India's AIF landscape." },
+      { question: "Do AIF returns come with any guarantee?", answer: "No. AIFs are market-linked vehicles; returns are not guaranteed, capital is at risk, and past performance is not indicative of future results. Any pitch that suggests otherwise should be treated as a red flag." },
+      { question: "How do AIFs differ from PMS?", answer: "A PMS holds securities directly in your own demat account with a ₹50 lakh minimum; an AIF pools money into a fund where you hold units, with a ₹1 crore minimum. PMS gains are taxed in your hands transaction by transaction; AIF taxation depends on category." },
+    ],
   },
   {
     slug: "cryptocurrency-indian-portfolio",
@@ -258,6 +346,85 @@ The CashFlow Planner app automates this — every March it identifies which unit
     readTime: "12 min",
     author: "PlanMyCashflows Research",
     content: "India has one of the world's harshest crypto tax regimes — 30% flat on gains, 1% TDS on transactions, no loss set-off. Despite this, a small allocation (5-10%) to BTC and ETH can still make sense. [Read the full crypto guide →](/investment-products/cryptocurrency)",
+  },
+  {
+    slug: "pms-aif-fees-taxation-risks",
+    title: "Understanding Fees, Taxation & Risks in PMS & AIF",
+    excerpt: "Fixed vs performance fees, hurdles and high-watermarks, exit loads, how PMS capital gains and AIF category taxation actually work, the risks that matter, and the questions to ask before you sign.",
+    category: "Investing",
+    tags: ["PMS", "AIF", "Fees", "Tax"],
+    date: "2026-07-11",
+    readTime: "8 min",
+    author: "PlanMyCashflows Research",
+    content: `
+Portfolio Management Services and Alternative Investment Funds are sophisticated products, and their economics are more layered than a mutual fund's single expense ratio. Before you evaluate any strategy's returns, you need to understand three things: what you will pay, how you will be taxed, and what can go wrong. This explainer covers all three — in plain English, with no product pitch attached.
+
+## The two levers: fixed fees and performance fees
+
+Almost every PMS and AIF charges through some combination of two levers. The **fixed fee** (also called the management fee) is a percentage of your portfolio value charged every year regardless of performance — commonly somewhere between 1% and 2.5% in PMS, and similar in AIFs. It pays for the team, research and operations, and it compounds quietly: 2% a year for a decade consumes a surprisingly large slice of your final corpus.
+
+The **performance fee** (or carried interest, in fund language) is a share of the profits — often 10% to 20% — that the manager earns only when returns cross an agreed threshold. Structures vary: some managers charge a lower fixed fee with a higher performance share ("1 and 20"), others a flat fixed fee with no performance component, and many offer more than one option for the same strategy. Neither structure is inherently better; a performance-heavy structure aligns incentives in good years but can tempt risk-taking, while a fixed-heavy structure is predictable but paid even in flat years.
+
+## Hurdle rates and high-watermarks — the fine print that decides everything
+
+Two clauses determine how much a performance fee actually costs you.
+
+The **hurdle rate** is the return the manager must beat before any performance fee applies. With a 10% hurdle, a 16% gross year means the performance share applies only to the 6% excess — not the whole gain. Check whether the hurdle is simple or compounding, and whether there is a "catch-up" clause that lets the manager take a larger share once the hurdle is crossed.
+
+The **high-watermark** protects you from paying twice for the same gains. If your portfolio falls from ₹1.2 crore to ₹1 crore and then recovers to ₹1.2 crore, a manager with a high-watermark earns no performance fee on the recovery — only on gains above the previous peak. Without a high-watermark, you can end up paying performance fees in recovery years even though you are no better off than before the drawdown. It is one of the first things worth checking in any fee schedule.
+
+## Exit loads and the other line items
+
+Beyond the headline fees, read for: **exit loads** (typically 1–3% if you withdraw within the first one to three years of a PMS, and structurally enforced lock-ins in most Category I and II AIFs), **brokerage and transaction costs** passed through to your account, custody and audit charges, and — in funds — setup or placement fees. In a PMS, all of these appear in your account statements because the securities are held in your name; in an AIF they are disclosed in the private placement memorandum. None of these are hidden if you read the schedule; most disappointment comes from not reading it.
+
+## How a PMS is taxed: capital gains in your hands
+
+A PMS is legally transparent: the securities sit in **your** demat account, so every buy and sell the manager executes is a taxable event for **you**, exactly as if you had traded yourself. For listed equity held over 12 months, gains are long-term and taxed at 12.5% above the annual ₹1.25 lakh exemption; gains on holdings under 12 months are short-term and taxed at 20% (rates applicable from FY 2025–26). Dividends are taxed at your slab rate.
+
+Two practical consequences follow. First, a high-churn PMS strategy generates more short-term gains, which are taxed more heavily — after-tax returns can diverge meaningfully from the gross numbers in a factsheet. Second, you receive detailed transaction statements and must reconcile them in your return; good managers provide audited tax packs, and it is fair to ask to see a sample before onboarding.
+
+## How AIFs are taxed: the category decides
+
+AIF taxation follows the category system. **Category I and II AIFs enjoy statutory pass-through**: the fund pays no tax on its investment income; instead the income retains its character and is taxed in your hands — capital gains as capital gains, interest income at your slab — with the fund deducting 10% TDS for resident investors along the way. **Category III AIFs are taxed at the fund level**, frequently at the maximum marginal rate on trading income, and you receive post-tax returns.
+
+NRIs can often reduce the tax on Indian income via the applicable Double Taxation Avoidance Agreement, claimed by submitting a Tax Residency Certificate and Form 10F. Every one of these rules can shift with a Finance Act — verify current rates with a tax adviser before committing, and read the tax section of the fund's PPM rather than relying on a sales summary.
+
+## The risks that actually matter
+
+**Market and concentration risk.** PMS strategies are typically concentrated — 15 to 30 stocks — which is the source of both outperformance and deeper drawdowns than a diversified fund. **Liquidity risk.** Category I and II AIFs lock capital for five to ten years; even PMS exits can take days to weeks to execute in falling markets, and exit loads may apply. **Leverage risk.** Category III funds may use leverage, which amplifies losses as efficiently as gains. **Manager risk.** You are underwriting a team and a process; key-person departures, style drift and asset bloat are all real. **Valuation risk.** Unlisted holdings in Category I/II funds are periodically valued, not continuously priced — interim NAVs are estimates. And in every case: **past performance is not indicative of future results**, and none of these products guarantees returns or capital.
+
+## Ten questions to ask before you sign
+
+What is the full fee schedule — fixed, performance, hurdle, catch-up, high-watermark, exit load — in writing? Is the hurdle compounding? Is the performance fee charged on realised or unrealised gains, and how often is it crystallised? What was the strategy's worst drawdown, and how long did recovery take? What is the typical portfolio turnover, and what does that imply for my short-term tax? How are the reported returns calculated (TWRR, pre- or post-fee, pre- or post-tax)? What happens if the key fund manager leaves? For an AIF: which category, what tenure, and what is the realistic distribution schedule? What conflicts of interest exist, and how is the distributor compensated? And finally — can I see the complete disclosure document and a sample tax pack before committing?
+
+A manager comfortable answering all ten in writing is telling you something almost as valuable as the answers themselves.
+
+## Frequently asked questions
+
+### Is a performance fee better than a fixed fee?
+
+Neither is inherently better. A performance-heavy structure costs less in bad years and aligns incentives in good ones, but check the hurdle and high-watermark fine print. A fixed-only structure is predictable and simple. Model both against realistic return assumptions — our [calculators](/resources/calculators) can help you see the compounding effect of fees.
+
+### Why does the same PMS return leave investors with different after-tax outcomes?
+
+Because PMS gains are taxed in each investor's hands: your holding periods, your other gains against the ₹1.25 lakh LTCG exemption, and your slab rate for dividends all differ. Two investors in the same strategy can legitimately report different after-tax results.
+
+### Are AIF returns shown before or after tax?
+
+It depends on the category. Category III funds pay tax at the fund level, so reported returns are usually post-tax; Category I and II funds are pass-through, so returns are typically pre-tax in your hands. Never compare the two without adjusting for this.
+
+### Can fees be negotiated?
+
+Sometimes. Larger commitments often access lower fee slabs, and many managers publish multiple fee options for the same strategy. What matters is that whatever you agree appears in the signed fee schedule — verbal assurances don't survive a drawdown.
+
+This article is for information and education only and does not constitute investment advice, a recommendation, or an offer to invest. PMS and AIF investments are subject to market risks, including possible loss of capital; fees, taxation and structures vary by provider and change with regulation. Read all scheme-related and disclosure documents carefully and consult your own financial and tax advisers before investing.
+`,
+    faqs: [
+      { question: "Is a performance fee better than a fixed fee?", answer: "Neither is inherently better. A performance-heavy structure costs less in bad years and aligns incentives in good ones, but check the hurdle and high-watermark fine print. A fixed-only structure is predictable and simple. Model both against realistic return assumptions before deciding." },
+      { question: "Why does the same PMS return leave investors with different after-tax outcomes?", answer: "Because PMS gains are taxed in each investor's hands: your holding periods, your other gains against the ₹1.25 lakh LTCG exemption, and your slab rate for dividends all differ. Two investors in the same strategy can legitimately report different after-tax results." },
+      { question: "Are AIF returns shown before or after tax?", answer: "It depends on the category. Category III funds pay tax at the fund level, so reported returns are usually post-tax; Category I and II funds are pass-through, so returns are typically pre-tax in your hands. Never compare the two without adjusting for this." },
+      { question: "Can fees be negotiated?", answer: "Sometimes. Larger commitments often access lower fee slabs, and many managers publish multiple fee options for the same strategy. Whatever you agree should appear in the signed fee schedule." },
+    ],
   },
   {
     slug: "nri-investing-india-2026-rulebook",

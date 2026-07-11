@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { StructuredData, articleSchema } from "@/components/StructuredData";
+import { StructuredData, articleSchema, faqSchema } from "@/components/StructuredData";
 import { PortableContent } from "@/components/PortableContent";
 import { PostLayout } from "@/components/blog/PostLayout";
 import { getBlogPost, getAllBlogSlugs, getAllBlogCards } from "@/lib/blog";
@@ -150,6 +150,7 @@ export default async function BlogPostPage({ params }: Props) {
           likeCount: engagement.likes,
         })}
       />
+      {post.faqs && post.faqs.length > 0 && <StructuredData data={faqSchema(post.faqs)} />}
     </>
   );
 }
