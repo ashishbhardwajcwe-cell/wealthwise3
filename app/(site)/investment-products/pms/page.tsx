@@ -3,9 +3,9 @@ import Link from "next/link";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { pmsData } from "@/lib/product-data";
 import { PMSGraph } from "@/components/ProductGraphs";
-import { PMSTable } from "@/components/data-tables/PMSTable";
+import { LeagueTable } from "@/components/data-tables/LeagueTable";
 import { DataOnboardingNotice } from "@/components/data-tables/DataOnboardingNotice";
-import { getPmsStrategies } from "@/lib/investment-data";
+import { getLivePmsStrategies } from "@/lib/investment-data";
 
 export const metadata: Metadata = {
   title: "PMS (Portfolio Management Services) — Complete Guide for Indian HNI",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function Page() {
-  const strategies = await getPmsStrategies();
+  const strategies = await getLivePmsStrategies();
   return (
     <>
       <InvestmentProductPage data={{ ...pmsData, graphic: <PMSGraph /> }} />
@@ -33,7 +33,7 @@ export default async function Page() {
         </div>
       </section>
       {strategies.length > 0 ? (
-        <PMSTable strategies={strategies} />
+        <LeagueTable strategies={strategies} heading="PMS strategies on our radar" />
       ) : (
         <DataOnboardingNotice
           title="PMS performance tracker — coming online"

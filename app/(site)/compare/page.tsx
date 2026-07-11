@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CompareTool } from "@/components/compare/CompareTool";
 import { siteConfig } from "@/lib/site-config";
+import { getLivePmsStrategies } from "@/lib/investment-data";
 
 export const metadata: Metadata = {
   title: { absolute: "Compare PMS & AIF Strategies | PlanMyCashflows" },
@@ -9,7 +10,10 @@ export const metadata: Metadata = {
     "Compare PMS and AIF strategies side-by-side — category, returns, AUM and minimum investment — before you commit. Live performance data is being integrated.",
 };
 
-export default function ComparePage() {
+export const revalidate = 300;
+
+export default async function ComparePage() {
+  const strategies = await getLivePmsStrategies();
   return (
     <>
       <section className="gradient-hero aurora">
@@ -18,17 +22,19 @@ export default function ComparePage() {
           <h1 className="mt-4 text-balance max-w-3xl mx-auto">Compare PMS &amp; AIF Strategies</h1>
           <p className="mt-5 text-lg text-[var(--color-slate)] leading-relaxed max-w-2xl mx-auto text-balance">
             Put up to three strategies side-by-side — category, returns, AUM and minimum investment.{" "}
-            <em className="text-sm">
-              (Live performance data is being integrated — the values below are illustrative placeholders of what
-              you&apos;ll be able to compare.)
-            </em>
+            {strategies.length === 0 && (
+              <em className="text-sm">
+                (Live performance data is being integrated — the values below are illustrative placeholders of what
+                you&apos;ll be able to compare.)
+              </em>
+            )}
           </p>
         </div>
       </section>
 
       <section className="py-16 md:py-20">
         <div className="container-wide">
-          <CompareTool />
+          <CompareTool strategies={strategies} />
 
           <p className="text-xs text-[var(--color-slate)] italic text-center mt-8 max-w-3xl mx-auto">
             Strategy details shown are for information and education only and do not constitute a recommendation or

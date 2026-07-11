@@ -2,24 +2,85 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { placeholderStrategies, strategyCategories, type StrategyCategory } from "@/lib/home-content";
+import { placeholderStrategies, strategyCategories } from "@/lib/home-content";
+import type { LivePmsStrategy } from "@/lib/investment-data";
+import { fmtPct, fmtAumCr, fmtMinL, fmtAsOf, latestAmfiDate } from "@/components/tables/table-utils";
+
+/** Normalised card shape shared by live and placeholder rows. */
+interface DisplayCard {
+  key: string;
+  strategy: string;
+  house: string;
+  category: string;
+  returns1y: string;
+  returns3y: string;
+  returns5y: string;
+  aum: string;
+  minInvestment: string;
+}
+
+const MAX_CARDS = 6;
 
 /**
- * Placeholder-friendly strategy grid: 6 cards rendered from a data array
- * so live APMI-backed rows can be swapped in without touching the layout.
+ * Strategy grid for the homepage. Renders the first ~6 live PMS strategies
+ * (from Sanity via `getLivePmsStrategies`) when available, and falls back to
+ * the illustrative placeholder array when the query returns empty. No returns
+ * figures are hardcoded — live cards format numbers straight from Sanity.
  */
-export function FeaturedStrategies() {
-  const [category, setCategory] = useState<StrategyCategory>("All");
+export function FeaturedStrategies({ strategies }: { strategies?: LivePmsStrategy[] }) {
+  const isLive = !!strategies && strategies.length > 0;
+  const [category, setCategory] = useState<string>("All");
 
-  const cards = useMemo(
-    () => (category === "All" ? placeholderStrategies : placeholderStrategies.filter((s) => s.category === category)),
-    [category],
+  const allCards: DisplayCard[] = useMemo(() => {
+    if (isLive) {
+      return strategies!.map((s) => ({
+        key: s._id,
+        strategy: s.strategyName,
+        house: s.manager,
+        category: s.category ?? "—",
+        returns1y: fmtPct(s.returns1y),
+        returns3y: fmtPct(s.returns3y),
+        returns5y: fmtPct(s.returns5y),
+        aum: fmtAumCr(s.aumCr),
+        minInvestment: fmtMinL(s.minInvestmentL),
+      }));
+    }
+    return placeholderStrategies.map((s, i) => ({
+      key: `${s.category}-${i}`,
+      strategy: s.strategy,
+      house: s.fundHouse,
+      category: s.category,
+      returns1y: s.returns1y,
+      returns3y: s.returns3y,
+      returns5y: s.returns5y,
+      aum: s.aum,
+      minInvestment: s.minInvestment,
+    }));
+  }, [isLive, strategies]);
+
+  const tabs: string[] = useMemo(() => {
+    if (!isLive) return [...strategyCategories];
+    const set = new Set<string>();
+    strategies!.forEach((s) => { if (s.category) set.add(s.category); });
+    return ["All", ...Array.from(set).sort()];
+  }, [isLive, strategies]);
+
+  const houseLabel = isLive ? "Manager" : "Fund House";
+
+  const cards = useMemo(() => {
+    const base = category === "All" ? allCards : allCards.filter((c) => c.category === category);
+    return base.slice(0, MAX_CARDS);
+  }, [category, allCards]);
+
+  const latestAsOf = useMemo(
+    () => (isLive ? fmtAsOf(latestAmfiDate(strategies!.map((s) => s.asOfDate))) : null),
+    [isLive, strategies],
   );
 
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-8" role="tablist" aria-label="Strategy categories">
-        {strategyCategories.map((c) => (
+        {tabs.map((c) => (
           <button
             key={c}
             role="tab"
@@ -42,14 +103,14 @@ export function FeaturedStrategies() {
         </p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {cards.map((s, i) => (
-            <div key={`${s.category}-${i}`} className="card-soft flex flex-col">
+          {cards.map((s) => (
+            <div key={s.key} className="card-soft flex flex-col">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
                   <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)]">Strategy</div>
                   <h3 className="text-base font-semibold mt-0.5">{s.strategy}</h3>
                   <div className="text-xs text-[var(--color-slate)] mt-1">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold">Fund House</span> · {s.fundHouse}
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">{houseLabel}</span> · {s.house}
                   </div>
                 </div>
                 <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[var(--color-gold)]/15 text-[var(--color-gold-dim)]">
@@ -90,6 +151,11 @@ export function FeaturedStrategies() {
           ))}
         </div>
       )}
+
+      <p className="text-[11px] text-[var(--color-slate)] italic text-center mt-6">
+        {isLive && latestAsOf ? <>As on {latestAsOf} · Returns are annualised (TWRR). </> : null}
+        Past performance is not indicative of future returns.
+      </p>
     </div>
   );
 }

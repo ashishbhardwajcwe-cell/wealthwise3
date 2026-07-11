@@ -10,6 +10,7 @@ import {
   stockAnalysisBySlugQuery,
   stockAnalysisSlugsQuery,
   allPmsStrategiesQuery,
+  livePmsStrategiesQuery,
   allAifFundsQuery,
   allUnlistedSharesQuery,
 } from "@/sanity/queries";
@@ -54,6 +55,26 @@ export interface PmsStrategy {
   asOfDate: string;
   source?: string;
   notes?: string;
+}
+
+/**
+ * PMS strategy with returns flattened to top-level fields — the shape
+ * consumed by the homepage grid, the compare tool and the league table.
+ * Sourced from APMI / SEBI-mandated disclosures via scripts/import-pms.mjs.
+ */
+export interface LivePmsStrategy {
+  _id: string;
+  strategyName: string;
+  manager: string;
+  category?: string;
+  aumCr?: number;
+  minInvestmentL?: number;
+  returns1y?: number;
+  returns3y?: number;
+  returns5y?: number;
+  sinceInception?: number;
+  asOfDate: string;
+  source?: string;
 }
 
 export interface AifFund {
@@ -120,6 +141,10 @@ export async function getStockAnalysis(slug: string): Promise<StockAnalysisDetai
 
 export async function getPmsStrategies(): Promise<PmsStrategy[]> {
   return safeFetch<PmsStrategy[]>(allPmsStrategiesQuery, [], undefined, ["pmsStrategy"]);
+}
+
+export async function getLivePmsStrategies(): Promise<LivePmsStrategy[]> {
+  return safeFetch<LivePmsStrategy[]>(livePmsStrategiesQuery, [], undefined, ["pmsStrategy"]);
 }
 
 export async function getAifFunds(): Promise<AifFund[]> {

@@ -179,6 +179,27 @@ export function fmtPct(v?: number | null): string {
   return `${v.toFixed(1)}%`;
 }
 
+/** "₹1,240 Cr" or an em dash for missing values. */
+export function fmtAumCr(v?: number | null): string {
+  if (v === undefined || v === null) return "—";
+  return `₹${v.toLocaleString("en-IN")} Cr`;
+}
+
+/** "₹50 L" (lakh) or an em dash for missing values. */
+export function fmtMinL(v?: number | null): string {
+  if (v === undefined || v === null) return "—";
+  return `₹${v.toLocaleString("en-IN")} L`;
+}
+
+/** ISO "YYYY-MM-DD" → "31 May 2026"; returns the input unchanged if unrecognised. */
+export function fmtAsOf(iso?: string | null): string {
+  if (!iso) return "—";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${Number(m[3])} ${months[Number(m[2]) - 1] ?? m[2]} ${m[1]}`;
+}
+
 /**
  * Latest date from a list of AMFI-style "DD-MMM-YYYY" date strings
  * (e.g. "30-Jun-2026"). Falls back to the last lexicographic value for
