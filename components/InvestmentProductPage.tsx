@@ -14,7 +14,7 @@ export interface ProductPageData {
   cons: string[];
   whoShouldConsider: string;
   commonMistakes: string[];
-  howAurisHelps: string;
+  howWeHelp: string;
   faqs: { question: string; answer: string }[];
   relatedPosts?: { slug: string; title: string }[];
   graphic?: React.ReactNode;
@@ -151,7 +151,7 @@ export function InvestmentProductPage({
         <div className="container-narrow">
           <span className="eyebrow">How we help</span>
           <h2 className="mt-3 mb-6">PlanMyCashflows + this product</h2>
-          <p className="text-lg text-[var(--color-slate)] leading-relaxed">{data.howAurisHelps}</p>
+          <p className="text-lg text-[var(--color-slate)] leading-relaxed">{data.howWeHelp}</p>
           <div className="mt-8 flex gap-3 flex-wrap">
             <Link href="/plan" className="btn-primary">
               Open the Wealth Planner
@@ -216,7 +216,7 @@ export function InvestmentProductPage({
 
       <CTASection
         title={`Get a personalised plan for ${data.name}`}
-        subtitle="Run our free AI snapshot, or book a 30-minute call with Ashish."
+        subtitle="Run our free AI snapshot, or book a 30-minute call with our team."
         primaryCta={{ label: "Run my snapshot", href: "/ai-wealth-planner" }}
         secondaryCta={{ label: "Book a call", href: "/contact" }}
       />

@@ -28,7 +28,7 @@ CRITICAL RULES:
 - Account for the user's country: India context for INR users, US for USD, UAE for AED, UK for GBP, Singapore for SGD
 - Returns assumption: 10–12% for equity, 6–7% for debt — clearly mention these are assumptions, not guarantees
 - Inflation assumption: 6% for India, 3% for US/UK, 2.5% for UAE/Singapore
-- Keep tone calm, military-precise, no exclamation marks
+- Keep tone calm and precise, no exclamation marks
 - yearly_projection should include one entry per year from current year to retirement age
 - projected_corpus should be in the same currency the user reports income in`;
 

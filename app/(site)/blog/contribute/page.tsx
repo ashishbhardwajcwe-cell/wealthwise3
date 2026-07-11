@@ -41,7 +41,7 @@ const FAQ = [
   {
     question: "Who can write for the PlanMyCashflows Journal?",
     answer:
-      "Anyone with genuine expertise or a well-researched perspective on investing, taxation, financial planning, NRI finance, or defence-personnel finances. You don't need to be a professional writer — our editor polishes every accepted piece.",
+      "Anyone with genuine expertise or a well-researched perspective on investing, taxation, financial planning, NRI finance, or alternative investments. You don't need to be a professional writer — our editor polishes every accepted piece.",
   },
   {
     question: "Is every submission published?",

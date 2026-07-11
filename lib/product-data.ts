@@ -15,7 +15,7 @@ export const mutualFundsData: ProductPageData = {
     { label: "Lock-in", value: "None (open-ended) · 3 yrs for ELSS" },
     { label: "Taxation (equity)", value: "STCG 20% · LTCG 12.5% above ₹1.25L/yr" },
     { label: "Taxation (debt, post-Apr 2023)", value: "At slab rate (no indexation)" },
-    { label: "Regulator", value: "SEBI · AMFI registered" },
+    { label: "Regulator", value: "SEBI-regulated products" },
     { label: "Risk level", value: "Low to Very High (varies by scheme)" },
   ],
   pros: [
@@ -41,8 +41,8 @@ export const mutualFundsData: ProductPageData = {
     "Stopping SIPs in market crashes. Those are the months your units cost the least.",
     "Ignoring the ELSS deduction (₹1.5L u/s 80C) when you're in old tax regime and could save ₹15k–₹45k in tax per year.",
   ],
-  howAurisHelps:
-    "CashFlow Planner tracks every mutual fund you own across folios and AMCs, flags Regular plans that should be moved to Direct, identifies overlap and concentration, and runs tax-loss harvesting on the ₹1.25L LTCG exemption every March. Our advisory layer (when our SEBI RIA licence is live) can build a goal-aligned scheme list for you.",
+  howWeHelp:
+    "CashFlow Planner tracks every mutual fund you own across folios and AMCs, flags Regular plans that should be moved to Direct, identifies overlap and concentration, and runs tax-loss harvesting on the ₹1.25L LTCG exemption every March. Our education-first explainers help you understand what a goal-aligned scheme list looks like.",
   faqs: [
     {
       question: "Direct vs Regular plans — does the 0.5% really matter?",
@@ -124,7 +124,7 @@ export const pmsData: ProductPageData = {
     "Ignoring tax implications. Every sale in your PMS triggers capital gains — high-churn strategies can quietly create big tax bills.",
     "Choosing a small AUM PMS purely for returns. Sub-₹500 Cr AUM PMSs can have liquidity issues and key-person risk.",
   ],
-  howAurisHelps:
+  howWeHelp:
     "We help you decide whether PMS even makes sense for you (often the answer is 'not yet — keep doing mutual funds'). If it does, we evaluate managers by their actual investment process, fee structure, risk-adjusted returns over multiple cycles, and AUM stability — not just glossy decks. CashFlow Planner tracks your PMS portfolio alongside your other assets in one view.",
   faqs: [
     {
@@ -207,7 +207,7 @@ export const aifData: ProductPageData = {
     "Over-allocating to one strategy or vintage year. AIF returns are highly dependent on entry timing and economic cycle.",
     "Ignoring the J-curve. PE/VC funds typically show negative returns for years 1–3 before paying off — many investors panic-exit secondary markets at a discount.",
   ],
-  howAurisHelps:
+  howWeHelp:
     "AIF selection requires deep diligence on manager pedigree, track record across cycles, fee transparency, and tax structure. We help filter the universe (hundreds of registered AIFs) to a shortlist that fits your portfolio gaps. CashFlow Planner tracks committed vs called capital, distributions, and net IRR alongside your liquid investments.",
   faqs: [
     {
@@ -286,7 +286,7 @@ export const unlistedSharesData: ProductPageData = {
     "Not checking the company's financials, board, or auditor track record before investing.",
     "Confusing 'pre-IPO' (likely listing soon) with 'unlisted forever' (private company that may never list).",
   ],
-  howAurisHelps:
+  howWeHelp:
     "We help you evaluate whether a specific unlisted opportunity fits your portfolio, vet the platform you're buying through (custody, settlement, KYC), and time the exit — pre-IPO, at IPO, or post-listing — for maximum after-tax outcome. CashFlow Planner tracks unlisted holdings alongside listed equity and flags upcoming IPO/event windows.",
   faqs: [
     {
@@ -365,7 +365,7 @@ export const cryptoData: ProductPageData = {
     "Concentrating in altcoins for higher returns. >80% of altcoins from 2017–18 are worth essentially zero today.",
     "Forgetting that crypto income must be reported in ITR Schedule VDA. Non-disclosure invites penalties.",
   ],
-  howAurisHelps:
+  howWeHelp:
     "We help you size a sensible crypto allocation within your overall plan, choose between exchange custody and self-custody, and track cost basis for tax reporting. CashFlow Planner integrates with Indian and global exchanges to give you a unified portfolio view including crypto. We don't recommend specific coins.",
   faqs: [
     {
@@ -444,7 +444,7 @@ export const directEquityData: ProductPageData = {
     "Trading too much. Every trade is a tax event and a chance to make a behavioural mistake. The best portfolios are boring portfolios.",
     "Not selling. Founders fall in love with their picks — but a stock that's tripled may now be 40% of your portfolio. Rebalancing isn't a crime.",
   ],
-  howAurisHelps:
+  howWeHelp:
     "Most investors are best served by index funds + a flexi-cap MF — we'll often tell you that's enough. If you do hold direct equity, CashFlow Planner tracks your portfolio in real time, flags overweighted positions, runs tax-loss harvesting to save on LTCG, and shows portfolio drift vs your target allocation. We don't give stock recommendations.",
   faqs: [
     {
@@ -523,7 +523,7 @@ export const insuranceData: ProductPageData = {
     "Skipping the medical test option to save 15 minutes. The price difference between tested and non-tested policies, and the claim dispute risk, makes the test worth doing.",
     "Buying a 'return of premium' term plan that returns your money if you survive. Sounds nice — but the premium is 2–3x a pure term, and the extra cost invested in MF would massively outperform the 'returned' premium.",
   ],
-  howAurisHelps:
+  howWeHelp:
     "We'll calculate your real term cover need based on income, dependents, and existing liabilities, recommend buying directly from insurer websites (not agents — saves the 30% commission), and identify health insurance gaps. CashFlow Planner's insurance gap analysis is part of every plan. We never sell insurance — there's no commission conflict.",
   faqs: [
     {
@@ -602,7 +602,7 @@ export const realEstateData: ProductPageData = {
     "Calculating 'returns' on real estate without including imputed rent, maintenance, society fees, property tax, and interest — most informal calculations dramatically overstate returns.",
     "Ignoring REITs because 'real estate must be a physical flat'. REITs are real estate — just liquid and diversified.",
   ],
-  howAurisHelps:
+  howWeHelp:
     "We help you assess whether your existing real estate allocation is healthy (often it's already too high), whether to buy vs rent for your primary home, and how to add real estate exposure via REITs vs physical property. CashFlow Planner tracks your real estate holdings (with market value updates) as part of the unified portfolio view.",
   faqs: [
     {
@@ -682,7 +682,7 @@ export const goldData: ProductPageData = {
     "Confusing 'digital gold' (PhonePe, Paytm) with Gold ETF. Digital gold has counter-party risk with the vault operator and is not exchange-traded.",
     "Forgetting that SGB interest (2.5%) is taxable at your slab rate, even though capital appreciation at maturity is tax-free.",
   ],
-  howAurisHelps:
+  howWeHelp:
     "We help you decide the right gold allocation for your age and risk profile, choose between SGB and Gold ETFs based on your liquidity needs, and stagger SGB purchases across multiple tranches for vintage diversification. CashFlow Planner tracks your gold across all forms (physical, ETF, SGB) at live market prices.",
   faqs: [
     {

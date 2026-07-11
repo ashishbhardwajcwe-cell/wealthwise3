@@ -18,16 +18,18 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: "PlanMyCashflows — Wealth that compounds. Plans that hold under fire.",
+    default: "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies",
     template: "%s | PlanMyCashflows",
   },
   description: siteConfig.description,
   keywords: [
+    "PMS India",
+    "AIF India",
+    "portfolio management services",
+    "alternative investment funds",
+    "alternative investments India",
     "wealth management India",
     "AI financial planner",
-    "PMS",
-    "AIF",
-    "alternative investments India",
     "mutual funds",
     "NRI investing",
   ],
@@ -39,17 +41,17 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: "PlanMyCashflows — Wealth that compounds. Plans that hold under fire.",
+    title: "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies",
     description: siteConfig.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: "PlanMyCashflows",
+    title: "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies",
     description: siteConfig.description,
   },
   robots: { index: true, follow: true },
   alternates: {
-    canonical: siteConfig.url,
+    canonical: "./",
     types: {
       "application/rss+xml": [{ url: "/rss.xml", title: "PlanMyCashflows Blog" }],
     },

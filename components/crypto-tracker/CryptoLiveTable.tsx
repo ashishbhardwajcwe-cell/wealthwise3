@@ -153,7 +153,7 @@ export function CryptoLiveTable({ coins, usdPrices = {} }: Props) {
           <button
             onClick={() => {
               const headers = ["Rank", "Coin", "Symbol", "Price (INR)", "Price (USD)", "24h %", "7d %", "30d %", "1Y %", ...(hasLongTerm ? ["2Y %", "3Y %", "5Y %", "10Y %"] : []), "24h Volume (INR)", "Market Cap (INR)", "From ATH %"];
-              downloadCsv(`auris-crypto-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (c, h) => {
+              downloadCsv(`pmc-crypto-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (c, h) => {
                 switch (h) {
                   case "Rank":              return c.rank;
                   case "Coin":              return c.name;

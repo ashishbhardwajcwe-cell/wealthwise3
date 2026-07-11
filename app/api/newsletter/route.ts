@@ -88,10 +88,10 @@ const WELCOME_HTML = `
         <li><a href="https://planmycashflows.com/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive plan, no signup</li>
         <li><a href="https://app.planmycashflows.com" style="color: #A08030;">Full CashFlow Planner app</a> — complete planner, 14-day trial, login required</li>
       </ul>
-      <p style="margin-top: 32px;">— Col Ashish Bhardwaj<br/><span style="color: #5A6B80; font-size: 13px;">Founder, PlanMyCashflows</span></p>
+      <p style="margin-top: 32px;">— The PlanMyCashflows Team</p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
       <p style="font-size: 12px; color: #5A6B80;">
-        Auris Pvt Ltd (CIN: U70200HR2026PTC141922). Educational content only. Not investment advice.
+        PlanMyCashflows. Educational content only. Not investment advice.
         Unsubscribe anytime by replying with "unsubscribe".
       </p>
     </div>
@@ -114,10 +114,9 @@ Where every PlanMyCashflows wealth planner lives:
 - Guided Plan (10 min): https://planmycashflows.com/guided
 - Full app: https://app.planmycashflows.com
 
-— Col Ashish Bhardwaj
-Founder, PlanMyCashflows
+— The PlanMyCashflows Team
 
 ---
-Auris Pvt Ltd (CIN: U70200HR2026PTC141922).
+PlanMyCashflows.
 Educational content only. Not investment advice.
 Unsubscribe by replying "unsubscribe".`;

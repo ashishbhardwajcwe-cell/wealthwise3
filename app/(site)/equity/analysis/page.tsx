@@ -8,7 +8,7 @@ import { getStockAnalyses } from "@/lib/investment-data";
 export const metadata: Metadata = {
   title: "Stock Analyses — PlanMyCashflows Research",
   description:
-    "In-depth stock research notes by Col Ashish Bhardwaj. Thesis, key metrics, strengths, risks, and conclusion for each analysis.",
+    "In-depth stock research notes by PlanMyCashflows Research. Thesis, key metrics, strengths, risks, and conclusion for each analysis.",
 };
 
 export const revalidate = 300;

@@ -75,7 +75,7 @@ export function MFLiveTable({
 
   function exportCsv() {
     const headers = ["Fund", "AMC", "Category", "CRISIL Rating", "NAV (INR)", "6M %", "1Y CAGR %", "2Y CAGR %", "3Y CAGR %", "5Y CAGR %", "10Y CAGR %", "Expense %", "As of", "Scheme code"];
-    downloadCsv(`auris-mutual-funds-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
+    downloadCsv(`pmc-mutual-funds-${new Date().toISOString().slice(0, 10)}.csv`, headers, filtered, (r, h) => {
       switch (h) {
         case "Fund":        return r.name;
         case "AMC":         return r.amc;

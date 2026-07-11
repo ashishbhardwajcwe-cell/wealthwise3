@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!a) return { title: "Analysis not found" };
   return {
     title: `${a.title} — PlanMyCashflows Research`,
-    description: a.thesis ?? `${a.company} stock analysis by Col Ashish Bhardwaj`,
+    description: a.thesis ?? `${a.company} stock analysis by PlanMyCashflows Research`,
   };
 }
 
@@ -198,7 +198,7 @@ export default async function StockAnalysisPage({ params }: Props) {
         data={articleSchema({
           title: a.title,
           description: a.thesis ?? `${a.company} stock analysis`,
-          author: a.author?.name ?? "Col Ashish Bhardwaj",
+          author: a.author?.name ?? "PlanMyCashflows Research",
           date: a.analysisDate,
           url: `${siteConfig.url}/equity/analysis/${slug}`,
         })}

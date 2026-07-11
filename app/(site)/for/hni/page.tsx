@@ -24,7 +24,7 @@ export default function Page() {
           "Family office equivalent reporting: consolidated net worth, cost basis, gain/loss, IRR by vehicle, across multiple family members",
           "Tax structuring: HUF/private trust setup, Section 80GG, REIT distribution tax treatment, cross-vehicle harvesting",
           "Succession framework: will, nominee alignment, asset titling, transfer mechanics, gifting strategy",
-          "Quarterly reviews with Ashish, plus an annual deep audit of the entire structure",
+          "Quarterly reviews with our senior team, plus an annual deep audit of the entire structure",
         ],
         commonSituations: [
           {

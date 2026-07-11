@@ -1,11 +1,13 @@
 export const siteConfig = {
   name: "PlanMyCashflows",
-  legalName: "Auris Pvt Ltd",
-  cin: "U70200HR2026PTC141922",
+  // The legal entity name is intentionally absent: the consumer brand is
+  // exclusively "PlanMyCashflows" and the entity name must not appear on
+  // marketing surfaces. Reinstate here only if counsel confirms a page
+  // legally requires it.
   email: "hello@planmycashflows.com",
   url: "https://planmycashflows.com",
   description:
-    "AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity.",
+    "Discover, compare and understand Portfolio Management Services (PMS) and Alternative Investment Funds (AIF) across India's leading fund houses. AI-powered, unbiased and education-first — for HNIs, professionals, business owners and NRIs.",
   /** The planner now lives in this same site at /app (migrated out of the
    *  retired wealthwise2 repo). Internal path → one domain, shared session. */
   appUrl: "/app",
@@ -40,7 +42,6 @@ export const investmentProducts = [
 ] as const;
 
 export const audiences = [
-  { slug: "defence-officers", name: "Defence Officers", short: "From olive greens to financial independence.", icon: "Shield", tone: "#4D7C0F", emoji: "🎖️" },
   { slug: "professionals", name: "Salaried Professionals", short: "Mid-career planning that actually compounds.", icon: "Briefcase", tone: "#2563EB", emoji: "💼" },
   { slug: "software-professionals", name: "Software & IT Professionals", short: "ESOPs, RSUs and high-income tax planning.", icon: "Cpu", tone: "#0891B2", emoji: "💻" },
   { slug: "executives", name: "Corporate Executives", short: "CXOs and senior leaders with complex comp.", icon: "Building2", tone: "#1E3A8A", emoji: "👔" },

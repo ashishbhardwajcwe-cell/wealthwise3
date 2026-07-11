@@ -66,9 +66,8 @@ export default function ContactPage() {
                   "Free AI Wealth Planner question",
                   "CashFlow Planner app trial / pricing",
                   "1:1 financial planning",
-                  "PMS / AIF advisory",
+                  "PMS / AIF enquiries",
                   "NRI planning",
-                  "Defence officer planning",
                   "Press / media",
                   "Something else",
                 ]} />
@@ -108,14 +107,14 @@ export default function ContactPage() {
               <ContactBlock
                 icon={<MapPin className="w-5 h-5" />}
                 title="Office"
-                body={`${siteConfig.legalName}\nGurugram, Haryana\nIndia`}
+                body={`${siteConfig.name}\nGurugram, Haryana\nIndia`}
               />
             </div>
 
             <div className="mt-10 bg-[var(--color-parchment)] rounded-xl p-5 border border-[var(--color-gold)]/30">
               <h3 className="font-semibold text-[var(--color-navy)] mb-2">Before you write</h3>
               <p className="text-sm text-[var(--color-slate)] leading-relaxed">
-                We can&apos;t give specific buy/sell recommendations until our SEBI RIA licence is live. Educational and planning conversations are very welcome.
+                We don&apos;t give specific buy/sell recommendations. Educational and planning conversations are very welcome.
               </p>
             </div>
           </div>

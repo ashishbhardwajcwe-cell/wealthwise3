@@ -14,9 +14,12 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/downloads/financial-health-check.pdf",     destination: "/resources/guides/financial-health-check",     permanent: true },
-      { source: "/downloads/defence-transition-planner.pdf", destination: "/resources/guides/defence-transition-planner", permanent: true },
+      { source: "/downloads/defence-transition-planner.pdf", destination: "/resources/guides/financial-health-check",     permanent: true },
       { source: "/downloads/nri-india-cheatsheet.pdf",       destination: "/resources/guides/nri-india-cheatsheet",       permanent: true },
       { source: "/downloads/pms-empanelment-guide.pdf",      destination: "/resources/guides/pms-empanelment-guide",      permanent: true },
+      // Retired audience and guide pages — the segments no longer exist.
+      { source: "/for/defence-officers",                     destination: "/for/professionals",                            permanent: true },
+      { source: "/resources/guides/defence-transition-planner", destination: "/resources/guides/financial-health-check",   permanent: true },
     ];
   },
   async headers() {

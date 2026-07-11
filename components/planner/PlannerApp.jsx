@@ -289,7 +289,7 @@ const AuthModal = ({ show, onClose, onSignIn, onDemo }) => {
 
         {/* Brand */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, marginBottom:14 }}>
-          <img src="/auris-logo.png" alt="PlanMyCashflows" style={{ height:36, objectFit:"contain" }} />
+          <img src="/pmc-logo.png" alt="PlanMyCashflows" style={{ height:36, objectFit:"contain" }} />
           <span style={{ fontFamily:DISPLAY, fontSize:20, fontWeight:700, color:T.white }}>PlanMy<span style={{ color:T.gold }}>Cashflows</span></span>
         </div>
 
@@ -381,7 +381,7 @@ const AuthModal = ({ show, onClose, onSignIn, onDemo }) => {
 const Navbar = ({ user, isDemo, onAuthClick, onLogout, onLogoClick, onGuided, guidedActive }) => (
   <nav className="glass-nav no-print" style={{ position:"sticky", top:0, zIndex:100, padding:"12px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
     <div onClick={onLogoClick} style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-      <img src="/auris-logo.png" alt="PlanMyCashflows" style={{ height:44, objectFit:"contain" }} />
+      <img src="/pmc-logo.png" alt="PlanMyCashflows" style={{ height:44, objectFit:"contain" }} />
     </div>
     <div style={{ display:"flex", alignItems:"center", gap:12 }}>
       {/* GUIDED PLAN TAB — separate YNAB-style guided experience */}
@@ -395,21 +395,6 @@ const Navbar = ({ user, isDemo, onAuthClick, onLogout, onLogoClick, onGuided, gu
           }}>
           ✨ Guided Plan
         </button>
-      )}
-      {/* FREE GUIDE BUTTON — shown when logged in or demo */}
-      {(user || isDemo) && (
-        <a href="/auris-financial-independence-playbook.pdf" download
-          style={{
-            padding:"8px 16px", borderRadius:10, fontSize:12, fontWeight:700,
-            background:`${T.gold}12`, color:T.gold, border:`1px solid ${T.gold}30`,
-            textDecoration:"none", display:"inline-flex", alignItems:"center", gap:6,
-            transition:"all 0.3s", cursor:"pointer", whiteSpace:"nowrap"
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = `${T.gold}25`; e.currentTarget.style.borderColor = T.gold; }}
-          onMouseLeave={e => { e.currentTarget.style.background = `${T.gold}12`; e.currentTarget.style.borderColor = `${T.gold}30`; }}
-        >
-          📘 Free Guide
-        </a>
       )}
       {isDemo ? (
         <>
@@ -1400,13 +1385,13 @@ const ReportView = ({ data, getAge, onBack, aiAnalysis, aiLoading, onRequestAI, 
       {/* PRINT-ONLY COVER PAGE (PlanMyCashflows branded) */}
       {pdfConfig.cover && (
         <div className="print-cover" style={{ flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", minHeight:"88vh", background:T.navy, color:T.white, borderRadius:0, padding:"40px", pageBreakAfter:"always" }}>
-          <img src="/auris-logo.png" alt="PlanMyCashflows" style={{ height:64, objectFit:"contain", marginBottom:24 }} />
+          <img src="/pmc-logo.png" alt="PlanMyCashflows" style={{ height:64, objectFit:"contain", marginBottom:24 }} />
           <div style={{ fontFamily:DISPLAY, fontSize:18, letterSpacing:"2px", color:T.gold, textTransform:"uppercase" }}>PlanMyCashflows</div>
           <h1 style={{ fontFamily:DISPLAY, fontSize:40, fontWeight:700, marginTop:18 }}>Financial Independence Plan</h1>
           <p style={{ fontFamily:DISPLAY, fontStyle:"italic", fontSize:22, color:T.goldLight, marginTop:10 }}>Prepared for {data.name || "Your Name"}</p>
           <p style={{ fontSize:14, color:"#ffffff99", marginTop:8 }}>{data.city || "India"} • {new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</p>
           {pdfConfig.note && <p style={{ maxWidth:520, margin:"28px auto 0", fontSize:14, color:"#ffffffcc", lineHeight:1.7, fontStyle:"italic", borderTop:`1px solid ${T.gold}40`, paddingTop:18 }}>“{pdfConfig.note}”</p>}
-          <p style={{ marginTop:"auto", fontSize:11, color:"#ffffff66", paddingTop:32 }}>Auris Pvt Ltd · Educational financial planning · Not investment advice</p>
+          <p style={{ marginTop:"auto", fontSize:11, color:"#ffffff66", paddingTop:32 }}>PlanMyCashflows · Educational financial planning · Not investment advice</p>
         </div>
       )}
 
@@ -1824,7 +1809,7 @@ const SiteFooter = () => (
     <div style={{ maxWidth:960, margin:"0 auto", display:"flex", flexDirection:"column", alignItems:"center", gap:18 }}>
       {/* Brand */}
       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-        <img src="/auris-logo.png" alt="PlanMyCashflows" style={{ height:32, objectFit:"contain" }} />
+        <img src="/pmc-logo.png" alt="PlanMyCashflows" style={{ height:32, objectFit:"contain" }} />
         <span style={{ fontFamily:DISPLAY, fontSize:18, color:T.white }}>PlanMy<span style={{ color:T.gold }}>Cashflows</span></span>
       </div>
 
@@ -1860,7 +1845,7 @@ const SiteFooter = () => (
 
       {/* Legal */}
       <p style={{ color:`${T.white}25`, fontSize:11, textAlign:"center", marginTop:4 }}>
-        © 2026 Auris Pvt Ltd · PlanMyCashflows · Not SEBI registered · For informational purposes only
+        © 2026 PlanMyCashflows · Not SEBI registered · For informational purposes only
       </p>
     </div>
   </footer>
@@ -1885,7 +1870,7 @@ const GUIDED_QUESTIONS = [
   { id:"kids", section:"About You", q:"How many children do you support?", sub:"", type:"single", showIf:a=>Array.isArray(a.dependents)&&a.dependents.includes("kids"),
     options:[{icon:"1️⃣",label:"One",value:1},{icon:"2️⃣",label:"Two",value:2},{icon:"3️⃣",label:"Three or more",value:3}] },
   { id:"employment", section:"About You", q:"How do you earn your primary income?", sub:"", type:"single",
-    options:[{icon:"🏢",label:"Salaried — private",value:"private"},{icon:"🏛️",label:"Salaried — government",value:"govt"},{icon:"🎖️",label:"Defence services",value:"defence"},{icon:"💻",label:"Self-employed / freelance",value:"self"},{icon:"🏭",label:"Business owner",value:"business"},{icon:"🏖️",label:"Retired",value:"retired"}] },
+    options:[{icon:"🏢",label:"Salaried — private",value:"private"},{icon:"🏛️",label:"Salaried — government",value:"govt"},{icon:"💻",label:"Self-employed / freelance",value:"self"},{icon:"🏭",label:"Business owner",value:"business"},{icon:"🏖️",label:"Retired",value:"retired"}] },
   { id:"cityTier", section:"About You", q:"Where do you live?", sub:"Cost of living varies a lot by city.", type:"single",
     options:[{icon:"🌆",label:"Metro (Mumbai, Delhi, etc.)",value:"metro"},{icon:"🏙️",label:"Tier-2 city",value:"tier2"},{icon:"🏡",label:"Tier-3 / town",value:"tier3"}] },
   // ── Income ──

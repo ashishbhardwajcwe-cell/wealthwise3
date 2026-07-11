@@ -29,19 +29,19 @@ export function WhatsAppFloat() {
       target="_blank"
       rel="noreferrer"
       aria-label="Chat with PlanMyCashflows on WhatsApp"
-      className="auris-whatsapp-float fixed bottom-5 right-5 md:bottom-7 md:right-7 z-40 group inline-flex items-center gap-2 pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 print:hidden"
+      className="pmc-whatsapp-float fixed bottom-5 right-5 md:bottom-7 md:right-7 z-40 group inline-flex items-center gap-2 pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 print:hidden"
       style={{ background: "#25D366", color: "white" }}
     >
       <WhatsAppIcon className="w-6 h-6" />
       <span className="text-sm font-semibold hidden sm:inline">Chat with us</span>
-      <span className="auris-whatsapp-pulse absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ background: "#34B7F1" }} aria-hidden />
+      <span className="pmc-whatsapp-pulse absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ background: "#34B7F1" }} aria-hidden />
       <style jsx>{`
-        @keyframes auris-whatsapp-pulse {
+        @keyframes pmc-whatsapp-pulse {
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.35); opacity: 0.7; }
         }
-        .auris-whatsapp-pulse {
-          animation: auris-whatsapp-pulse 1.8s ease-in-out infinite;
+        .pmc-whatsapp-pulse {
+          animation: pmc-whatsapp-pulse 1.8s ease-in-out infinite;
         }
       `}</style>
     </a>

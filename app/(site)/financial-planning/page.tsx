@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { BlogCard } from "@/components/BlogCard";
 import { HomeMarketsTeaser } from "@/components/markets/HomeMarketsTeaser";
 import { investmentProducts, audiences, siteConfig } from "@/lib/site-config";
-import { FounderPortrait, UnifiedPlanDiagram } from "@/components/Illustrations";
+import { UnifiedPlanDiagram } from "@/components/Illustrations";
 
 export const metadata: Metadata = {
   title: "Financial Planning",
@@ -22,11 +22,11 @@ export default function FinancialPlanningPage() {
     <>
       {/* Hero */}
       <Hero
-        title="Wealth that compounds. Plans that hold under fire."
-        subtitle="AI-powered financial planning and global wealth management — built for professionals, families, and military officers who want clarity."
+        title="Wealth that compounds. Plans that hold."
+        subtitle="AI-powered financial planning and global wealth management — built for professionals, families, and global Indians who want clarity."
         primaryCta={{ label: "Open the AI Wealth Planner", href: siteConfig.appDeepLink }}
         secondaryCta={{ label: "Book a call", href: siteConfig.topmateUrl }}
-        trustLine="NISM-certified · DPDP compliant · Education-first"
+        trustLine="Education-first · DPDP compliant · No sales pressure"
       />
 
       {/* What we cover — 9 products */}
@@ -177,12 +177,12 @@ export default function FinancialPlanningPage() {
               readTime="14 min"
             />
             <BlogCard
-              slug="defence-officer-financial-independence-checklist"
-              title="The defence officer's complete financial independence checklist"
-              excerpt="A practical 12-point framework for officers transitioning to civilian life — built from interviews with 40+ retired colonels and group captains."
-              category="Defence"
-              date="May 12, 2026"
-              readTime="18 min"
+              slug="nri-investing-india-2026-rulebook"
+              title="NRI investing in India: the 2026 rulebook"
+              excerpt="FEMA, RBI, SEBI, FATCA, DTAA — the rules NRIs need to know in 2026 to invest in India compliantly and tax-efficiently."
+              category="NRI"
+              date="Mar 28, 2026"
+              readTime="15 min"
             />
             <BlogCard
               slug="ltcg-125-lakh-exemption-most-underused-tax-tool"
@@ -196,31 +196,20 @@ export default function FinancialPlanningPage() {
         </div>
       </section>
 
-      {/* Founder */}
+      {/* Our approach */}
       <section className="bg-[var(--color-navy)] text-[var(--color-cream)]">
-        <div className="container-wide py-20 md:py-28 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="eyebrow text-[var(--color-gold-light)]">Our founder</span>
-            <h2 className="mt-3 text-[var(--color-cream)] text-balance">
-              From 20 years in olive greens to building a wealth firm.
-            </h2>
-            <p className="mt-6 text-[var(--color-silver)] leading-relaxed">
-              Col Ashish Bhardwaj spent two decades in the Indian Army before leaving to build PlanMyCashflows.
-              The mission is simple: bring the rigour, calm, and discipline of military planning to financial planning —
-              for officers, professionals, NRIs, and families who deserve more than another sales pitch.
-            </p>
-            <Link href="/about" className="inline-flex items-center gap-2 mt-8 text-[var(--color-gold-light)] font-semibold">
-              Read the founder story <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="aspect-[3/4] rounded-xl overflow-hidden">
-              <FounderPortrait variant="uniform" />
-            </div>
-            <div className="aspect-[3/4] rounded-xl overflow-hidden mt-8">
-              <FounderPortrait variant="civilian" />
-            </div>
-          </div>
+        <div className="container-wide py-20 md:py-28 text-center">
+          <span className="eyebrow text-[var(--color-gold-light)]">Our approach</span>
+          <h2 className="mt-3 text-[var(--color-cream)] text-balance max-w-3xl mx-auto">
+            Planning built on rigour, calm and discipline.
+          </h2>
+          <p className="mt-6 text-[var(--color-silver)] leading-relaxed max-w-2xl mx-auto">
+            PlanMyCashflows brings a methodical, education-first approach to financial planning —
+            for professionals, NRIs, and families who deserve more than another sales pitch.
+          </p>
+          <Link href="/about" className="inline-flex items-center gap-2 mt-8 text-[var(--color-gold-light)] font-semibold">
+            Read about our mission <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </section>
 

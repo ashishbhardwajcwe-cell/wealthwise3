@@ -98,26 +98,26 @@ export default function CashFlowPlannerAppPage() {
         </div>
       </section>
 
-      {/* Founder note */}
+      {/* Why we built this */}
       <section className="py-20 bg-[var(--color-navy)] text-[var(--color-cream)]">
         <div className="container-narrow">
-          <span className="eyebrow text-[var(--color-gold-light)]">A note from the founder</span>
-          <h2 className="text-[var(--color-cream)] mt-3 text-balance">Why I built this</h2>
+          <span className="eyebrow text-[var(--color-gold-light)]">A note from the team</span>
+          <h2 className="text-[var(--color-cream)] mt-3 text-balance">Why we built this</h2>
           <div className="mt-8 space-y-5 text-[var(--color-silver)] leading-relaxed">
             <p>
-              When I left the Army after 20 years, I sat down to actually plan my financial life. I had EPF, NPS, mutual funds across three AMCs, FDs at two banks,
-              an SGB tranche I&apos;d forgotten about, a flat in Pune, a small US stocks position, and a vague sense that things were &ldquo;probably fine.&rdquo;
+              Most serious investors we meet share the same starting point: EPF, NPS, mutual funds across three AMCs, FDs at two banks,
+              a forgotten SGB tranche, a flat, a small US stocks position — and a vague sense that things are &ldquo;probably fine.&rdquo;
             </p>
             <p>
-              They weren&apos;t fine. They weren&apos;t terrible — but I had no view of my actual net worth, no rebalancing happening, no tax harvesting,
-              and my retirement projection was somebody&apos;s spreadsheet from 2019. I wanted one place that made the picture honest and actionable.
-              Excel wasn&apos;t enough. The apps I tried were either glorified portfolio trackers or thinly disguised distributor platforms.
+              Usually they aren&apos;t fine. Not terrible — but there&apos;s no view of actual net worth, no rebalancing happening, no tax harvesting,
+              and the retirement projection is somebody&apos;s spreadsheet from 2019. Investors deserve one place that makes the picture honest and actionable.
+              Excel isn&apos;t enough. Most apps are either glorified portfolio trackers or thinly disguised distributor platforms.
             </p>
             <p>
-              CashFlow Planner is what I wanted. A serious tool for serious investors — military officers, professionals, NRIs, families with real complexity.
+              CashFlow Planner is that place. A serious tool for serious investors — professionals, NRIs, families with real complexity.
               It doesn&apos;t sell you products. It tells you what to do.
             </p>
-            <p className="text-[var(--color-gold-light)] font-semibold">— Col Ashish Bhardwaj</p>
+            <p className="text-[var(--color-gold-light)] font-semibold">— The PlanMyCashflows Team</p>
           </div>
         </div>
       </section>

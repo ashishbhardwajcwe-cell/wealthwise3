@@ -118,102 +118,8 @@ export const GUIDES: Record<string, GuideContent> = {
       ],
     },
     closing: [
-      "This check identifies the gap. Filling it is the work. If you want a second pair of eyes on your specific situation, the PlanMyCashflows Planner runs the math in 60 seconds, and a 30-minute call with Ashish is free for the first session.",
+      "This check identifies the gap. Filling it is the work. If you want a second pair of eyes on your specific situation, the PlanMyCashflows Planner runs the math in 60 seconds, and a 30-minute call with our team is free for the first session.",
       "The biggest mistake most people make is doing more — adding more SIPs, more apps, more accounts — when what they need is doing less, better. This check is designed to find the one thing that, fixed, changes everything else.",
-    ],
-  },
-
-  "defence-transition-planner": {
-    slug: "defence-transition-planner",
-    title: "The defence officer's transition financial planner",
-    subtitle: "A 12-point framework for the 18 months before — and after — superannuation.",
-    audience: "Serving and recently-retired defence officers",
-    readTime: "20 minutes",
-    intro: [
-      "After interviewing 40+ retired colonels, group captains, and naval captains over the last two years, certain patterns emerge in who navigates the transition to civilian life well — and who struggles. This planner captures the framework the well-navigators used.",
-      "I went through this transition myself. The financial cliff at superannuation is steeper than most officers expect, and the institutional advice ecosystem available to defence officers is mostly commission-driven LIC agents and well-meaning but undertrained peers.",
-      "This planner won't replace a real financial plan, but it will tell you what to ask, when, and to whom. It's the structure I wish I had when I had 18 months left.",
-    ],
-    sections: [
-      {
-        heading: "Phase 1: 18 months before retirement",
-        paragraphs: [
-          "This is the most leverage you'll have in your financial life. You still have income, still have employer benefits, and have time to make structural decisions before the income cliff hits.",
-        ],
-        bullets: [
-          "Calculate your actual post-retirement income. Take basic + DA × 50% (varies by category), subtract commutation reduction if you'll commute, add DSOP/AGIF annuitised at 7%. This is your new baseline. Most officers' post-retirement income is 30–50% of in-service.",
-          "Decide commutation early. The IRR on commutation is roughly 8–9% — attractive vs FD, loses to equity over the same period. Right answer depends on your existing corpus and ability to invest the lump sum well.",
-          "Audit your insurance. List every LIC, AGIF, postal life insurance policy. Calculate IRR on each — most are 4–5%, dramatically worse than equity. Decide which to keep, paid-up, or surrender. Redirect freed premiums to goal-aligned mutual funds.",
-          "Buy adequate term cover NOW. Premiums rise sharply at 50+. A ₹2 Cr term policy bought at 45 might be ₹15k/year; at 55 it could be ₹40k/year. AGIF doesn't count — it's a savings product, not pure insurance.",
-          "Build personal health insurance alongside ECHS. ECHS has gaps — empanelled hospital availability, certain procedures, dependents. ₹15–25L family floater + ₹15L super top-up while you're still in service (insurers won't issue post-retirement at the same price).",
-        ],
-      },
-      {
-        heading: "Phase 2: Last 6 months — set up the second career engine",
-        paragraphs: [
-          "The officers who navigate retirement best have 50–70% of in-service income post-retirement, not 30–50%. The differential comes from second careers. Start setting this up in the last 6 months.",
-        ],
-        bullets: [
-          "Identify 2–3 second-career paths and have meaningful conversations in each: corporate roles (PSU boards, private security, defence consulting), small business (resort, school, real estate brokerage), or freelance (training, consulting, expert witness).",
-          "Update LinkedIn properly. Most officer LinkedIn profiles read like a service record. Rewrite for civilian recruiters: emphasize leadership scale, P&L responsibility, crisis management, training of large teams.",
-          "Build pre-retirement runway. Aim to enter retirement with at least 18–24 months of expenses in liquid funds. Pension fixation, AGIF maturity, second-career setup, ECHS card processing — these take longer than expected.",
-          "Right-size your housing decision. The single biggest mistake retiring officers make is buying or upgrading to a too-large home using AGIF/DSOP money. House size grows but income shrinks; many regret the high maintenance costs and inflexibility.",
-        ],
-      },
-      {
-        heading: "Phase 3: The 90 days post-retirement",
-        paragraphs: [
-          "Most logistic and financial mistakes happen in this window. Have a written 90-day checklist.",
-        ],
-        bullets: [
-          "Pension fixation paperwork. Pursue this actively — it can take 3–6 months and your first pension may be off if not corrected early.",
-          "AGIF claim and reinvestment. The lump sum from AGIF will land in your bank — don't let it sit in savings account for 6 months. Plan deployment in advance: portion to debt fund for stability, portion to equity SIP via STP over 12 months.",
-          "Update tax residency status if relocating. Many officers move to a different state post-retirement (Pune, Bangalore, Dehradun). HRA, state-specific deductions, and stamp duty considerations change.",
-          "ECHS card activation. Mandatory. Don't postpone — emergencies don't wait.",
-          "Pension bank account separation. Many officers keep using their CGDA SBI account for everything. Better: dedicated pension-receiving account, separate operating account, separate investment-clearing account. Easier to track, audit, and pass on.",
-        ],
-      },
-      {
-        heading: "Phase 4: Years 1–3 post-retirement",
-        paragraphs: [
-          "Asset allocation shifts. In-service: aggressive (80%+ equity is fine). Post-retirement: shift to 50–60% equity over 3 years. Don't go below 40% equity — you still need inflation protection for 25+ years of retirement.",
-        ],
-        bullets: [
-          "Set up SWP (Systematic Withdrawal Plan) for income supplementation if pension + second career income isn't enough.",
-          "Tax planning: Pension qualifies for special considerations under sec 87A; second-career income is fresh tax territory. Engage a CA familiar with ex-services finance.",
-          "Write your will. 70% of officers haven't. Without one, your spouse can face 6–18 months of process to access funds.",
-          "Brief your spouse. Most spouses know 'Papa handles the money.' Write a one-page continuity document covering: every account, every advisor's contact, the financial plan in plain English, what to do in the first 90 days if something happens to you.",
-        ],
-      },
-      {
-        heading: "Stay away from these traps",
-        paragraphs: [
-          "Retiring officers are heavily targeted by frauds dressed up as ex-servicemen schemes, unlisted shares of defence companies, or guaranteed 18% returns.",
-        ],
-        bullets: [
-          "Anything offering guaranteed double-digit returns is either fraud or about to collapse.",
-          "Anything pitched specifically because you're an officer (ex-servicemen scheme, defence officer special access) deserves extra scrutiny — most are exploiting trust, not offering genuine access.",
-          "Anything with urgency (closing tomorrow, last 5 spots) is engineered to bypass your judgment. The right plan doesn't need 18% returns to succeed.",
-          "The hardest lesson: your decades of discipline and discernment in uniform don't transfer automatically to financial decisions. Different domain, different threat model, different counter-parties.",
-        ],
-      },
-    ],
-    checklist: {
-      title: "Quarterly checkpoints for the 18 months around retirement",
-      items: [
-        "Q-4 (18 months out): Insurance audit complete. Term + health adequate.",
-        "Q-3 (12 months out): Second-career path identified. LinkedIn updated. Pre-retirement runway being built.",
-        "Q-2 (6 months out): Pension calculation done. Commutation decision made. AGIF deployment plan written.",
-        "Q-1 (3 months out): Housing decision finalised. Spouse briefing document drafted. 90-day post-retirement checklist ready.",
-        "Q+1 (3 months in): Pension fixation pursued. AGIF deployed. ECHS active.",
-        "Q+2 (6 months in): Tax structure for new income mix optimised. Will written.",
-        "Q+3 (9 months in): Asset allocation rebalanced for retirement phase. SWP set up if needed.",
-        "Q+4 (12 months in): Full annual financial review. Adjust 5-year plan based on actuals.",
-      ],
-    },
-    closing: [
-      "I've been through this. So have most officers I work with. The transition is harder than peacetime postings, easier than active service — and the financial cliff is the dimension nobody briefed you on.",
-      "If you want a personalised version of this plan applied to your situation — your pension category, AGIF balance, second-career prospects, dependents — book a 30-minute session. It's free for officers in their last 18 months. We can do most of the planning together in that one call.",
     ],
   },
 
@@ -329,7 +235,7 @@ export const GUIDES: Record<string, GuideContent> = {
     },
     closing: [
       "NRI investing rewards the patient and the structured. Skipping the boring compliance work to chase yield is the single biggest pattern in NRI investment loss cases.",
-      "If you'd like this cheatsheet personalised to your country of residence, return-to-India horizon, and current portfolio mix, a 30-minute call with Ashish can map your specific path. NRI calls are usually scheduled around your timezone.",
+      "If you'd like this cheatsheet personalised to your country of residence, return-to-India horizon, and current portfolio mix, a 30-minute call with our team can map your specific path. NRI calls are usually scheduled around your timezone.",
     ],
   },
 

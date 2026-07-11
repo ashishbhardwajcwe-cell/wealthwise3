@@ -39,7 +39,7 @@ export async function GET() {
     <link>${siteConfig.url}/blog</link>
     <description>${xmlEscape(siteConfig.description)}</description>
     <language>en-IN</language>
-    <copyright>© ${new Date().getFullYear()} ${xmlEscape(siteConfig.legalName)}</copyright>
+    <copyright>© ${new Date().getFullYear()} ${xmlEscape(siteConfig.name)}</copyright>
     <lastBuildDate>${now}</lastBuildDate>
     <atom:link href="${siteConfig.url}/rss.xml" rel="self" type="application/rss+xml" />
 ${items}

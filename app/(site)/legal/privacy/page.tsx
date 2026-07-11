@@ -17,7 +17,8 @@ export default function PrivacyPolicyPage() {
         {
           heading: "1. Who we are",
           content: [
-            `${siteConfig.legalName} (CIN: ${siteConfig.cin}), trading as ${siteConfig.name}, with registered office in Gurugram, Haryana, India, operates this website ${siteConfig.url} and the CashFlow Planner application available at ${siteConfig.appUrl}.`,
+            // TODO: reinstate exact legal-entity wording here only if counsel confirms it is mandatory.
+            `The company behind ${siteConfig.name}, a private limited company registered in India with its registered office in Gurugram, Haryana, operates this website ${siteConfig.url} and the CashFlow Planner application available at ${siteConfig.appUrl}.`,
             `For privacy-related questions, contact us at privacy@planmycashflows.com.`,
           ],
         },

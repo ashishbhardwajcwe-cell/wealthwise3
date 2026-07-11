@@ -94,11 +94,11 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
 
   return createPortal((
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-12 md:pt-16 px-4 overflow-y-auto auris-login-fadein"
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-12 md:pt-16 px-4 overflow-y-auto pmc-login-fadein"
       style={{ background: "rgba(5,12,25,0.7)", backdropFilter: "blur(8px)" }}
     >
       <div
-        className="relative auris-login-scalein w-full max-w-[380px] mb-12"
+        className="relative pmc-login-scalein w-full max-w-[380px] mb-12"
         style={{
           background: "#0D1B2E",
           borderRadius: 18,
@@ -119,7 +119,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
 
         {/* Brand */}
         <div className="flex items-center justify-center gap-2.5 mb-3">
-          <Image src="/auris-logo.png" alt="PlanMyCashflows" width={36} height={36} className="rounded-md" />
+          <Image src="/pmc-logo.png" alt="PlanMyCashflows" width={36} height={36} className="rounded-md" />
           <span className="text-xl font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
             PlanMy<span style={{ color: "var(--color-gold)" }}>Cashflows</span>
           </span>
@@ -265,16 +265,16 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
       />
 
       <style jsx global>{`
-        @keyframes auris-login-fadein {
+        @keyframes pmc-login-fadein {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        @keyframes auris-login-scalein {
+        @keyframes pmc-login-scalein {
           from { opacity: 0; transform: translateY(-8px) scale(0.96); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .auris-login-fadein { animation: auris-login-fadein 0.18s ease-out; }
-        .auris-login-scalein { animation: auris-login-scalein 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
+        .pmc-login-fadein { animation: pmc-login-fadein 0.18s ease-out; }
+        .pmc-login-scalein { animation: pmc-login-scalein 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </div>
   ), document.body);
