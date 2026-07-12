@@ -19,6 +19,7 @@ import { HomeNewsletter } from "@/components/home/HomeNewsletter";
 import { StructuredData, faqSchema } from "@/components/StructuredData";
 import { siteConfig } from "@/lib/site-config";
 import { comparisonRows, educationTiles, homeFaqs, industryStats } from "@/lib/home-content";
+import { getLivePmsStrategies } from "@/lib/investment-data";
 
 const PAGE_TITLE = "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies";
 const PAGE_DESCRIPTION =
@@ -43,7 +44,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const strategies = await getLivePmsStrategies();
   return (
     <>
       {/* 1 — Hero: text left, lazy video facade right */}
@@ -383,15 +387,17 @@ export default function HomePage() {
             <h2 className="mt-3 text-balance">Explore Curated Strategies</h2>
             <p className="mt-4 text-lg text-[var(--color-slate)] leading-relaxed">
               Browse a selection of PMS and AIF strategies across categories.{" "}
-              <em className="text-sm">
-                (Live performance data is being integrated — the cards below are illustrative examples of what
-                you&apos;ll be able to explore and compare.)
-              </em>
+              {strategies.length === 0 && (
+                <em className="text-sm">
+                  (Live performance data is being integrated — the cards below are illustrative examples of what
+                  you&apos;ll be able to explore and compare.)
+                </em>
+              )}
             </p>
           </div>
 
           <div className="reveal">
-            <FeaturedStrategies />
+            <FeaturedStrategies strategies={strategies} />
           </div>
 
           <p className="text-xs text-[var(--color-slate)] italic text-center mt-8 max-w-3xl mx-auto reveal">

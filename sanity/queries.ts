@@ -78,6 +78,31 @@ export const allPmsStrategiesQuery = groq`
       returns, fees, asOfDate, source, notes }
 `;
 
+/**
+ * Published PMS strategies with the return fields flattened for the
+ * homepage grid, the compare tool and the league table. Neutral base
+ * order (by manager, then strategy) — the UI re-sorts on demand, so the
+ * feed itself does not imply a performance ranking.
+ */
+export const livePmsStrategiesQuery = groq`
+  *[_type == "pmsStrategy" && !(_id in path("drafts.**"))]
+    | order(manager asc, strategyName asc)
+    {
+      _id,
+      strategyName,
+      manager,
+      category,
+      aumCr,
+      minInvestmentL,
+      "returns1y": returns.y1,
+      "returns3y": returns.y3,
+      "returns5y": returns.y5,
+      "sinceInception": returns.sinceInception,
+      asOfDate,
+      source
+    }
+`;
+
 export const allAifFundsQuery = groq`
   *[_type == "aifFund"]
     | order(asOfDate desc)
