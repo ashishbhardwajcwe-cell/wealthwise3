@@ -18,7 +18,7 @@
  *
  * CSV columns (header row required, order doesn't matter):
  *   strategyName*  manager*  category  aumCr  minInvestmentL
- *   returns1y  returns3y  returns5y  sinceInception
+ *   returns1m  returns3m  returns6m  returns1y  returns2y  returns3y  returns4y  returns5y  sinceInception
  *   feesFixed  feesPerformance  feesHurdle
  *   asOfDate*  (YYYY-MM-DD)   source*   notes
  *   (* = required — every published figure must carry its as-of date and
@@ -65,8 +65,13 @@ rows.slice(1).forEach((r, i) => {
   }
 
   const returns = {
+    m1: num(get("returns1m")),
+    m3: num(get("returns3m")),
+    m6: num(get("returns6m")),
     y1: num(get("returns1y")),
+    y2: num(get("returns2y")),
     y3: num(get("returns3y")),
+    y4: num(get("returns4y")),
     y5: num(get("returns5y")),
     sinceInception: num(get("sinceInception")),
   };

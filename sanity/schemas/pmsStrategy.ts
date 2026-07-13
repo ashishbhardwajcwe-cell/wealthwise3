@@ -28,8 +28,13 @@ export const pmsStrategy = defineType({
       title: "Returns (% CAGR)",
       type: "object",
       fields: [
+        { name: "m1", title: "1-month", type: "number" },
+        { name: "m3", title: "3-month", type: "number" },
+        { name: "m6", title: "6-month", type: "number" },
         { name: "y1", title: "1-year", type: "number" },
+        { name: "y2", title: "2-year", type: "number" },
         { name: "y3", title: "3-year", type: "number" },
+        { name: "y4", title: "4-year", type: "number" },
         { name: "y5", title: "5-year", type: "number" },
         { name: "sinceInception", title: "Since inception", type: "number" },
       ],
@@ -53,7 +58,7 @@ export const pmsStrategy = defineType({
     defineField({
       name: "source",
       type: "string",
-      description: "Where this data came from (e.g. PMS Bazaar, manager website)",
+      description: "Where this data came from (e.g. APMI monthly report, manager factsheet)",
     }),
     defineField({
       name: "notes",
