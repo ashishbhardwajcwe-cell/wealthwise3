@@ -18,6 +18,21 @@ function periodReturn(s: LivePmsStrategy, p: Period): number | undefined {
   return p === "1Y" ? s.returns1y : p === "3Y" ? s.returns3y : s.returns5y;
 }
 
+const PLAUSIBLE_MIN = -95;   // % — below this is a reporting artifact, not a real annualised return
+const PLAUSIBLE_MAX = 300;   // % — above this in any period is almost certainly not annualised
+
+/**
+ * True when any of the strategy's headline returns falls outside the
+ * plausible band for an annualised equity figure. APMI's feed mixes in
+ * liquid-fund / structured-product / debt rows whose "return" columns are
+ * not annualised equity returns (e.g. −113%, which is mathematically
+ * impossible); those must not pollute a public performance table.
+ */
+export function hasImplausibleReturn(s: LivePmsStrategy): boolean {
+  const vals = [s.returns1y, s.returns3y, s.returns5y];
+  return vals.some((v) => typeof v === "number" && (v < PLAUSIBLE_MIN || v > PLAUSIBLE_MAX));
+}
+
 function getValue(s: LivePmsStrategy, key: SortKey, period: Period): string | number | undefined {
   if (key === "name") return `${s.manager} ${s.strategyName}`;
   if (key === "category") return s.category;
@@ -43,23 +58,33 @@ interface Props {
 export function LeagueTable({ strategies, heading = "PMS strategy performance" }: Props) {
   const [category, setCategory] = useState("All");
   const [period, setPeriod] = useState<Period>("3Y");
-  const { sortBy, sortDir, toggleSort } = useTableSort<SortKey>("return", "desc", TEXT_KEYS);
+  const { sortBy, sortDir, toggleSort } = useTableSort<SortKey>("aumCr", "desc", TEXT_KEYS);
+
+  // Drop reporting artifacts (implausible returns) before anything else, so
+  // categories, rows, count and as-of date all reflect the trustworthy set.
+  const cleanStrategies = useMemo(
+    () => strategies.filter((s) => !hasImplausibleReturn(s)),
+    [strategies],
+  );
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    strategies.forEach((s) => { if (s.category) set.add(s.category); });
+    cleanStrategies.forEach((s) => { if (s.category) set.add(s.category); });
     return ["All", ...Array.from(set).sort()];
-  }, [strategies]);
+  }, [cleanStrategies]);
 
   const rows = useMemo(() => {
-    let r = strategies;
+    let r = cleanStrategies;
     if (category !== "All") r = r.filter((s) => s.category === category);
+    // Only show rows that actually have a number for the selected period, so
+    // the table never leads with rows of dashes.
+    r = r.filter((s) => typeof periodReturn(s, period) === "number");
     return sortRows(r, (row, key) => getValue(row, key, period), sortBy, sortDir);
-  }, [strategies, category, sortBy, sortDir, period]);
+  }, [cleanStrategies, category, sortBy, sortDir, period]);
 
   const latestAsOf = useMemo(
-    () => fmtAsOf(latestAmfiDate(strategies.map((s) => s.asOfDate))),
-    [strategies],
+    () => fmtAsOf(latestAmfiDate(cleanStrategies.map((s) => s.asOfDate))),
+    [cleanStrategies],
   );
 
   return (
@@ -69,7 +94,7 @@ export function LeagueTable({ strategies, heading = "PMS strategy performance" }
           <span className="eyebrow">Strategy table</span>
           <h2 className="mt-2">{heading}</h2>
           <p className="text-sm text-[var(--color-slate)] mt-2">
-            {strategies.length} {strategies.length === 1 ? "strategy" : "strategies"} shown. Filter by category,
+            {cleanStrategies.length} {cleanStrategies.length === 1 ? "strategy" : "strategies"} shown. Filter by category,
             switch the return period, or sort any column. As on {latestAsOf}.
           </p>
         </div>
