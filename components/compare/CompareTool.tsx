@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { placeholderStrategies } from "@/lib/home-content";
 import type { LivePmsStrategy } from "@/lib/investment-data";
 import { fmtPct, fmtAumCr, fmtMinL, fmtAsOf, latestAmfiDate } from "@/components/tables/table-utils";
+import { hasImplausibleReturn } from "@/components/data-tables/LeagueTable";
 
 const MAX_COLUMNS = 3;
 
@@ -21,16 +22,134 @@ interface CompareItem {
 }
 
 /**
+ * Dependency-free searchable strategy picker. A text input filters a listbox
+ * by a case-insensitive substring match on "manager + strategy", so the
+ * ~1,700-row live feed is findable by typing instead of an endless scroll.
+ * Clicking a result selects it; picking "— None —" clears the slot.
+ */
+function StrategyCombobox({
+  slot,
+  items,
+  value,
+  disabledIndexes,
+  onChange,
+}: {
+  slot: number;
+  items: CompareItem[];
+  value: number | null;
+  disabledIndexes: Set<number>;
+  onChange: (value: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Close the listbox when the user clicks outside the widget.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const selected = value !== null ? items[value] : null;
+  const label = (s: CompareItem) => `${s.category} · ${s.strategy}`;
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => !q || `${s.house} ${s.strategy}`.toLowerCase().includes(q));
+  }, [items, query]);
+
+  const select = (i: number | null) => {
+    onChange(i);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        id={`compare-slot-${slot}`}
+        type="text"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`compare-listbox-${slot}`}
+        autoComplete="off"
+        placeholder={selected ? label(selected) : "— None — (type to search)"}
+        value={open ? query : selected ? label(selected) : ""}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        className="w-full px-3 py-2.5 bg-white border border-[var(--color-silver)]/60 rounded-lg text-sm focus:outline-none focus:border-[var(--color-gold)]"
+      />
+      {open && (
+        <ul
+          id={`compare-listbox-${slot}`}
+          role="listbox"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-silver)]/60 bg-white shadow-lg text-sm"
+        >
+          <li role="option" aria-selected={value === null}>
+            <button
+              type="button"
+              onClick={() => select(null)}
+              className="w-full text-left px-3 py-2 hover:bg-[var(--color-parchment)]/60 text-[var(--color-slate)]"
+            >
+              — None —
+            </button>
+          </li>
+          {matches.length === 0 ? (
+            <li className="px-3 py-2 text-[var(--color-slate)] italic">No matches</li>
+          ) : (
+            matches.map(({ s, i }) => {
+              const isDisabled = disabledIndexes.has(i) && value !== i;
+              return (
+                <li key={i} role="option" aria-selected={value === i}>
+                  <button
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => select(i)}
+                    className={`w-full text-left px-3 py-2 ${
+                      isDisabled
+                        ? "text-[var(--color-silver)] cursor-not-allowed"
+                        : value === i
+                        ? "bg-[var(--color-parchment)] text-[var(--color-navy)] font-semibold"
+                        : "hover:bg-[var(--color-parchment)]/60 text-[var(--color-navy)]"
+                    }`}
+                  >
+                    <span className="block">{s.strategy}</span>
+                    <span className="block text-xs text-[var(--color-slate)]">
+                      {s.house}{s.category !== "—" ? ` · ${s.category}` : ""}
+                    </span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/**
  * Pick up to three strategies and compare them side-by-side. Uses the live
  * PMS feed from Sanity when available and falls back to the illustrative
- * placeholder array when empty. No returns figures are hardcoded.
+ * placeholder array when empty. Reporting artifacts (implausible returns) are
+ * filtered out so the picker never offers them. No returns figures are hardcoded.
  */
 export function CompareTool({ strategies }: { strategies?: LivePmsStrategy[] }) {
-  const isLive = !!strategies && strategies.length > 0;
+  const liveStrategies = useMemo(
+    () => (strategies ?? []).filter((s) => !hasImplausibleReturn(s)),
+    [strategies],
+  );
+  const isLive = liveStrategies.length > 0;
 
   const items: CompareItem[] = useMemo(() => {
     if (isLive) {
-      return strategies!.map((s) => ({
+      return liveStrategies.map((s) => ({
         strategy: s.strategyName,
         house: s.manager,
         category: s.category ?? "—",
@@ -51,7 +170,7 @@ export function CompareTool({ strategies }: { strategies?: LivePmsStrategy[] }) 
       aum: s.aum,
       minInvestment: s.minInvestment,
     }));
-  }, [isLive, strategies]);
+  }, [isLive, liveStrategies]);
 
   const houseLabel = isLive ? "Manager" : "Fund House";
 
@@ -71,16 +190,18 @@ export function CompareTool({ strategies }: { strategies?: LivePmsStrategy[] }) 
     Array.from({ length: MAX_COLUMNS }, (_, i) => (i < items.length ? i : null)),
   );
 
-  const setSlot = (slot: number, value: string) => {
-    setSlots((prev) => prev.map((v, i) => (i === slot ? (value === "" ? null : Number(value)) : v)));
+  const setSlot = (slot: number, value: number | null) => {
+    setSlots((prev) => prev.map((v, i) => (i === slot ? value : v)));
   };
+
+  const selectedIndexes = new Set(slots.filter((v): v is number => v !== null));
 
   const chosen = slots
     .filter((v): v is number => v !== null)
     .map((i) => items[i])
     .filter(Boolean);
 
-  const latestAsOf = isLive ? fmtAsOf(latestAmfiDate(strategies!.map((s) => s.asOfDate))) : null;
+  const latestAsOf = isLive ? fmtAsOf(latestAmfiDate(liveStrategies.map((s) => s.asOfDate))) : null;
 
   return (
     <div>
@@ -94,19 +215,13 @@ export function CompareTool({ strategies }: { strategies?: LivePmsStrategy[] }) 
             >
               Strategy {slot + 1}
             </label>
-            <select
-              id={`compare-slot-${slot}`}
-              value={slots[slot] ?? ""}
-              onChange={(e) => setSlot(slot, e.target.value)}
-              className="w-full px-3 py-2.5 bg-white border border-[var(--color-silver)]/60 rounded-lg text-sm focus:outline-none focus:border-[var(--color-gold)]"
-            >
-              <option value="">— None —</option>
-              {items.map((s, i) => (
-                <option key={i} value={i} disabled={slots.includes(i) && slots[slot] !== i}>
-                  {s.category} · {s.strategy}
-                </option>
-              ))}
-            </select>
+            <StrategyCombobox
+              slot={slot}
+              items={items}
+              value={slots[slot]}
+              disabledIndexes={selectedIndexes}
+              onChange={(v) => setSlot(slot, v)}
+            />
           </div>
         ))}
       </div>
