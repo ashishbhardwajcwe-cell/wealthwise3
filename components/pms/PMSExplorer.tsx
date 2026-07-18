@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from "react";
+"use client";
+
+import { useState, useMemo, type CSSProperties } from "react";
 import {
   Search, X, Check, Scale, Info, SlidersHorizontal,
   ArrowUpRight, ArrowDownRight, ChevronRight,
@@ -7,31 +9,45 @@ import {
 /*
   PlanMyCashflows — PMS Explorer
   ------------------------------------------------------------------
-  Drop-in prototype for /investment-products/pms.
+  Ported from the standalone prototype for /investment-products/pms.
 
-  Design notes for porting into the Next.js app:
-  - Fonts are loaded here via a <style> @import for the prototype.
-    In the app, move Fraunces / Inter / IBM Plex Mono into next/font
-    and delete the injected <style>.
-  - Colours + fonts are applied with inline styles / helper classes so
-    the file renders standalone. Layout uses Tailwind core utilities,
-    which your app already has.
+  - Fonts (Fraunces / Inter / IBM Plex Mono) are loaded via next/font in
+    app/layout.tsx and exposed as CSS variables; the .font-display / .font-ui
+    / .font-num helpers live in app/globals.css alongside the :root design
+    tokens (--ink, --green, --pos, --neg, …).
   - STRATEGIES is a hand-built sample (~30 funds, as-on 30 Jun 2026)
-    assembled from your live data + the compendium grid. Swap it for
-    your real feed — the card only needs { manager, strategy, category,
-    aum, minL, since, returns:{'1M'..'SI'} }.
+    assembled from live data + the compendium grid. Swap it for the real
+    feed — the card only needs the Strategy shape defined below.
   - "Alpha" = strategy return − benchmark return for the SELECTED period.
-    Benchmark = S&P BSE 500 TRI (your FAQ already references Nifty 500).
-    Periods with no clean benchmark (5Y, SI) show raw return, no alpha.
+    Benchmark = S&P BSE 500 TRI. Periods with no clean benchmark (5Y, SI)
+    show raw return, no alpha.
 */
 
+/* ---------- types ---------- */
+type Period = "1M" | "3M" | "6M" | "1Y" | "2Y" | "3Y" | "5Y" | "SI";
+type Tone = "pos" | "neg" | "flat";
+type SortKey = "aum" | "alpha" | "return" | "name";
+
+/** Return figures keyed by period; null where a figure isn't published. */
+type PeriodReturns = Record<Period, number | null>;
+
+/** Shape of one PMS strategy row consumed by the explorer. */
+export type Strategy = {
+  manager: string;
+  strategy: string;
+  category: string;
+  aum: number; // ₹ crore
+  since: string;
+  returns: PeriodReturns;
+};
+
 /* ---- benchmark: S&P BSE 500 TRI, same periods as the cards ---- */
-const BENCH = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
+const BENCH: Record<Period, number | null> = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
 const BENCH_NAME = "S&P BSE 500 TRI";
 const AS_ON = "30 Jun 2026";
 
 /* ---- sample data (real published figures, curated subset) ---- */
-const STRATEGIES = [
+const STRATEGIES: Strategy[] = [
   { manager: "Stallion Asset", strategy: "Core Fund", category: "Multicap", aum: 8102, since: "Oct 2018", returns: { "1M": 7.56, "3M": 15.17, "6M": 4.72, "1Y": 15.31, "2Y": 21.25, "3Y": 39.14, "5Y": 25.9, "SI": 28.02 } },
   { manager: "Aequitas", strategy: "India Opportunities Product", category: "Smallcap", aum: 2637, since: "Feb 2013", returns: { "1M": 0.52, "3M": -5.02, "6M": 15.55, "1Y": 41.15, "2Y": 31.12, "3Y": 41.13, "5Y": 38.16, "SI": 32.9 } },
   { manager: "Wallfort", strategy: "Diversified Fund", category: "Mid & Small", aum: 574, since: "Nov 2018", returns: { "1M": 0.7, "3M": 8.59, "6M": -8.52, "1Y": 4.2, "2Y": 17.17, "3Y": 38.05, "5Y": 26.57, "SI": 22.22 } },
@@ -64,22 +80,31 @@ const STRATEGIES = [
   { manager: "Asit C. Mehta", strategy: "Ace Multi Asset Portfolio", category: "Hybrid", aum: 12, since: "Oct 2018", returns: { "1M": 0.01, "3M": 1.03, "6M": -1.62, "1Y": 6.8, "2Y": 5.55, "3Y": 25.15, "5Y": 19.63, "SI": 16.41 } },
 ];
 
-const CATEGORIES = ["All", "Largecap", "Flexicap", "Multicap", "Mid & Small", "Midcap", "Smallcap", "Thematic", "Hybrid"];
-const PERIODS = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "SI"];
-const HEADLINE_PERIODS = ["1M", "6M", "1Y", "3Y", "5Y", "SI"]; // tiles shown on the card
+const CATEGORIES: string[] = ["All", "Largecap", "Flexicap", "Multicap", "Mid & Small", "Midcap", "Smallcap", "Thematic", "Hybrid"];
+const PERIODS: Period[] = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "SI"];
+const HEADLINE_PERIODS: Period[] = ["1M", "6M", "1Y", "3Y", "5Y", "SI"]; // tiles shown on the card
 
 /* ---------- helpers ---------- */
-const fmtPct = (v) => (v === null || v === undefined ? "N/A" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%`);
-const fmtAum = (cr) => (cr >= 1000 ? `₹${(cr / 1000).toFixed(2)}K Cr` : `₹${cr.toLocaleString("en-IN")} Cr`);
-const toneOf = (v) => (v === null || v === undefined ? "flat" : v > 0.0001 ? "pos" : v < -0.0001 ? "neg" : "flat");
-const toneColor = { pos: "var(--pos)", neg: "var(--neg)", flat: "var(--flat)" };
-const toneBg = { pos: "var(--pos-bg)", neg: "var(--neg-bg)", flat: "var(--flat-bg)" };
-const monogram = (m) => m.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-const alphaFor = (ret, p) => (ret[p] === null || ret[p] === undefined || BENCH[p] === null ? null : ret[p] - BENCH[p]);
-const beats = (ret, periods) => periods.reduce((n, p) => n + (alphaFor(ret, p) > 0 ? 1 : 0), 0);
+const fmtPct = (v: number | null | undefined): string => (v === null || v === undefined ? "N/A" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%`);
+const fmtAum = (cr: number): string => (cr >= 1000 ? `₹${(cr / 1000).toFixed(2)}K Cr` : `₹${cr.toLocaleString("en-IN")} Cr`);
+const toneOf = (v: number | null | undefined): Tone => (v === null || v === undefined ? "flat" : v > 0.0001 ? "pos" : v < -0.0001 ? "neg" : "flat");
+const toneColor: Record<Tone, string> = { pos: "var(--pos)", neg: "var(--neg)", flat: "var(--flat)" };
+const toneBg: Record<Tone, string> = { pos: "var(--pos-bg)", neg: "var(--neg-bg)", flat: "var(--flat-bg)" };
+const monogram = (m: string): string => m.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+const alphaFor = (ret: PeriodReturns, p: Period): number | null => {
+  const r = ret[p];
+  const b = BENCH[p];
+  if (r === null || b === null) return null;
+  return r - b;
+};
+const beats = (ret: PeriodReturns, periods: Period[]): number =>
+  periods.reduce((n, p) => {
+    const a = alphaFor(ret, p);
+    return n + (a !== null && a > 0 ? 1 : 0);
+  }, 0);
 
 /* ---------- small pieces ---------- */
-function AlphaChip({ value }) {
+function AlphaChip({ value }: { value: number | null }) {
   if (value === null) return <span className="font-num" style={{ fontSize: 12, color: "var(--muted)" }}>no benchmark</span>;
   const t = toneOf(value);
   const Icon = value > 0 ? ArrowUpRight : ArrowDownRight;
@@ -92,9 +117,9 @@ function AlphaChip({ value }) {
   );
 }
 
-function ConsistencyDots({ ret }) {
+function ConsistencyDots({ ret }: { ret: PeriodReturns }) {
   // over 1Y / 2Y / 3Y — the periods that actually matter for selection
-  const longPeriods = ["1Y", "2Y", "3Y"];
+  const longPeriods: Period[] = ["1Y", "2Y", "3Y"];
   const n = beats(ret, longPeriods);
   return (
     <span className="inline-flex items-center gap-1" title={`Beat ${BENCH_NAME} in ${n} of 3 long-term windows`}>
@@ -107,7 +132,7 @@ function ConsistencyDots({ ret }) {
   );
 }
 
-function ReturnTile({ label, value }) {
+function ReturnTile({ label, value }: { label: string; value: number | null }) {
   const t = toneOf(value);
   return (
     <div className="rounded-lg px-2 py-1.5 text-center" style={{ background: "var(--flat-bg)", border: "1px solid var(--line)" }}>
@@ -120,7 +145,13 @@ function ReturnTile({ label, value }) {
 }
 
 /* ---------- card ---------- */
-function StrategyCard({ s, period, selected, onCompare, onBrief }) {
+function StrategyCard({ s, period, selected, onCompare, onBrief }: {
+  s: Strategy;
+  period: Period;
+  selected: boolean;
+  onCompare: (s: Strategy) => void;
+  onBrief: (s: Strategy) => void;
+}) {
   const ret = s.returns[period];
   const alpha = alphaFor(s.returns, period);
   const topTone = toneOf(alpha === null ? ret : alpha);
@@ -191,7 +222,7 @@ function StrategyCard({ s, period, selected, onCompare, onBrief }) {
 }
 
 /* ---------- brief sheet ---------- */
-function BriefSheet({ s, onClose }) {
+function BriefSheet({ s, onClose }: { s: Strategy | null; onClose: () => void }) {
   if (!s) return null;
   const nBeat = beats(s.returns, ["1Y", "2Y", "3Y"]);
   return (
@@ -208,7 +239,7 @@ function BriefSheet({ s, onClose }) {
         <div className="p-5">
           {/* facts */}
           <div className="grid grid-cols-2 gap-3">
-            {[["Category", s.category], ["AUM", fmtAum(s.aum)], ["Minimum", "₹50 lakh"], ["Since", s.since]].map(([k, v]) => (
+            {([["Category", s.category], ["AUM", fmtAum(s.aum)], ["Minimum", "₹50 lakh"], ["Since", s.since]] as [string, string][]).map(([k, v]) => (
               <div key={k} className="rounded-xl px-3 py-2.5" style={{ background: "var(--flat-bg)" }}>
                 <div className="font-ui" style={{ fontSize: 11, color: "var(--muted)" }}>{k}</div>
                 <div className="font-num" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>{v}</div>
@@ -252,7 +283,7 @@ function BriefSheet({ s, onClose }) {
             <p className="font-ui" style={{ fontSize: 12.5, color: "var(--ink)", lineHeight: 1.5, margin: 0 }}>
               Beat the benchmark in <strong>{nBeat} of 3</strong> long-term windows (1Y / 2Y / 3Y).
               {nBeat >= 2 ? " Consistent alpha across cycles — the number worth trusting." : " Thin long-term alpha — the recent figure may be flattering. Check the 3Y before the 1M."}
-              {" "}Returns are TWRR at strategy level, as on {AS_ON}. Your own return depends on entry timing. Past performance doesn't predict the future.
+              {" "}Returns are TWRR at strategy level, as on {AS_ON}. Your own return depends on entry timing. Past performance doesn&apos;t predict the future.
             </p>
           </div>
 
@@ -266,7 +297,11 @@ function BriefSheet({ s, onClose }) {
 }
 
 /* ---------- compare modal ---------- */
-function CompareModal({ items, onClose, onRemove }) {
+function CompareModal({ items, onClose, onRemove }: {
+  items: Strategy[];
+  onClose: () => void;
+  onRemove: (s: Strategy) => void;
+}) {
   if (!items.length) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,26,20,0.5)" }} onClick={onClose}>
@@ -290,7 +325,7 @@ function CompareModal({ items, onClose, onRemove }) {
               </tr>
             </thead>
             <tbody>
-              {[["Category", (s) => s.category], ["AUM", (s) => fmtAum(s.aum)]].map(([label, fn]) => (
+              {([["Category", (s: Strategy) => s.category], ["AUM", (s: Strategy) => fmtAum(s.aum)]] as [string, (s: Strategy) => string][]).map(([label, fn]) => (
                 <tr key={label} style={{ borderTop: "1px solid var(--line)" }}>
                   <td className="font-ui px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{label}</td>
                   {items.map((s) => <td key={s.strategy} className="font-num px-3 py-2" style={{ fontSize: 13, color: "var(--ink)" }}>{fn(s)}</td>)}
@@ -320,30 +355,30 @@ function CompareModal({ items, onClose, onRemove }) {
 
 /* ---------- main ---------- */
 export default function PMSExplorer() {
-  const [category, setCategory] = useState("All");
-  const [period, setPeriod] = useState("3Y");
-  const [sort, setSort] = useState("aum");
-  const [query, setQuery] = useState("");
-  const [beatOnly, setBeatOnly] = useState(false);
-  const [compare, setCompare] = useState([]);
-  const [brief, setBrief] = useState(null);
-  const [showCompare, setShowCompare] = useState(false);
+  const [category, setCategory] = useState<string>("All");
+  const [period, setPeriod] = useState<Period>("3Y");
+  const [sort, setSort] = useState<SortKey>("aum");
+  const [query, setQuery] = useState<string>("");
+  const [beatOnly, setBeatOnly] = useState<boolean>(false);
+  const [compare, setCompare] = useState<Strategy[]>([]);
+  const [brief, setBrief] = useState<Strategy | null>(null);
+  const [showCompare, setShowCompare] = useState<boolean>(false);
 
-  const toggleCompare = (s) => {
+  const toggleCompare = (s: Strategy) => {
     setCompare((prev) => prev.find((x) => x.strategy === s.strategy && x.manager === s.manager)
       ? prev.filter((x) => !(x.strategy === s.strategy && x.manager === s.manager))
       : prev.length >= 3 ? prev : [...prev, s]);
   };
-  const isSelected = (s) => !!compare.find((x) => x.strategy === s.strategy && x.manager === s.manager);
+  const isSelected = (s: Strategy) => !!compare.find((x) => x.strategy === s.strategy && x.manager === s.manager);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<Strategy[]>(() => {
     let list = STRATEGIES.filter((s) => category === "All" || s.category === category);
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter((s) => (s.manager + " " + s.strategy).toLowerCase().includes(q));
     }
-    if (beatOnly && BENCH[period] !== null) list = list.filter((s) => alphaFor(s.returns, period) > 0);
-    const val = (s) => s.returns[period];
+    if (beatOnly && BENCH[period] !== null) list = list.filter((s) => (alphaFor(s.returns, period) ?? -Infinity) > 0);
+    const val = (s: Strategy) => s.returns[period];
     list = [...list].sort((a, b) => {
       if (sort === "aum") return b.aum - a.aum;
       if (sort === "return") return (val(b) ?? -999) - (val(a) ?? -999);
@@ -354,20 +389,7 @@ export default function PMSExplorer() {
     return list;
   }, [category, period, sort, query, beatOnly]);
 
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-    :root{
-      --ink:#0F1A14; --muted:#5B6660; --line:#E4E7E2; --page:#F3F5F1; --card:#FFFFFF;
-      --green:#0E7C56; --green-deep:#0A5E41; --green-tint:#E7F3EC;
-      --pos:#15803D; --pos-bg:#E9F6ED; --neg:#C0392B; --neg-bg:#FBEBE9; --flat:#6B7280; --flat-bg:#F2F4F0;
-    }
-    .font-display{font-family:'Fraunces',Georgia,serif;}
-    .font-ui{font-family:'Inter',system-ui,-apple-system,sans-serif;}
-    .font-num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;}
-    .pmc-scroll::-webkit-scrollbar{height:6px;width:6px;} .pmc-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
-  `;
-
-  const chipStyle = (active) => ({
+  const chipStyle = (active: boolean): CSSProperties => ({
     fontSize: 13, fontWeight: 500,
     color: active ? "#fff" : "var(--ink)",
     background: active ? "var(--ink)" : "#fff",
@@ -376,8 +398,6 @@ export default function PMSExplorer() {
 
   return (
     <div className="font-ui min-h-screen" style={{ background: "var(--page)", color: "var(--ink)" }}>
-      <style>{css}</style>
-
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* header */}
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -385,7 +405,7 @@ export default function PMSExplorer() {
             <div className="font-ui" style={{ fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--green-deep)", fontWeight: 600 }}>PlanMyCashflows</div>
             <h1 className="font-display" style={{ fontSize: 40, fontWeight: 600, color: "var(--ink)", lineHeight: 1.05, marginTop: 4 }}>PMS Explorer</h1>
             <p className="font-ui" style={{ fontSize: 15, color: "var(--muted)", marginTop: 8, maxWidth: 560 }}>
-              We rank on <strong style={{ color: "var(--ink)" }}>alpha</strong>, not the raw return chart — because in PMS, last year's chart-topper is often next year's laggard. Every card shows return <em>and</em> what it beat.
+              We rank on <strong style={{ color: "var(--ink)" }}>alpha</strong>, not the raw return chart — because in PMS, last year&apos;s chart-topper is often next year&apos;s laggard. Every card shows return <em>and</em> what it beat.
             </p>
           </div>
           <div className="text-right">
@@ -407,14 +427,14 @@ export default function PMSExplorer() {
 
             <div className="flex items-center rounded-xl bg-white overflow-hidden" style={{ border: "1px solid var(--line)" }}>
               <span className="font-ui px-2.5" style={{ fontSize: 11, color: "var(--muted)" }}>PERIOD</span>
-              {["1M", "1Y", "3Y", "5Y", "SI"].map((p) => (
+              {(["1M", "1Y", "3Y", "5Y", "SI"] as const).map((p) => (
                 <button key={p} onClick={() => setPeriod(p)} className="font-num px-2.5 py-2"
                   style={{ fontSize: 12, fontWeight: 600, color: period === p ? "#fff" : "var(--ink)", background: period === p ? "var(--green)" : "transparent" }}>{p}</button>
               ))}
             </div>
 
             <div className="relative">
-              <select value={sort} onChange={(e) => setSort(e.target.value)}
+              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}
                 className="font-ui appearance-none rounded-xl bg-white pl-3 pr-8 py-2" style={{ fontSize: 13, border: "1px solid var(--line)", color: "var(--ink)" }}>
                 <option value="aum">Sort: AUM</option>
                 <option value="alpha">Sort: Alpha ({period})</option>

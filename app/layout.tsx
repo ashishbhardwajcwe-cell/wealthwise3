@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 
@@ -12,6 +12,22 @@ const inter = Inter({
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
+  display: "swap",
+});
+
+// Fonts for the PMS Explorer design system. Fraunces (variable) and IBM Plex
+// Mono are exposed as CSS variables alongside the existing Inter, which the
+// explorer reuses for its `.font-ui` helper. See app/globals.css.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-ibm-plex-mono",
   display: "swap",
 });
 
@@ -60,7 +76,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en-IN" className={`${inter.variable} ${playfair.variable} ${fraunces.variable} ${ibmPlexMono.variable}`}>
       <body>{children}</body>
     </html>
   );

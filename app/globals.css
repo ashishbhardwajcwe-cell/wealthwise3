@@ -350,6 +350,40 @@ html.js-reveal .reveal[data-reveal-delay="3"] { transition-delay: .24s; }
   html.js-reveal .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
 }
 
+/* ============================================================
+   PMS Explorer — design tokens + font helpers
+   Ported from the standalone prototype's injected <style>. The three
+   fonts are loaded via next/font/google in app/layout.tsx and exposed
+   as --font-fraunces / --font-inter / --font-ibm-plex-mono on <html>;
+   the helper classes below map the explorer's font roles onto them.
+   ============================================================ */
+:root {
+  --ink: #0F1A14;
+  --muted: #5B6660;
+  --line: #E4E7E2;
+  --page: #F3F5F1;
+  --card: #FFFFFF;
+  --green: #0E7C56;
+  --green-deep: #0A5E41;
+  --green-tint: #E7F3EC;
+  --pos: #15803D;
+  --pos-bg: #E9F6ED;
+  --neg: #C0392B;
+  --neg-bg: #FBEBE9;
+  --flat: #6B7280;
+  --flat-bg: #F2F4F0;
+}
+
+.font-display { font-family: var(--font-fraunces), Georgia, serif; }
+.font-ui { font-family: var(--font-inter), system-ui, -apple-system, sans-serif; }
+.font-num {
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.pmc-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+.pmc-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+
 /* Print styles — clean PDF export from guide pages */
 @media print {
   header, footer, nav, .no-print { display: none !important; }
