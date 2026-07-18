@@ -434,7 +434,8 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="font-ui" style={{ fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--green-deep)", fontWeight: 600 }}>PlanMyCashflows</div>
-            <h1 className="font-display" style={{ fontSize: 40, fontWeight: 600, color: "var(--ink)", lineHeight: 1.05, marginTop: 4 }}>PMS Explorer</h1>
+            {/* h2, not h1 — the page hero (InvestmentProductPage) owns the page's h1 */}
+            <h2 className="font-display" style={{ fontSize: 40, fontWeight: 600, color: "var(--ink)", lineHeight: 1.05, marginTop: 4 }}>PMS Explorer</h2>
             <p className="font-ui" style={{ fontSize: 15, color: "var(--muted)", marginTop: 8, maxWidth: 560 }}>
               We rank on <strong style={{ color: "var(--ink)" }}>alpha</strong>, not the raw return chart — because in PMS, last year&apos;s chart-topper is often next year&apos;s laggard. Every card shows return <em>and</em> what it beat.
             </p>
@@ -445,8 +446,8 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
           </div>
         </div>
 
-        {/* controls */}
-        <div className="sticky top-0 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 py-3 mt-6" style={{ background: "var(--page)", borderBottom: "1px solid var(--line)" }}>
+        {/* controls — top-16 sticks them below the site header (sticky h-16 z-50) */}
+        <div className="sticky top-16 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 py-3 mt-6" style={{ background: "var(--page)", borderBottom: "1px solid var(--line)" }}>
           {/* search + period + sort */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 rounded-xl px-3 py-2 bg-white flex-1 min-w-[220px]" style={{ border: "1px solid var(--line)" }}>
