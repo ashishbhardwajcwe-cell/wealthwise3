@@ -3,7 +3,7 @@ import Link from "next/link";
 import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { pmsData } from "@/lib/product-data";
 import { PMSGraph } from "@/components/ProductGraphs";
-import { LeagueTable } from "@/components/data-tables/LeagueTable";
+import PMSExplorer from "@/components/pms/PMSExplorer";
 import { DataOnboardingNotice } from "@/components/data-tables/DataOnboardingNotice";
 import { getLivePmsStrategies } from "@/lib/investment-data";
 
@@ -33,7 +33,7 @@ export default async function Page() {
         </div>
       </section>
       {strategies.length > 0 ? (
-        <LeagueTable strategies={strategies} heading="PMS strategies on our radar" />
+        <PMSExplorer strategies={strategies} />
       ) : (
         <DataOnboardingNotice
           title="PMS performance tracker — coming online"

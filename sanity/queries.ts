@@ -80,9 +80,10 @@ export const allPmsStrategiesQuery = groq`
 
 /**
  * Published PMS strategies with the return fields flattened for the
- * homepage grid, the compare tool and the league table. Neutral base
- * order (by manager, then strategy) — the UI re-sorts on demand, so the
- * feed itself does not imply a performance ranking.
+ * homepage grid, the compare tool, the league table and the PMS
+ * explorer. Neutral base order (by manager, then strategy) — the UI
+ * re-sorts on demand, so the feed itself does not imply a performance
+ * ranking.
  */
 export const livePmsStrategiesQuery = groq`
   *[_type == "pmsStrategy" && !(_id in path("drafts.**"))]
@@ -94,7 +95,11 @@ export const livePmsStrategiesQuery = groq`
       category,
       aumCr,
       minInvestmentL,
+      "returns1m": returns.m1,
+      "returns3m": returns.m3,
+      "returns6m": returns.m6,
       "returns1y": returns.y1,
+      "returns2y": returns.y2,
       "returns3y": returns.y3,
       "returns5y": returns.y5,
       "sinceInception": returns.sinceInception,

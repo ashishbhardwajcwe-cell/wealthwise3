@@ -69,7 +69,11 @@ export interface LivePmsStrategy {
   category?: string;
   aumCr?: number;
   minInvestmentL?: number;
+  returns1m?: number;
+  returns3m?: number;
+  returns6m?: number;
   returns1y?: number;
+  returns2y?: number;
   returns3y?: number;
   returns5y?: number;
   sinceInception?: number;
