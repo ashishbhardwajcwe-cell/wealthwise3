@@ -5,19 +5,24 @@ import {
   Search, X, Check, Scale, Info, SlidersHorizontal,
   ArrowUpRight, ArrowDownRight, ChevronRight,
 } from "lucide-react";
+import type { LivePmsStrategy } from "@/lib/investment-data";
+import { hasImplausibleReturn } from "@/components/data-tables/LeagueTable";
+import { fmtAsOf, latestAmfiDate } from "@/components/tables/table-utils";
 
 /*
   PlanMyCashflows — PMS Explorer
   ------------------------------------------------------------------
-  Ported from the standalone prototype for /investment-products/pms.
+  Card-based explorer for the live PMS feed.
 
+  - Data comes in as LivePmsStrategy[] (the same livePmsStrategiesQuery
+    feed that powers the league table and compare tool), passed from a
+    server component via getLivePmsStrategies(). Rows with implausible
+    returns are dropped with the league table's hasImplausibleReturn
+    before anything renders.
   - Fonts (Fraunces / Inter / IBM Plex Mono) are loaded via next/font in
     app/layout.tsx and exposed as CSS variables; the .font-display / .font-ui
     / .font-num helpers live in app/globals.css alongside the :root design
     tokens (--ink, --green, --pos, --neg, …).
-  - STRATEGIES is a hand-built sample (~30 funds, as-on 30 Jun 2026)
-    assembled from live data + the compendium grid. Swap it for the real
-    feed — the card only needs the Strategy shape defined below.
   - "Alpha" = strategy return − benchmark return for the SELECTED period.
     Benchmark = S&P BSE 500 TRI. Periods with no clean benchmark (5Y, SI)
     show raw return, no alpha.
@@ -31,62 +36,59 @@ type SortKey = "aum" | "alpha" | "return" | "name";
 /** Return figures keyed by period; null where a figure isn't published. */
 type PeriodReturns = Record<Period, number | null>;
 
-/** Shape of one PMS strategy row consumed by the explorer. */
+/** Shape of one PMS strategy row consumed by the explorer cards. */
 export type Strategy = {
+  id: string;
   manager: string;
   strategy: string;
-  category: string;
-  aum: number; // ₹ crore
-  since: string;
+  category: string | null;
+  aum: number | null; // ₹ crore
+  since: string | null;
   returns: PeriodReturns;
 };
 
-/* ---- benchmark: S&P BSE 500 TRI, same periods as the cards ---- */
+/* ---- benchmark: S&P BSE 500 TRI, same periods as the cards ----
+   Not in Sanity — hardcoded, so UPDATE THESE VALUES during the monthly
+   data refresh (current figures as on 30 Jun 2026). 5Y and SI stay null:
+   there is no clean like-for-like series for them, so those periods show
+   raw return with no alpha. */
 const BENCH: Record<Period, number | null> = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
 const BENCH_NAME = "S&P BSE 500 TRI";
-const AS_ON = "30 Jun 2026";
 
-/* ---- sample data (real published figures, curated subset) ---- */
-const STRATEGIES: Strategy[] = [
-  { manager: "Stallion Asset", strategy: "Core Fund", category: "Multicap", aum: 8102, since: "Oct 2018", returns: { "1M": 7.56, "3M": 15.17, "6M": 4.72, "1Y": 15.31, "2Y": 21.25, "3Y": 39.14, "5Y": 25.9, "SI": 28.02 } },
-  { manager: "Aequitas", strategy: "India Opportunities Product", category: "Smallcap", aum: 2637, since: "Feb 2013", returns: { "1M": 0.52, "3M": -5.02, "6M": 15.55, "1Y": 41.15, "2Y": 31.12, "3Y": 41.13, "5Y": 38.16, "SI": 32.9 } },
-  { manager: "Wallfort", strategy: "Diversified Fund", category: "Mid & Small", aum: 574, since: "Nov 2018", returns: { "1M": 0.7, "3M": 8.59, "6M": -8.52, "1Y": 4.2, "2Y": 17.17, "3Y": 38.05, "5Y": 26.57, "SI": 22.22 } },
-  { manager: "Green Lantern Capital", strategy: "Growth Fund", category: "Mid & Small", aum: 1769, since: "Dec 2017", returns: { "1M": -0.29, "3M": 7.65, "6M": 9.4, "1Y": 7.89, "2Y": 8.92, "3Y": 37.85, "5Y": 34.86, "SI": 23.17 } },
-  { manager: "Sundaram Alternates", strategy: "SISOP", category: "Multicap", aum: 1865, since: "Feb 2010", returns: { "1M": 7.5, "3M": 16.5, "6M": 17.3, "1Y": 33.7, "2Y": 28.6, "3Y": 25.3, "5Y": 19.07, "SI": 18.87 } },
-  { manager: "Sundaram Alternates", strategy: "S.E.L.F", category: "Midcap", aum: 1027, since: "Jun 2010", returns: { "1M": 8.2, "3M": 18.7, "6M": 19.8, "1Y": 35.1, "2Y": 24.7, "3Y": 24.6, "5Y": 17.96, "SI": 18.32 } },
-  { manager: "Carnelian", strategy: "Bespoke Portfolio", category: "Multicap", aum: 3645, since: "Aug 2019", returns: { "1M": 4.6, "3M": 6.93, "6M": 1.01, "1Y": 14.22, "2Y": 13.67, "3Y": 25.33, "5Y": null, "SI": 25.58 } },
-  { manager: "Carnelian", strategy: "Shift Strategy", category: "Mid & Small", aum: 5699, since: "Dec 2021", returns: { "1M": 5.07, "3M": 8.17, "6M": 0.19, "1Y": 5.4, "2Y": 13.26, "3Y": 23.74, "5Y": null, "SI": null } },
-  { manager: "ICICI Prudential", strategy: "PMS Contra Strategy", category: "Flexicap", aum: 13837, since: "Sep 2018", returns: { "1M": -0.16, "3M": -2.99, "6M": -1.65, "1Y": 4.29, "2Y": 4.29, "3Y": 19.0, "5Y": 17.47, "SI": 18.02 } },
-  { manager: "ICICI Prudential", strategy: "PMS PIPE Strategy", category: "Smallcap", aum: 7830, since: "Sep 2019", returns: { "1M": 0.09, "3M": 3.2, "6M": 1.42, "1Y": 5.95, "2Y": 6.81, "3Y": 22.2, "5Y": null, "SI": 25.05 } },
-  { manager: "ICICI Prudential", strategy: "PMS Largecap Strategy", category: "Largecap", aum: 879, since: "Mar 2009", returns: { "1M": 1.1, "3M": -4.08, "6M": -2.72, "1Y": 3.09, "2Y": 4.96, "3Y": 19.51, "5Y": 16.02, "SI": 15.82 } },
-  { manager: "Abakkus", strategy: "All Cap Approach", category: "Multicap", aum: 7767, since: "Oct 2020", returns: { "1M": 1.23, "3M": -2.27, "6M": -0.27, "1Y": 8.69, "2Y": 6.78, "3Y": 17.05, "5Y": null, "SI": 22.95 } },
-  { manager: "Abakkus", strategy: "Emerging Opportunities", category: "Mid & Small", aum: 5943, since: "Oct 2020", returns: { "1M": -1.71, "3M": 1.89, "6M": -3.71, "1Y": -2.39, "2Y": 7.28, "3Y": 18.14, "5Y": null, "SI": 26.43 } },
-  { manager: "Buoyant Capital", strategy: "Opportunities PMS", category: "Multicap", aum: 11548, since: "Jun 2016", returns: { "1M": -0.78, "3M": -3.73, "6M": -2.48, "1Y": 8.11, "2Y": 12.03, "3Y": 18.92, "5Y": null, "SI": 20.75 } },
-  { manager: "ValueQuest", strategy: "Growth", category: "Multicap", aum: 2020, since: "Jul 2018", returns: { "1M": 6.0, "3M": 18.8, "6M": 11.9, "1Y": 16.2, "2Y": 11.1, "3Y": 18.9, "5Y": null, "SI": null } },
-  { manager: "Equitree Capital", strategy: "Emerging Opportunities", category: "Smallcap", aum: 1512, since: "Oct 2017", returns: { "1M": -0.69, "3M": 8.78, "6M": -5.71, "1Y": -6.87, "2Y": 7.97, "3Y": 27.24, "5Y": 23.23, "SI": 7.9 } },
-  { manager: "Counter Cyclical", strategy: "Diversified Long Term Value", category: "Smallcap", aum: 972, since: "Nov 2018", returns: { "1M": 4.53, "3M": 11.12, "6M": 2.38, "1Y": -3.12, "2Y": 10.16, "3Y": 22.64, "5Y": 32.56, "SI": 44.64 } },
-  { manager: "Sundaram Alternates", strategy: "Rising Stars", category: "Smallcap", aum: 121, since: "Nov 2009", returns: { "1M": 5.7, "3M": 18.6, "6M": 22.0, "1Y": 37.2, "2Y": 23.5, "3Y": 17.8, "5Y": 16.94, "SI": 15.14 } },
-  { manager: "Aditya Birla Sun Life", strategy: "Select Sector Portfolio", category: "Mid & Small", aum: 588, since: "Oct 2009", returns: { "1M": 4.03, "3M": 9.13, "6M": 6.91, "1Y": 12.63, "2Y": 18.13, "3Y": 27.64, "5Y": 19.86, "SI": 17.25 } },
-  { manager: "Wallfort", strategy: "Avenue Fund", category: "Mid & Small", aum: 146, since: "Feb 2022", returns: { "1M": 0.23, "3M": 7.27, "6M": 5.19, "1Y": 25.52, "2Y": 14.72, "3Y": 30.5, "5Y": null, "SI": 25.01 } },
-  { manager: "InCred", strategy: "Healthcare Portfolio", category: "Thematic", aum: 657, since: "Feb 2023", returns: { "1M": 7.12, "3M": 8.61, "6M": -6.51, "1Y": 10.19, "2Y": 25.56, "3Y": 28.28, "5Y": null, "SI": null } },
-  { manager: "Negen Capital", strategy: "Special Situations & Dynamic Allocation", category: "Thematic", aum: 1451, since: "Aug 2017", returns: { "1M": 2.45, "3M": 10.39, "6M": 1.77, "1Y": -0.35, "2Y": 11.71, "3Y": 24.59, "5Y": null, "SI": 17.51 } },
-  { manager: "Invesco", strategy: "India R.I.S.E Portfolio", category: "Thematic", aum: 338, since: "—", returns: { "1M": 0.63, "3M": -2.14, "6M": -0.76, "1Y": 10.92, "2Y": 6.24, "3Y": 18.69, "5Y": null, "SI": null } },
-  { manager: "360 ONE", strategy: "Phoenix Portfolio", category: "Multicap", aum: 1754, since: "Jan 2021", returns: { "1M": 1.97, "3M": -1.36, "6M": -3.39, "1Y": 1.77, "2Y": 4.52, "3Y": 16.59, "5Y": 16.2, "SI": 17.56 } },
-  { manager: "Unifi Capital", strategy: "APJ (formerly APJ 20)", category: "Midcap", aum: 900, since: "—", returns: { "1M": 1.32, "3M": 1.15, "6M": -5.43, "1Y": -1.77, "2Y": 4.5, "3Y": 13.57, "5Y": null, "SI": null } },
-  { manager: "Marcellus", strategy: "Consistent Compounders", category: "Largecap", aum: 1666, since: "—", returns: { "1M": 4.0, "3M": 1.11, "6M": -4.6, "1Y": -4.05, "2Y": 2.3, "3Y": 5.43, "5Y": null, "SI": null } },
-  { manager: "Marcellus", strategy: "Kings of Capital", category: "Largecap", aum: 135, since: "—", returns: { "1M": 0.32, "3M": -2.19, "6M": -7.77, "1Y": -6.12, "2Y": 7.11, "3Y": 8.25, "5Y": null, "SI": null } },
-  { manager: "Marcellus", strategy: "Little Champs", category: "Midcap", aum: 129, since: "—", returns: { "1M": 0.67, "3M": 0.98, "6M": -6.06, "1Y": -6.77, "2Y": 0.93, "3Y": 1.96, "5Y": null, "SI": null } },
-  { manager: "Estee Advisors", strategy: "I Alpha", category: "Hybrid", aum: 257, since: "Sep 2009", returns: { "1M": 0.87, "3M": 2.08, "6M": 3.9, "1Y": 7.9, "2Y": 9.36, "3Y": 10.7, "5Y": 9.06, "SI": 10.46 } },
-  { manager: "Asit C. Mehta", strategy: "Ace Multi Asset Portfolio", category: "Hybrid", aum: 12, since: "Oct 2018", returns: { "1M": 0.01, "3M": 1.03, "6M": -1.62, "1Y": 6.8, "2Y": 5.55, "3Y": 25.15, "5Y": 19.63, "SI": 16.41 } },
-];
+/* ---------- data mapping ---------- */
+const orNull = (v: number | null | undefined): number | null => (typeof v === "number" ? v : null);
 
-const CATEGORIES: string[] = ["All", "Largecap", "Flexicap", "Multicap", "Mid & Small", "Midcap", "Smallcap", "Thematic", "Hybrid"];
+/** Map one Sanity feed row (flattened livePmsStrategiesQuery projection) to the card shape. */
+function toExplorerStrategy(s: LivePmsStrategy): Strategy {
+  return {
+    id: s._id,
+    manager: s.manager,
+    strategy: s.strategyName,
+    category: s.category ?? null,
+    aum: orNull(s.aumCr),
+    // pmsStrategy has no inception-date field (asOfDate is the data refresh
+    // date, not launch). Map it here when the schema gains one — the card
+    // and brief sheet already hide their "Since" line while this is null.
+    since: null,
+    returns: {
+      "1M": orNull(s.returns1m),
+      "3M": orNull(s.returns3m),
+      "6M": orNull(s.returns6m),
+      "1Y": orNull(s.returns1y),
+      "2Y": orNull(s.returns2y),
+      "3Y": orNull(s.returns3y),
+      "5Y": orNull(s.returns5y),
+      "SI": orNull(s.sinceInception),
+    },
+  };
+}
+
 const PERIODS: Period[] = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "SI"];
 const HEADLINE_PERIODS: Period[] = ["1M", "6M", "1Y", "3Y", "5Y", "SI"]; // tiles shown on the card
 
 /* ---------- helpers ---------- */
 const fmtPct = (v: number | null | undefined): string => (v === null || v === undefined ? "N/A" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%`);
-const fmtAum = (cr: number): string => (cr >= 1000 ? `₹${(cr / 1000).toFixed(2)}K Cr` : `₹${cr.toLocaleString("en-IN")} Cr`);
+const fmtAum = (cr: number | null): string => (cr === null ? "—" : cr >= 1000 ? `₹${(cr / 1000).toFixed(2)}K Cr` : `₹${cr.toLocaleString("en-IN")} Cr`);
 const toneOf = (v: number | null | undefined): Tone => (v === null || v === undefined ? "flat" : v > 0.0001 ? "pos" : v < -0.0001 ? "neg" : "flat");
 const toneColor: Record<Tone, string> = { pos: "var(--pos)", neg: "var(--neg)", flat: "var(--flat)" };
 const toneBg: Record<Tone, string> = { pos: "var(--pos-bg)", neg: "var(--neg-bg)", flat: "var(--flat-bg)" };
@@ -137,7 +139,7 @@ function ReturnTile({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="rounded-lg px-2 py-1.5 text-center" style={{ background: "var(--flat-bg)", border: "1px solid var(--line)" }}>
       <div className="font-num" style={{ fontSize: 13, fontWeight: 600, color: value === null ? "var(--muted)" : toneColor[t], lineHeight: 1.1 }}>
-        {value === null ? "—" : `${value > 0 ? "" : ""}${value.toFixed(1)}%`}
+        {value === null ? "—" : `${value.toFixed(1)}%`}
       </div>
       <div className="font-num" style={{ fontSize: 10, color: "var(--muted)", marginTop: 2, letterSpacing: 0.3 }}>{label}</div>
     </div>
@@ -167,12 +169,14 @@ function StrategyCard({ s, period, selected, onCompare, onBrief }: {
             </div>
             <div className="min-w-0">
               <div className="font-ui truncate" style={{ fontSize: 12, color: "var(--muted)" }}>{s.manager}</div>
-              <div className="font-num" style={{ fontSize: 11, color: "var(--muted)" }}>Since {s.since}</div>
+              {s.since && <div className="font-num" style={{ fontSize: 11, color: "var(--muted)" }}>Since {s.since}</div>}
             </div>
           </div>
-          <span className="font-ui shrink-0 rounded-full px-2 py-0.5" style={{ fontSize: 11, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
-            {s.category}
-          </span>
+          {s.category && (
+            <span className="font-ui shrink-0 rounded-full px-2 py-0.5" style={{ fontSize: 11, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
+              {s.category}
+            </span>
+          )}
         </div>
 
         {/* strategy name */}
@@ -222,9 +226,15 @@ function StrategyCard({ s, period, selected, onCompare, onBrief }: {
 }
 
 /* ---------- brief sheet ---------- */
-function BriefSheet({ s, onClose }: { s: Strategy | null; onClose: () => void }) {
+function BriefSheet({ s, asOn, onClose }: { s: Strategy | null; asOn: string; onClose: () => void }) {
   if (!s) return null;
   const nBeat = beats(s.returns, ["1Y", "2Y", "3Y"]);
+  const facts: [string, string][] = [
+    ...(s.category ? ([["Category", s.category]] as [string, string][]) : []),
+    ["AUM", fmtAum(s.aum)],
+    ["Minimum", "₹50 lakh"],
+    ...(s.since ? ([["Since", s.since]] as [string, string][]) : []),
+  ];
   return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: "rgba(15,26,20,0.45)" }} onClick={onClose}>
       <div className="h-full w-full max-w-md bg-white overflow-y-auto" style={{ boxShadow: "-8px 0 40px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
@@ -239,7 +249,7 @@ function BriefSheet({ s, onClose }: { s: Strategy | null; onClose: () => void })
         <div className="p-5">
           {/* facts */}
           <div className="grid grid-cols-2 gap-3">
-            {([["Category", s.category], ["AUM", fmtAum(s.aum)], ["Minimum", "₹50 lakh"], ["Since", s.since]] as [string, string][]).map(([k, v]) => (
+            {facts.map(([k, v]) => (
               <div key={k} className="rounded-xl px-3 py-2.5" style={{ background: "var(--flat-bg)" }}>
                 <div className="font-ui" style={{ fontSize: 11, color: "var(--muted)" }}>{k}</div>
                 <div className="font-num" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>{v}</div>
@@ -283,7 +293,7 @@ function BriefSheet({ s, onClose }: { s: Strategy | null; onClose: () => void })
             <p className="font-ui" style={{ fontSize: 12.5, color: "var(--ink)", lineHeight: 1.5, margin: 0 }}>
               Beat the benchmark in <strong>{nBeat} of 3</strong> long-term windows (1Y / 2Y / 3Y).
               {nBeat >= 2 ? " Consistent alpha across cycles — the number worth trusting." : " Thin long-term alpha — the recent figure may be flattering. Check the 3Y before the 1M."}
-              {" "}Returns are TWRR at strategy level, as on {AS_ON}. Your own return depends on entry timing. Past performance doesn&apos;t predict the future.
+              {" "}Returns are TWRR at strategy level, as on {asOn}. Your own return depends on entry timing. Past performance doesn&apos;t predict the future.
             </p>
           </div>
 
@@ -303,6 +313,12 @@ function CompareModal({ items, onClose, onRemove }: {
   onRemove: (s: Strategy) => void;
 }) {
   if (!items.length) return null;
+  // Facts rows — the category row is dropped entirely while the category
+  // enrichment pass hasn't run, instead of rendering a row of dashes.
+  const factRows: [string, (s: Strategy) => string][] = [
+    ...(items.some((s) => s.category) ? ([["Category", (s: Strategy) => s.category ?? "—"]] as [string, (s: Strategy) => string][]) : []),
+    ["AUM", (s: Strategy) => fmtAum(s.aum)],
+  ];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,26,20,0.5)" }} onClick={onClose}>
       <div className="w-full max-w-4xl max-h-[85vh] overflow-auto rounded-2xl bg-white" onClick={(e) => e.stopPropagation()}>
@@ -316,7 +332,7 @@ function CompareModal({ items, onClose, onRemove }: {
               <tr>
                 <th></th>
                 {items.map((s) => (
-                  <th key={s.strategy} className="px-3 pb-3 text-left align-bottom">
+                  <th key={s.id} className="px-3 pb-3 text-left align-bottom">
                     <div className="font-ui" style={{ fontSize: 11, color: "var(--muted)" }}>{s.manager}</div>
                     <div className="font-display" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", lineHeight: 1.1 }}>{s.strategy}</div>
                     <button onClick={() => onRemove(s)} className="font-ui mt-1" style={{ fontSize: 11, color: "var(--neg)" }}>remove</button>
@@ -325,10 +341,10 @@ function CompareModal({ items, onClose, onRemove }: {
               </tr>
             </thead>
             <tbody>
-              {([["Category", (s: Strategy) => s.category], ["AUM", (s: Strategy) => fmtAum(s.aum)]] as [string, (s: Strategy) => string][]).map(([label, fn]) => (
+              {factRows.map(([label, fn]) => (
                 <tr key={label} style={{ borderTop: "1px solid var(--line)" }}>
                   <td className="font-ui px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{label}</td>
-                  {items.map((s) => <td key={s.strategy} className="font-num px-3 py-2" style={{ fontSize: 13, color: "var(--ink)" }}>{fn(s)}</td>)}
+                  {items.map((s) => <td key={s.id} className="font-num px-3 py-2" style={{ fontSize: 13, color: "var(--ink)" }}>{fn(s)}</td>)}
                 </tr>
               ))}
               {PERIODS.map((p) => (
@@ -337,7 +353,7 @@ function CompareModal({ items, onClose, onRemove }: {
                   {items.map((s) => {
                     const a = alphaFor(s.returns, p);
                     return (
-                      <td key={s.strategy} className="px-3 py-2">
+                      <td key={s.id} className="px-3 py-2">
                         <span className="font-num" style={{ fontSize: 13, fontWeight: 600, color: s.returns[p] === null ? "var(--muted)" : toneColor[toneOf(s.returns[p])] }}>{fmtPct(s.returns[p])}</span>
                         {a !== null && <span className="font-num" style={{ fontSize: 11, color: toneColor[toneOf(a)], marginLeft: 6 }}>{a > 0 ? "+" : ""}{a.toFixed(1)}</span>}
                       </td>
@@ -354,7 +370,7 @@ function CompareModal({ items, onClose, onRemove }: {
 }
 
 /* ---------- main ---------- */
-export default function PMSExplorer() {
+export default function PMSExplorer({ strategies }: { strategies: LivePmsStrategy[] }) {
   const [category, setCategory] = useState<string>("All");
   const [period, setPeriod] = useState<Period>("3Y");
   const [sort, setSort] = useState<SortKey>("aum");
@@ -364,15 +380,30 @@ export default function PMSExplorer() {
   const [brief, setBrief] = useState<Strategy | null>(null);
   const [showCompare, setShowCompare] = useState<boolean>(false);
 
+  // Drop reporting artifacts first — same guard as the league table — so
+  // cards, categories, count and as-of date all reflect the trustworthy set.
+  const clean = useMemo(() => strategies.filter((s) => !hasImplausibleReturn(s)), [strategies]);
+  const data = useMemo<Strategy[]>(() => clean.map(toExplorerStrategy), [clean]);
+  const asOf = useMemo(() => fmtAsOf(latestAmfiDate(clean.map((s) => s.asOfDate))), [clean]);
+
+  // Category chips only exist for categories actually present in the data.
+  // While the enrichment pass hasn't run (category mostly empty), this is
+  // [] and the whole filter row hides.
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach((s) => { if (s.category) set.add(s.category); });
+    return set.size > 0 ? ["All", ...Array.from(set).sort()] : [];
+  }, [data]);
+
   const toggleCompare = (s: Strategy) => {
-    setCompare((prev) => prev.find((x) => x.strategy === s.strategy && x.manager === s.manager)
-      ? prev.filter((x) => !(x.strategy === s.strategy && x.manager === s.manager))
+    setCompare((prev) => prev.find((x) => x.id === s.id)
+      ? prev.filter((x) => x.id !== s.id)
       : prev.length >= 3 ? prev : [...prev, s]);
   };
-  const isSelected = (s: Strategy) => !!compare.find((x) => x.strategy === s.strategy && x.manager === s.manager);
+  const isSelected = (s: Strategy) => !!compare.find((x) => x.id === s.id);
 
   const filtered = useMemo<Strategy[]>(() => {
-    let list = STRATEGIES.filter((s) => category === "All" || s.category === category);
+    let list = data.filter((s) => category === "All" || s.category === category);
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter((s) => (s.manager + " " + s.strategy).toLowerCase().includes(q));
@@ -380,14 +411,14 @@ export default function PMSExplorer() {
     if (beatOnly && BENCH[period] !== null) list = list.filter((s) => (alphaFor(s.returns, period) ?? -Infinity) > 0);
     const val = (s: Strategy) => s.returns[period];
     list = [...list].sort((a, b) => {
-      if (sort === "aum") return b.aum - a.aum;
+      if (sort === "aum") return (b.aum ?? -1) - (a.aum ?? -1);
       if (sort === "return") return (val(b) ?? -999) - (val(a) ?? -999);
       if (sort === "alpha") return (alphaFor(b.returns, period) ?? -999) - (alphaFor(a.returns, period) ?? -999);
       if (sort === "name") return (a.manager + a.strategy).localeCompare(b.manager + b.strategy);
       return 0;
     });
     return list;
-  }, [category, period, sort, query, beatOnly]);
+  }, [data, category, period, sort, query, beatOnly]);
 
   const chipStyle = (active: boolean): CSSProperties => ({
     fontSize: 13, fontWeight: 500,
@@ -409,8 +440,8 @@ export default function PMSExplorer() {
             </p>
           </div>
           <div className="text-right">
-            <div className="font-num" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{STRATEGIES.length} of 1,734 shown</div>
-            <div className="font-ui" style={{ fontSize: 12, color: "var(--muted)" }}>as on {AS_ON}</div>
+            <div className="font-num" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{filtered.length} of {data.length} shown</div>
+            <div className="font-ui" style={{ fontSize: 12, color: "var(--muted)" }}>as on {asOf}</div>
           </div>
         </div>
 
@@ -445,12 +476,12 @@ export default function PMSExplorer() {
             </div>
           </div>
 
-          {/* category chips + beat-only */}
+          {/* category chips (hidden while the data has no categories) + beat-only */}
           <div className="flex items-center gap-2 mt-2.5 overflow-x-auto pb-1 pmc-scroll">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button key={c} onClick={() => setCategory(c)} className="font-ui whitespace-nowrap rounded-full px-3 py-1.5" style={chipStyle(category === c)}>{c}</button>
             ))}
-            <div style={{ width: 1, height: 22, background: "var(--line)", margin: "0 4px" }} />
+            {categories.length > 0 && <div style={{ width: 1, height: 22, background: "var(--line)", margin: "0 4px" }} />}
             <button onClick={() => setBeatOnly((v) => !v)} title={BENCH[period] === null ? "No benchmark for this period" : ""}
               disabled={BENCH[period] === null}
               className="font-ui whitespace-nowrap inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
@@ -462,7 +493,12 @@ export default function PMSExplorer() {
         </div>
 
         {/* grid */}
-        {filtered.length === 0 ? (
+        {data.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="font-display" style={{ fontSize: 20, color: "var(--ink)" }}>Live data is being onboarded.</p>
+            <p className="font-ui" style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>We refresh PMS strategy returns monthly from APMI disclosures — check back shortly.</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <p className="font-display" style={{ fontSize: 20, color: "var(--ink)" }}>No strategies match those filters.</p>
             <p className="font-ui" style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>Try clearing “beat benchmark only,” or widening the category.</p>
@@ -470,7 +506,7 @@ export default function PMSExplorer() {
         ) : (
           <div className="grid gap-4 mt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
             {filtered.map((s) => (
-              <StrategyCard key={s.manager + s.strategy} s={s} period={period}
+              <StrategyCard key={s.id} s={s} period={period}
                 selected={isSelected(s)} onCompare={toggleCompare} onBrief={setBrief} />
             ))}
           </div>
@@ -478,7 +514,7 @@ export default function PMSExplorer() {
 
         {/* footnote */}
         <p className="font-ui mt-8" style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, maxWidth: 720 }}>
-          Returns are Time-Weighted Rate of Return at the strategy level, annualised beyond 1 year, as on {AS_ON}. Alpha is return minus {BENCH_NAME} for the same window (shown where a like-for-like benchmark exists). Figures are sourced from disclosures and are not verified by SEBI. Past performance is not indicative of future returns. Minimum investment ₹50 lakh (SEBI mandate). This is not investment advice.
+          Returns are Time-Weighted Rate of Return at the strategy level, annualised beyond 1 year, as on {asOf}. Alpha is return minus {BENCH_NAME} for the same window (shown where a like-for-like benchmark exists). Figures are sourced from disclosures and are not verified by SEBI. Past performance is not indicative of future returns. Minimum investment ₹50 lakh (SEBI mandate). This is not investment advice.
         </p>
       </div>
 
@@ -489,7 +525,7 @@ export default function PMSExplorer() {
             <div className="flex items-center gap-2 overflow-x-auto pmc-scroll">
               <span className="font-ui shrink-0" style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{compare.length}/3 to compare:</span>
               {compare.map((s) => (
-                <span key={s.strategy} className="font-ui shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1" style={{ fontSize: 12, background: "rgba(255,255,255,0.12)", color: "#fff" }}>
+                <span key={s.id} className="font-ui shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1" style={{ fontSize: 12, background: "rgba(255,255,255,0.12)", color: "#fff" }}>
                   {s.strategy}<button onClick={() => toggleCompare(s)}><X size={12} /></button>
                 </span>
               ))}
@@ -502,7 +538,7 @@ export default function PMSExplorer() {
         </div>
       )}
 
-      <BriefSheet s={brief} onClose={() => setBrief(null)} />
+      <BriefSheet s={brief} asOn={asOf} onClose={() => setBrief(null)} />
       {showCompare && <CompareModal items={compare} onClose={() => setShowCompare(false)} onRemove={toggleCompare} />}
     </div>
   );
