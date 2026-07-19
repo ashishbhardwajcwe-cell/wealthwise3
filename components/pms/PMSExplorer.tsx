@@ -106,8 +106,12 @@ const beats = (ret: PeriodReturns, periods: Period[]): number =>
   }, 0);
 
 /* ---------- small pieces ---------- */
-function AlphaChip({ value }: { value: number | null }) {
-  if (value === null) return <span className="font-num" style={{ fontSize: 12, color: "var(--muted)" }}>no benchmark</span>;
+function AlphaChip({ value, ret }: { value: number | null; ret: number | null }) {
+  if (value === null) {
+    // Missing return → "no data"; return present but no benchmark series
+    // for this period (BENCH[period] null → alpha null) → "no benchmark".
+    return <span className="font-num" style={{ fontSize: 12, color: "var(--muted)" }}>{ret === null ? "no data" : "no benchmark"}</span>;
+  }
   const t = toneOf(value);
   const Icon = value > 0 ? ArrowUpRight : ArrowDownRight;
   return (
@@ -191,7 +195,7 @@ function StrategyCard({ s, period, selected, onCompare, onBrief }: {
             <div className="font-ui" style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>{period} return {period !== "1M" && period !== "3M" && period !== "6M" ? "· annualised" : ""}</div>
           </div>
           <div className="flex flex-col items-end gap-1.5 pb-0.5">
-            <AlphaChip value={alpha} />
+            <AlphaChip value={alpha} ret={ret} />
             <ConsistencyDots ret={s.returns} />
           </div>
         </div>
