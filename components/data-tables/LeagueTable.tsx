@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { LivePmsStrategy } from "@/lib/investment-data";
+import { hasImplausibleReturn } from "@/lib/pms";
 import {
   Th, PlainTh, pillBtn, fmtPct, fmtAumCr, fmtMinL, fmtAsOf,
   useTableSort, sortRows, latestAmfiDate,
@@ -16,21 +17,6 @@ const PERIODS: Period[] = ["1Y", "3Y", "5Y"];
 
 function periodReturn(s: LivePmsStrategy, p: Period): number | undefined {
   return p === "1Y" ? s.returns1y : p === "3Y" ? s.returns3y : s.returns5y;
-}
-
-const PLAUSIBLE_MIN = -95;   // % — below this is a reporting artifact, not a real annualised return
-const PLAUSIBLE_MAX = 300;   // % — above this in any period is almost certainly not annualised
-
-/**
- * True when any of the strategy's headline returns falls outside the
- * plausible band for an annualised equity figure. APMI's feed mixes in
- * liquid-fund / structured-product / debt rows whose "return" columns are
- * not annualised equity returns (e.g. −113%, which is mathematically
- * impossible); those must not pollute a public performance table.
- */
-export function hasImplausibleReturn(s: LivePmsStrategy): boolean {
-  const vals = [s.returns1y, s.returns3y, s.returns5y];
-  return vals.some((v) => typeof v === "number" && (v < PLAUSIBLE_MIN || v > PLAUSIBLE_MAX));
 }
 
 function getValue(s: LivePmsStrategy, key: SortKey, period: Period): string | number | undefined {
