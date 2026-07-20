@@ -5,7 +5,7 @@ import Link from "next/link";
 import { placeholderStrategies } from "@/lib/home-content";
 import type { LivePmsStrategy } from "@/lib/investment-data";
 import { fmtPct, fmtAumCr, fmtMinL, fmtAsOf, latestAmfiDate } from "@/components/tables/table-utils";
-import { hasImplausibleReturn } from "@/components/data-tables/LeagueTable";
+import { hasImplausibleReturn } from "@/lib/pms";
 
 const MAX_COLUMNS = 3;
 
