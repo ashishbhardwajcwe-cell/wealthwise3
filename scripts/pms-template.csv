@@ -1,1 +1,1 @@
-strategyName,manager,category,aumCr,minInvestmentL,returns1y,returns3y,returns5y,sinceInception,feesFixed,feesPerformance,feesHurdle,asOfDate,source,notes
+strategyName,manager,category,aumCr,minInvestmentL,returns1m,returns3m,returns6m,returns1y,returns2y,returns3y,returns4y,returns5y,sinceInception,feesFixed,feesPerformance,feesHurdle,asOfDate,source,notes,sanityId

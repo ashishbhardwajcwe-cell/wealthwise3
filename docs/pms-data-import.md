@@ -33,11 +33,12 @@ copyrighted reproduction).
    | category | – | one of `Multicap, Largecap, Midcap, Smallcap, Thematic, Quant, Hybrid` |
    | aumCr | – | AUM in ₹ crore |
    | minInvestmentL | – | minimum in ₹ lakh (SEBI floor is 50) |
-   | returns1y / returns3y / returns5y / sinceInception | – | % CAGR as published by APMI |
+   | returns1m / returns3m / returns6m / returns1y / returns2y / returns3y / returns4y / returns5y / sinceInception | – | % as published by APMI (annualised beyond 1Y) |
    | feesFixed / feesPerformance / feesHurdle | – | % figures from the manager's disclosure |
    | asOfDate | ✅ | `YYYY-MM-DD` — the month-end the APMI numbers refer to |
    | source | ✅ | e.g. `APMI monthly report, May 2026` |
    | notes | – | one-line editorial note, educational framing only |
+   | sanityId | – | pin the row to an exact existing document `_id` — only needed when the importer reports an ambiguous rename match |
 
 3. Run the import (needs a Sanity **write** token; the read-only token used
    by the website is not enough — create an Editor token once in
@@ -51,10 +52,26 @@ copyrighted reproduction).
    deploy or via the Sanity webhook).
 
 Re-running is safe: the document id is derived from manager + strategy
-name, so each month's run **updates** the same records. Strategies you add
-by hand in the Studio are never touched. Keep `scripts/pms-data.csv` out of
-git if you prefer (it contains only public data, so committing it is also
-fine and gives you a history of what was published when).
+name, so each month's run **updates** the same records. Two guards make
+this robust:
+
+- **Rename guard.** If APMI (or you) renames a manager or strategy between
+  months ("Stallion Asset" → "Stallion Asset Private Limited"), the row's
+  derived id no longer matches. Instead of silently creating a duplicate,
+  the importer fuzzy-matches the row against the existing documents: a
+  unique near-duplicate keeps its existing id (reported as "matched despite
+  a rename"), and an ambiguous match aborts the import with the candidate
+  ids so you can pin the right one via the `sanityId` column.
+- **Carry-forward.** Hand-curated fields the CSV doesn't carry — category,
+  notes, fees, minInvestmentL — are preserved from the existing document
+  instead of being wiped by the update. Returns and AUM always come from
+  the CSV (never carried forward), so stale numbers can't survive under a
+  fresh as-of date.
+
+Strategies you add by hand in the Studio are never touched unless a CSV row
+matches them. Keep `scripts/pms-data.csv` out of git if you prefer (it
+contains only public data, so committing it is also fine and gives you a
+history of what was published when).
 
 ## Compliance notes
 

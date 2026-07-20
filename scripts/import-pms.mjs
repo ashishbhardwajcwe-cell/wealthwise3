@@ -27,9 +27,20 @@
  * The Sanity document _id is derived from manager + strategy name, so
  * re-running the import next month UPDATES the same records instead of
  * duplicating them. Documents created manually in the Studio are untouched.
+ *
+ * Rename guard: manager/strategy names drift between refreshes ("Stallion
+ * Asset" vs "Stallion Asset Private Limited"), which would mint a duplicate
+ * document under a fresh _id. Before writing, each row whose _id doesn't
+ * already exist is fuzzy-matched against the existing documents; a unique
+ * near-duplicate keeps its existing _id, an ambiguous one aborts the import
+ * and asks you to pin the target via the optional `sanityId` CSV column.
+ * Hand-curated fields the CSV doesn't provide (category, notes, fees,
+ * minInvestmentL) are carried forward from the existing document instead of
+ * being wiped by the createOrReplace.
  */
 
-import { requireSanityEnv, readCsvArg, num, slugify, prune, sanityUpsert } from "./import-shared.mjs";
+import { requireSanityEnv, readCsvArg, num, slugify, prune, sanityUpsert, sanityQuery } from "./import-shared.mjs";
+import { resolveImportTarget } from "./pms-matching.mjs";
 
 const VALID_CATEGORIES = ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid"];
 
@@ -82,8 +93,10 @@ rows.slice(1).forEach((r, i) => {
   };
 
   docs.push({
-    _id: `pmsStrategy-${slugify(`${manager}-${strategyName}`)}`,
+    _id: get("sanityId") || `pmsStrategy-${slugify(`${manager}-${strategyName}`)}`,
     _type: "pmsStrategy",
+    // sanityId column set → the target doc is pinned by hand; skip matching.
+    __pinned: !!get("sanityId"),
     strategyName,
     manager,
     ...(category ? { category } : {}),
@@ -106,8 +119,68 @@ if (!docs.length) {
   process.exit(1);
 }
 
+// ---------- rename guard + carry-forward ----------
+const existing = await sanityQuery(
+  env,
+  `*[_type == "pmsStrategy" && !(_id in path("drafts.**"))]{ _id, strategyName, manager, category, notes, minInvestmentL, fees }`,
+);
+const existingById = new Map(existing.map((d) => [d._id, d]));
+
+const label = (d) => `${d.manager} — ${d.strategyName}`;
+const renamed = [];
+const created = [];
+const ambiguous = [];
+const claimed = new Map(); // target _id → row label, to catch two rows resolving to one doc
+
+for (const doc of docs) {
+  let target;
+  if (doc.__pinned) {
+    target = { id: doc._id, matchType: existingById.has(doc._id) ? "exact" : "new" };
+  } else {
+    target = resolveImportTarget(doc, existingById, existing);
+  }
+  if (target.matchType === "ambiguous") {
+    ambiguous.push({ doc, candidates: target.candidates });
+    continue;
+  }
+  if (claimed.has(target.id)) {
+    ambiguous.push({ doc, note: `resolves to the same document as row "${claimed.get(target.id)}" (${target.id})` });
+    continue;
+  }
+  claimed.set(target.id, label(doc));
+  if (target.matchType === "renamed") renamed.push({ row: label(doc), keeps: label(target.matched), id: target.id });
+  if (target.matchType === "new") created.push(label(doc));
+  doc._id = target.id;
+
+  // createOrReplace would wipe fields the CSV doesn't carry — keep the
+  // hand-curated ones from the existing document.
+  const prev = existingById.get(doc._id);
+  if (prev) {
+    if (!doc.category && prev.category) doc.category = prev.category;
+    if (!doc.notes && prev.notes) doc.notes = prev.notes;
+    if (doc.minInvestmentL === undefined && prev.minInvestmentL !== undefined) doc.minInvestmentL = prev.minInvestmentL;
+    if (!doc.fees && prev.fees) doc.fees = prev.fees;
+  }
+  delete doc.__pinned;
+}
+
+if (ambiguous.length) {
+  console.error("Ambiguous rows — nothing imported. Pin each row's target with the `sanityId` CSV column and re-run:");
+  for (const a of ambiguous) {
+    console.error(`  • ${label(a.doc)}`);
+    if (a.note) console.error(`      ${a.note}`);
+    for (const c of a.candidates ?? []) console.error(`      candidate: ${label(c)} [${c._id}]`);
+  }
+  process.exit(1);
+}
+
 await sanityUpsert(env, docs);
 
 console.log(`Imported ${docs.length} PMS strategies into Sanity (${env.projectId}/${env.dataset}):`);
+console.log(`  ${docs.length - renamed.length - created.length} updated · ${renamed.length} matched despite a rename · ${created.length} new`);
 for (const d of docs) console.log(`  • ${d.manager} — ${d.strategyName} (as of ${d.asOfDate})`);
+if (renamed.length) {
+  console.log("\nRename matches (CSV name → existing document kept):");
+  for (const r of renamed) console.log(`  • ${r.row} → ${r.keeps}  [${r.id}]`);
+}
 console.log("\nThe /investment-products/pms page will show them after the next revalidation/deploy.");
