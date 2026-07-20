@@ -74,6 +74,18 @@ export const prune = (o) => {
   return Object.keys(out).length ? out : undefined;
 };
 
+/** Run a GROQ query via the Sanity HTTP query API. */
+export async function sanityQuery(env, query) {
+  const url = `https://${env.projectId}.api.sanity.io/v${env.apiVersion}/data/query/${env.dataset}?query=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${env.token}` } });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    console.error(`Sanity query failed (HTTP ${res.status}):\n${JSON.stringify(body, null, 2)}`);
+    process.exit(1);
+  }
+  return body.result;
+}
+
 /** createOrReplace all docs via the Sanity HTTP mutate API. */
 export async function sanityUpsert(env, docs) {
   const mutations = docs.map((doc) => ({ createOrReplace: doc }));
