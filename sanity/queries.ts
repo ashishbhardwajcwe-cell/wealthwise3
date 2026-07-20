@@ -108,6 +108,29 @@ export const livePmsStrategiesQuery = groq`
     }
 `;
 
+/**
+ * The single benchmark document (S&P BSE 500 TRI) the PMS explorer measures
+ * alpha against. Effectively a singleton — the newest published one wins.
+ * Return fields are flattened to match the strategy feed's shape. Absent
+ * document → null, and the front-end falls back to its last stored values.
+ */
+export const benchmarkQuery = groq`
+  *[_type == "benchmark" && !(_id in path("drafts.**"))]
+    | order(asOfDate desc)[0]{
+      name,
+      "returns1m": returns.m1,
+      "returns3m": returns.m3,
+      "returns6m": returns.m6,
+      "returns1y": returns.y1,
+      "returns2y": returns.y2,
+      "returns3y": returns.y3,
+      "returns5y": returns.y5,
+      "sinceInception": returns.sinceInception,
+      asOfDate,
+      source
+    }
+`;
+
 export const allAifFundsQuery = groq`
   *[_type == "aifFund"]
     | order(asOfDate desc)

@@ -11,8 +11,8 @@ import { hasImplausibleReturn } from "@/lib/pms";
 import { fmtAsOf, latestAmfiDate } from "@/lib/format";
 import { formatAumCr } from "@/lib/utils";
 import {
-  type Period, type Strategy,
-  BENCH, BENCH_NAME, PERIODS,
+  type Period, type Strategy, type Benchmark,
+  FALLBACK_BENCHMARK, PERIODS,
   toStrategy, fmtPct, toneOf, toneColor,
   alphaFor,
   AlphaChip, ConsistencyDots,
@@ -64,16 +64,17 @@ function ReturnTile({ label, value }: { label: string; value: number | null }) {
 }
 
 /* ---------- card ---------- */
-function StrategyCard({ s, period, selected, onCompare, onBrief, onEnquire }: {
+function StrategyCard({ s, period, benchmark, selected, onCompare, onBrief, onEnquire }: {
   s: Strategy;
   period: Period;
+  benchmark: Benchmark;
   selected: boolean;
   onCompare: (s: Strategy) => void;
   onBrief: (s: Strategy) => void;
   onEnquire: (s: Strategy) => void;
 }) {
   const ret = s.returns[period];
-  const alpha = alphaFor(s.returns, period);
+  const alpha = alphaFor(s.returns, period, benchmark.returns);
   const topTone = toneOf(alpha === null ? ret : alpha);
   return (
     <div className="rounded-2xl bg-white flex flex-col" style={{ border: "1px solid var(--line)", borderTop: `3px solid ${toneColor[topTone]}` }}>
@@ -112,7 +113,7 @@ function StrategyCard({ s, period, selected, onCompare, onBrief, onEnquire }: {
           </div>
           <div className="flex flex-col items-end gap-1.5 pb-0.5">
             <AlphaChip value={alpha} ret={ret} />
-            <ConsistencyDots ret={s.returns} />
+            <ConsistencyDots ret={s.returns} bench={benchmark.returns} benchName={benchmark.name} />
           </div>
         </div>
       </div>
@@ -151,9 +152,10 @@ function StrategyCard({ s, period, selected, onCompare, onBrief, onEnquire }: {
 }
 
 /* ---------- brief sheet ---------- */
-function BriefSheet({ s, asOn, onClose, onEnquire }: {
+function BriefSheet({ s, asOn, benchmark, onClose, onEnquire }: {
   s: Strategy | null;
   asOn: string;
+  benchmark: Benchmark;
   onClose: () => void;
   onEnquire: (s: Strategy) => void;
 }) {
@@ -181,12 +183,12 @@ function BriefSheet({ s, asOn, onClose, onEnquire }: {
           </Link>
 
           {/* full grid vs benchmark */}
-          <h3 className="font-ui mt-5 mb-2" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Returns vs {BENCH_NAME}</h3>
-          <ReturnsVsBenchmarkTable returns={s.returns} />
+          <h3 className="font-ui mt-5 mb-2" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Returns vs {benchmark.name}</h3>
+          <ReturnsVsBenchmarkTable returns={s.returns} bench={benchmark.returns} />
 
           {/* honest read */}
           <div className="mt-4">
-            <HowToReadThis returns={s.returns} asOn={asOn} />
+            <HowToReadThis returns={s.returns} asOn={asOn} bench={benchmark.returns} />
           </div>
 
           <button onClick={() => onEnquire(s)}
@@ -200,8 +202,9 @@ function BriefSheet({ s, asOn, onClose, onEnquire }: {
 }
 
 /* ---------- compare modal ---------- */
-function CompareModal({ items, onClose, onRemove }: {
+function CompareModal({ items, benchmark, onClose, onRemove }: {
   items: Strategy[];
+  benchmark: Benchmark;
   onClose: () => void;
   onRemove: (s: Strategy) => void;
 }) {
@@ -244,7 +247,7 @@ function CompareModal({ items, onClose, onRemove }: {
                 <tr key={p} style={{ borderTop: "1px solid var(--line)" }}>
                   <td className="font-ui px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{p} <span style={{ fontSize: 10 }}>(α)</span></td>
                   {items.map((s) => {
-                    const a = alphaFor(s.returns, p);
+                    const a = alphaFor(s.returns, p, benchmark.returns);
                     return (
                       <td key={s.id} className="px-3 py-2">
                         <span className="font-num" style={{ fontSize: 13, fontWeight: 600, color: s.returns[p] === null ? "var(--muted)" : toneColor[toneOf(s.returns[p])] }}>{fmtPct(s.returns[p])}</span>
@@ -263,7 +266,7 @@ function CompareModal({ items, onClose, onRemove }: {
 }
 
 /* ---------- main ---------- */
-export default function PMSExplorer({ strategies }: { strategies: LivePmsStrategy[] }) {
+export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK }: { strategies: LivePmsStrategy[]; benchmark?: Benchmark }) {
   const [category, setCategory] = useState<string>("All");
   const [period, setPeriod] = useState<Period>("3Y");
   const [sort, setSort] = useState<SortKey>("aum");
@@ -302,17 +305,17 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
       const q = query.toLowerCase();
       list = list.filter((s) => (s.manager + " " + s.strategy).toLowerCase().includes(q));
     }
-    if (beatOnly && BENCH[period] !== null) list = list.filter((s) => (alphaFor(s.returns, period) ?? -Infinity) > 0);
+    if (beatOnly && benchmark.returns[period] !== null) list = list.filter((s) => (alphaFor(s.returns, period, benchmark.returns) ?? -Infinity) > 0);
     const val = (s: Strategy) => s.returns[period];
     list = [...list].sort((a, b) => {
       if (sort === "aum") return (b.aum ?? -1) - (a.aum ?? -1);
       if (sort === "return") return (val(b) ?? -999) - (val(a) ?? -999);
-      if (sort === "alpha") return (alphaFor(b.returns, period) ?? -999) - (alphaFor(a.returns, period) ?? -999);
+      if (sort === "alpha") return (alphaFor(b.returns, period, benchmark.returns) ?? -999) - (alphaFor(a.returns, period, benchmark.returns) ?? -999);
       if (sort === "name") return (a.manager + a.strategy).localeCompare(b.manager + b.strategy);
       return 0;
     });
     return list;
-  }, [data, category, period, sort, query, beatOnly]);
+  }, [data, category, period, sort, query, beatOnly, benchmark]);
 
   const chipStyle = (active: boolean): CSSProperties => ({
     fontSize: 13, fontWeight: 500,
@@ -377,10 +380,10 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
               <button key={c} onClick={() => setCategory(c)} className="font-ui whitespace-nowrap rounded-full px-3 py-1.5" style={chipStyle(category === c)}>{c}</button>
             ))}
             {categories.length > 0 && <div style={{ width: 1, height: 22, background: "var(--line)", margin: "0 4px" }} />}
-            <button onClick={() => setBeatOnly((v) => !v)} title={BENCH[period] === null ? "No benchmark for this period" : ""}
-              disabled={BENCH[period] === null}
+            <button onClick={() => setBeatOnly((v) => !v)} title={benchmark.returns[period] === null ? "No benchmark for this period" : ""}
+              disabled={benchmark.returns[period] === null}
               className="font-ui whitespace-nowrap inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
-              style={{ fontSize: 13, fontWeight: 500, opacity: BENCH[period] === null ? 0.4 : 1,
+              style={{ fontSize: 13, fontWeight: 500, opacity: benchmark.returns[period] === null ? 0.4 : 1,
                 color: beatOnly ? "#fff" : "var(--green-deep)", background: beatOnly ? "var(--green)" : "var(--green-tint)", border: "1px solid transparent" }}>
               <Check size={13} /> Beat benchmark only
             </button>
@@ -401,7 +404,7 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
         ) : (
           <div className="grid gap-4 mt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
             {filtered.map((s) => (
-              <StrategyCard key={s.id} s={s} period={period}
+              <StrategyCard key={s.id} s={s} period={period} benchmark={benchmark}
                 selected={isSelected(s)} onCompare={toggleCompare} onBrief={setBrief} onEnquire={setEnquire} />
             ))}
           </div>
@@ -411,7 +414,7 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
         <NewsletterBand source="pms-explorer" />
 
         {/* footnote */}
-        <ComplianceFootnote asOn={asOf} />
+        <ComplianceFootnote asOn={asOf} benchName={benchmark.name} />
       </div>
 
       {/* compare tray */}
@@ -434,8 +437,8 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
         </div>
       )}
 
-      <BriefSheet s={brief} asOn={asOf} onClose={() => setBrief(null)} onEnquire={setEnquire} />
-      {showCompare && <CompareModal items={compare} onClose={() => setShowCompare(false)} onRemove={toggleCompare} />}
+      <BriefSheet s={brief} asOn={asOf} benchmark={benchmark} onClose={() => setBrief(null)} onEnquire={setEnquire} />
+      {showCompare && <CompareModal items={compare} benchmark={benchmark} onClose={() => setShowCompare(false)} onRemove={toggleCompare} />}
       {/* z-[60] — sits above the brief sheet when opened from inside it */}
       {enquire && <EnquireModal strategy={enquire.strategy} source="pms-explorer" onClose={() => setEnquire(null)} />}
     </div>
