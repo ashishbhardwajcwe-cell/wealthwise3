@@ -11,13 +11,15 @@ import { hasImplausibleReturn } from "@/lib/pms";
 import { fmtAsOf, latestAmfiDate } from "@/lib/format";
 import { formatAumCr } from "@/lib/utils";
 import {
-  type Period, type PeriodReturns, type Strategy,
+  type Period, type Strategy,
   BENCH, BENCH_NAME, PERIODS,
   toStrategy, fmtPct, toneOf, toneColor,
-  alphaFor, beats,
+  alphaFor,
   AlphaChip, ConsistencyDots,
   FactsGrid, ReturnsVsBenchmarkTable, HowToReadThis, ComplianceFootnote,
 } from "@/components/pms/strategy-shared";
+import { EnquireModal } from "@/components/pms/EnquireModal";
+import { NewsletterBand } from "@/components/pms/NewsletterBand";
 
 /*
   PlanMyCashflows — PMS Explorer
@@ -62,12 +64,13 @@ function ReturnTile({ label, value }: { label: string; value: number | null }) {
 }
 
 /* ---------- card ---------- */
-function StrategyCard({ s, period, selected, onCompare, onBrief }: {
+function StrategyCard({ s, period, selected, onCompare, onBrief, onEnquire }: {
   s: Strategy;
   period: Period;
   selected: boolean;
   onCompare: (s: Strategy) => void;
   onBrief: (s: Strategy) => void;
+  onEnquire: (s: Strategy) => void;
 }) {
   const ret = s.returns[period];
   const alpha = alphaFor(s.returns, period);
@@ -120,12 +123,17 @@ function StrategyCard({ s, period, selected, onCompare, onBrief }: {
       </div>
 
       {/* footer */}
-      <div className="mt-3 px-4 py-3 flex items-center justify-between" style={{ borderTop: "1px solid var(--line)" }}>
+      <div className="mt-3 px-4 py-3 flex flex-wrap items-center justify-between gap-2" style={{ borderTop: "1px solid var(--line)" }}>
         <div>
           <div className="font-num" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{formatAumCr(s.aum)}</div>
           <div className="font-ui" style={{ fontSize: 11, color: "var(--muted)" }}>AUM · min ₹50L</div>
         </div>
         <div className="flex items-center gap-1.5">
+          <button onClick={() => onEnquire(s)}
+            className="font-ui rounded-lg px-2.5 py-1.5"
+            style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "var(--green)" }}>
+            Enquire
+          </button>
           <button onClick={() => onCompare(s)}
             className="font-ui inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 transition-colors"
             style={{ fontSize: 12, fontWeight: 500, color: selected ? "#fff" : "var(--green-deep)", background: selected ? "var(--green)" : "var(--green-tint)" }}>
@@ -143,7 +151,12 @@ function StrategyCard({ s, period, selected, onCompare, onBrief }: {
 }
 
 /* ---------- brief sheet ---------- */
-function BriefSheet({ s, asOn, onClose }: { s: Strategy | null; asOn: string; onClose: () => void }) {
+function BriefSheet({ s, asOn, onClose, onEnquire }: {
+  s: Strategy | null;
+  asOn: string;
+  onClose: () => void;
+  onEnquire: (s: Strategy) => void;
+}) {
   if (!s) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: "rgba(15,26,20,0.45)" }} onClick={onClose}>
@@ -176,7 +189,8 @@ function BriefSheet({ s, asOn, onClose }: { s: Strategy | null; asOn: string; on
             <HowToReadThis returns={s.returns} asOn={asOn} />
           </div>
 
-          <button className="font-ui w-full mt-4 rounded-xl py-3" style={{ fontSize: 14, fontWeight: 600, color: "#fff", background: "var(--green)" }}>
+          <button onClick={() => onEnquire(s)}
+            className="font-ui w-full mt-4 rounded-xl py-3" style={{ fontSize: 14, fontWeight: 600, color: "#fff", background: "var(--green)" }}>
             Enquire about {s.strategy}
           </button>
         </div>
@@ -257,6 +271,7 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
   const [beatOnly, setBeatOnly] = useState<boolean>(false);
   const [compare, setCompare] = useState<Strategy[]>([]);
   const [brief, setBrief] = useState<Strategy | null>(null);
+  const [enquire, setEnquire] = useState<Strategy | null>(null);
   const [showCompare, setShowCompare] = useState<boolean>(false);
 
   // Drop reporting artifacts first — same guard as the league table — so
@@ -387,10 +402,13 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
           <div className="grid gap-4 mt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
             {filtered.map((s) => (
               <StrategyCard key={s.id} s={s} period={period}
-                selected={isSelected(s)} onCompare={toggleCompare} onBrief={setBrief} />
+                selected={isSelected(s)} onCompare={toggleCompare} onBrief={setBrief} onEnquire={setEnquire} />
             ))}
           </div>
         )}
+
+        {/* monthly brief signup */}
+        <NewsletterBand source="pms-explorer" />
 
         {/* footnote */}
         <ComplianceFootnote asOn={asOf} />
@@ -416,8 +434,10 @@ export default function PMSExplorer({ strategies }: { strategies: LivePmsStrateg
         </div>
       )}
 
-      <BriefSheet s={brief} asOn={asOf} onClose={() => setBrief(null)} />
+      <BriefSheet s={brief} asOn={asOf} onClose={() => setBrief(null)} onEnquire={setEnquire} />
       {showCompare && <CompareModal items={compare} onClose={() => setShowCompare(false)} onRemove={toggleCompare} />}
+      {/* z-[60] — sits above the brief sheet when opened from inside it */}
+      {enquire && <EnquireModal strategy={enquire.strategy} source="pms-explorer" onClose={() => setEnquire(null)} />}
     </div>
   );
 }

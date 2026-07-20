@@ -12,6 +12,8 @@ import {
   FactsGrid, ReturnsVsBenchmarkTable, HowToReadThis, ComplianceFootnote,
   BENCH_NAME,
 } from "@/components/pms/strategy-shared";
+import { EnquireButton } from "@/components/pms/EnquireButton";
+import { NewsletterBand } from "@/components/pms/NewsletterBand";
 
 /*
   /pms/[slug] — one SEO page per PMS strategy.
@@ -142,10 +144,7 @@ export default async function PmsStrategyPage({ params }: Props) {
 
         {/* enquire CTA */}
         <div className="mt-6 flex flex-col sm:flex-row gap-3">
-          <Link href="/contact" className="font-ui flex-1 text-center rounded-xl py-3 px-5"
-            style={{ fontSize: 14, fontWeight: 600, color: "#fff", background: "var(--green)" }}>
-            Enquire about {s.strategy}
-          </Link>
+          <EnquireButton strategy={s.strategy} source="pms-strategy-page" />
           <Link href="/investment-products/pms" className="font-ui flex-1 text-center rounded-xl py-3 px-5"
             style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", background: "#fff", border: "1px solid var(--line)" }}>
             Explore all PMS strategies
@@ -184,6 +183,9 @@ export default async function PmsStrategyPage({ params }: Props) {
             </div>
           </div>
         )}
+
+        {/* monthly brief signup */}
+        <NewsletterBand source="pms-strategy-page" />
 
         {/* compliance — same disclaimer as the explorer */}
         <ComplianceFootnote asOn={asOn} />
