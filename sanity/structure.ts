@@ -36,6 +36,7 @@ export const deskStructure: StructureResolver = (S) =>
               S.documentTypeListItem("pmsStrategy").title("PMS Strategies"),
               S.documentTypeListItem("aifFund").title("AIF Funds"),
               S.documentTypeListItem("unlistedShare").title("Unlisted Shares"),
+              S.documentTypeListItem("benchmark").title("Benchmarks"),
             ]),
         ),
     ]);

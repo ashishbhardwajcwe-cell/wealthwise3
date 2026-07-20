@@ -11,6 +11,7 @@ import {
   stockAnalysisSlugsQuery,
   allPmsStrategiesQuery,
   livePmsStrategiesQuery,
+  benchmarkQuery,
   allAifFundsQuery,
   allUnlistedSharesQuery,
 } from "@/sanity/queries";
@@ -78,6 +79,25 @@ export interface LivePmsStrategy {
   returns5y?: number;
   sinceInception?: number;
   asOfDate: string;
+  source?: string;
+}
+
+/**
+ * Benchmark return series (S&P BSE 500 TRI), flattened like LivePmsStrategy.
+ * Missing periods mean "no clean like-for-like series" — the site suppresses
+ * alpha for those periods instead of comparing against a mismatched line.
+ */
+export interface BenchmarkDoc {
+  name: string;
+  returns1m?: number;
+  returns3m?: number;
+  returns6m?: number;
+  returns1y?: number;
+  returns2y?: number;
+  returns3y?: number;
+  returns5y?: number;
+  sinceInception?: number;
+  asOfDate?: string;
   source?: string;
 }
 
@@ -149,6 +169,13 @@ export async function getPmsStrategies(): Promise<PmsStrategy[]> {
 
 export async function getLivePmsStrategies(): Promise<LivePmsStrategy[]> {
   return safeFetch<LivePmsStrategy[]>(livePmsStrategiesQuery, [], undefined, ["pmsStrategy"]);
+}
+
+/** The benchmark series for PMS alpha. Null when Sanity is absent or the
+ *  document hasn't been created yet — callers fall back to the last stored
+ *  values baked into components/pms/strategy-shared.tsx. */
+export async function getBenchmark(name = "S&P BSE 500 TRI"): Promise<BenchmarkDoc | null> {
+  return safeFetch<BenchmarkDoc | null>(benchmarkQuery, null, { name }, ["benchmark"]);
 }
 
 export async function getAifFunds(): Promise<AifFund[]> {

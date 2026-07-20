@@ -10,7 +10,7 @@
  */
 
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
-import type { LivePmsStrategy } from "@/lib/investment-data";
+import type { LivePmsStrategy, BenchmarkDoc } from "@/lib/investment-data";
 import { pmsStrategySlug } from "@/lib/pms";
 import { formatAumCr } from "@/lib/utils";
 
@@ -33,13 +33,38 @@ export type Strategy = {
   returns: PeriodReturns;
 };
 
-/* ---- benchmark: S&P BSE 500 TRI, same periods as the cards ----
-   Not in Sanity — hardcoded, so UPDATE THESE VALUES during the monthly
-   data refresh (current figures as on 30 Jun 2026). 5Y and SI stay null:
-   there is no clean like-for-like series for them, so those periods show
-   raw return with no alpha. */
-export const BENCH: Record<Period, number | null> = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
+/** Benchmark returns keyed by period; null = no clean like-for-like series
+ *  for that window, so alpha is suppressed there. */
+export type BenchSeries = Record<Period, number | null>;
+
 export const BENCH_NAME = "S&P BSE 500 TRI";
+
+/* ---- fallback benchmark series ----
+   The live series comes from the Sanity `benchmark` document (updated by
+   the monthly refresh — see scripts/fetch-benchmark.mjs). These are the
+   last stored values, used ONLY when that document is absent so the
+   explorer and strategy pages never crash or lose their alpha context
+   (figures as on 30 Jun 2026). 5Y and SI stay null: there is no clean
+   like-for-like series for them, so those periods show raw return with
+   no alpha. */
+const FALLBACK_BENCH: BenchSeries = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
+
+/** Sanity benchmark doc → per-period series. Doc absent → fallback values.
+ *  When the doc exists, ONLY the periods it carries get a benchmark —
+ *  a missing 5Y/SI stays null and alpha stays suppressed there. */
+export function toBenchSeries(doc: BenchmarkDoc | null | undefined): BenchSeries {
+  if (!doc) return FALLBACK_BENCH;
+  return {
+    "1M": orNull(doc.returns1m),
+    "3M": orNull(doc.returns3m),
+    "6M": orNull(doc.returns6m),
+    "1Y": orNull(doc.returns1y),
+    "2Y": orNull(doc.returns2y),
+    "3Y": orNull(doc.returns3y),
+    "5Y": orNull(doc.returns5y),
+    "SI": orNull(doc.sinceInception),
+  };
+}
 
 export const PERIODS: Period[] = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "SI"];
 
@@ -79,15 +104,15 @@ export const fmtPct = (v: number | null | undefined): string => (v === null || v
 export const toneOf = (v: number | null | undefined): Tone => (v === null || v === undefined ? "flat" : v > 0.0001 ? "pos" : v < -0.0001 ? "neg" : "flat");
 export const toneColor: Record<Tone, string> = { pos: "var(--pos)", neg: "var(--neg)", flat: "var(--flat)" };
 export const toneBg: Record<Tone, string> = { pos: "var(--pos-bg)", neg: "var(--neg-bg)", flat: "var(--flat-bg)" };
-export const alphaFor = (ret: PeriodReturns, p: Period): number | null => {
+export const alphaFor = (ret: PeriodReturns, p: Period, bench: BenchSeries): number | null => {
   const r = ret[p];
-  const b = BENCH[p];
+  const b = bench[p];
   if (r === null || b === null) return null;
   return r - b;
 };
-export const beats = (ret: PeriodReturns, periods: Period[]): number =>
+export const beats = (ret: PeriodReturns, periods: Period[], bench: BenchSeries): number =>
   periods.reduce((n, p) => {
-    const a = alphaFor(ret, p);
+    const a = alphaFor(ret, p, bench);
     return n + (a !== null && a > 0 ? 1 : 0);
   }, 0);
 
@@ -109,10 +134,10 @@ export function AlphaChip({ value, ret }: { value: number | null; ret: number | 
   );
 }
 
-export function ConsistencyDots({ ret }: { ret: PeriodReturns }) {
+export function ConsistencyDots({ ret, bench }: { ret: PeriodReturns; bench: BenchSeries }) {
   // over 1Y / 2Y / 3Y — the periods that actually matter for selection
   const longPeriods: Period[] = ["1Y", "2Y", "3Y"];
-  const n = beats(ret, longPeriods);
+  const n = beats(ret, longPeriods, bench);
   return (
     <span className="inline-flex items-center gap-1" title={`Beat ${BENCH_NAME} in ${n} of 3 long-term windows`}>
       {longPeriods.map((p, i) => (
@@ -146,7 +171,7 @@ export function FactsGrid({ s }: { s: Strategy }) {
 }
 
 /** Full 1M→SI returns table vs the benchmark, with alpha per row. */
-export function ReturnsVsBenchmarkTable({ returns }: { returns: PeriodReturns }) {
+export function ReturnsVsBenchmarkTable({ returns, bench }: { returns: PeriodReturns; bench: BenchSeries }) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--line)" }}>
       <table className="w-full" style={{ borderCollapse: "collapse" }}>
@@ -160,12 +185,12 @@ export function ReturnsVsBenchmarkTable({ returns }: { returns: PeriodReturns })
         </thead>
         <tbody>
           {PERIODS.map((p) => {
-            const a = alphaFor(returns, p);
+            const a = alphaFor(returns, p, bench);
             return (
               <tr key={p} style={{ borderTop: "1px solid var(--line)" }}>
                 <td className="font-num px-3 py-2" style={{ fontSize: 12, color: "var(--ink)" }}>{p}</td>
                 <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, fontWeight: 600, color: returns[p] === null ? "var(--muted)" : toneColor[toneOf(returns[p])] }}>{fmtPct(returns[p])}</td>
-                <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{BENCH[p] === null ? "—" : fmtPct(BENCH[p])}</td>
+                <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{bench[p] === null ? "—" : fmtPct(bench[p])}</td>
                 <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, fontWeight: 600, color: a === null ? "var(--muted)" : toneColor[toneOf(a)] }}>{a === null ? "—" : `${a > 0 ? "+" : ""}${a.toFixed(1)}`}</td>
               </tr>
             );
@@ -177,8 +202,8 @@ export function ReturnsVsBenchmarkTable({ returns }: { returns: PeriodReturns })
 }
 
 /** The honesty block: how many long-term windows beat the benchmark, and what that means. */
-export function HowToReadThis({ returns, asOn }: { returns: PeriodReturns; asOn: string }) {
-  const nBeat = beats(returns, ["1Y", "2Y", "3Y"]);
+export function HowToReadThis({ returns, asOn, bench }: { returns: PeriodReturns; asOn: string; bench: BenchSeries }) {
+  const nBeat = beats(returns, ["1Y", "2Y", "3Y"], bench);
   return (
     <div className="rounded-xl p-3.5" style={{ background: "var(--green-tint)" }}>
       <div className="font-ui flex items-center gap-1.5 mb-1" style={{ fontSize: 12, fontWeight: 600, color: "var(--green-deep)" }}>

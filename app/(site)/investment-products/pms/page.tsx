@@ -5,7 +5,7 @@ import { pmsData } from "@/lib/product-data";
 import { PMSGraph } from "@/components/ProductGraphs";
 import PMSExplorer from "@/components/pms/PMSExplorer";
 import { DataOnboardingNotice } from "@/components/data-tables/DataOnboardingNotice";
-import { getLivePmsStrategies } from "@/lib/investment-data";
+import { getLivePmsStrategies, getBenchmark } from "@/lib/investment-data";
 
 export const metadata: Metadata = {
   title: "PMS (Portfolio Management Services) — Complete Guide for Indian HNI",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function Page() {
-  const strategies = await getLivePmsStrategies();
+  const [strategies, benchmark] = await Promise.all([getLivePmsStrategies(), getBenchmark()]);
   return (
     <>
       <InvestmentProductPage data={{ ...pmsData, graphic: <PMSGraph /> }} />
@@ -33,7 +33,7 @@ export default async function Page() {
         </div>
       </section>
       {strategies.length > 0 ? (
-        <PMSExplorer strategies={strategies} />
+        <PMSExplorer strategies={strategies} benchmark={benchmark} />
       ) : (
         <DataOnboardingNotice
           title="PMS performance tracker — coming online"

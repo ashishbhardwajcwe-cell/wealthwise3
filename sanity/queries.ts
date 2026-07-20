@@ -108,6 +108,25 @@ export const livePmsStrategiesQuery = groq`
     }
 `;
 
+/** One benchmark series by exact name, flattened like the PMS feed. */
+export const benchmarkQuery = groq`
+  *[_type == "benchmark" && name == $name && !(_id in path("drafts.**"))]
+    | order(asOfDate desc)[0]
+    {
+      name,
+      "returns1m": returns.m1,
+      "returns3m": returns.m3,
+      "returns6m": returns.m6,
+      "returns1y": returns.y1,
+      "returns2y": returns.y2,
+      "returns3y": returns.y3,
+      "returns5y": returns.y5,
+      "sinceInception": returns.sinceInception,
+      asOfDate,
+      source
+    }
+`;
+
 export const allAifFundsQuery = groq`
   *[_type == "aifFund"]
     | order(asOfDate desc)

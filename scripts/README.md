@@ -6,8 +6,17 @@ Sanity documents in one command, so the monthly refresh is:
 
 ```
 npm run import:pms -- scripts/pms-data.csv
+npm run fetch:benchmark
 npm run import:aif -- scripts/aif-data.csv
 ```
+
+`fetch:benchmark` refreshes the S&P BSE 500 TRI series (the Sanity
+`benchmark` document) that alpha is computed against. It tries APMI's
+loadIAReport endpoint; when the response carries no parseable benchmark TRI
+row it prints an **UPDATE BENCHMARK MANUALLY in Sanity Studio** notice and
+leaves the last stored values in place — it never scrapes third-party sites.
+Useful flags: `--dry-run` (parse and print, write nothing) and
+`--as-of YYYY-MM-DD` (defaults to the previous month-end).
 
 Both upsert by `manager + name`, so re-running next month **updates** the same
 rows — never duplicates. Validation runs before anything is written; a bad row

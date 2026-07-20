@@ -6,6 +6,7 @@ import { stockAnalysis } from "./stockAnalysis";
 import { pmsStrategy } from "./pmsStrategy";
 import { aifFund } from "./aifFund";
 import { unlistedShare } from "./unlistedShare";
+import { benchmark } from "./benchmark";
 
 export const schemaTypes: SchemaTypeDefinition[] = [
   // Editorial
@@ -17,4 +18,5 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   pmsStrategy,
   aifFund,
   unlistedShare,
+  benchmark,
 ];

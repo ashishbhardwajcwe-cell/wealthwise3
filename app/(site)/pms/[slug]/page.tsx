@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { getLivePmsStrategies } from "@/lib/investment-data";
+import { getLivePmsStrategies, getBenchmark } from "@/lib/investment-data";
 import { cleanPmsStrategies, findPmsStrategyBySlug, pmsStrategySlug } from "@/lib/pms";
 import { fmtAsOf } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 import {
-  toStrategy, toneOf, toneColor, alphaFor,
+  toStrategy, toneOf, toneColor, alphaFor, toBenchSeries,
   AlphaChip, ConsistencyDots,
   FactsGrid, ReturnsVsBenchmarkTable, HowToReadThis, ComplianceFootnote,
   BENCH_NAME,
@@ -70,14 +70,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PmsStrategyPage({ params }: Props) {
   const { slug } = await params;
-  const clean = cleanPmsStrategies(await getLivePmsStrategies());
+  const [strategies, benchmark] = await Promise.all([getLivePmsStrategies(), getBenchmark()]);
+  const clean = cleanPmsStrategies(strategies);
   const live = findPmsStrategyBySlug(clean, slug);
   if (!live) notFound();
 
   const s = toStrategy(live, clean);
+  const bench = toBenchSeries(benchmark);
   const asOn = fmtAsOf(live.asOfDate);
   const ret3y = s.returns["3Y"];
-  const alpha3y = alphaFor(s.returns, "3Y");
+  const alpha3y = alphaFor(s.returns, "3Y", bench);
 
   // Up to 6 stablemates from the same category, biggest first, linked.
   const related = live.category
@@ -124,7 +126,7 @@ export default async function PmsStrategyPage({ params }: Props) {
           </div>
           <div className="flex flex-col items-end gap-2 pb-1">
             <AlphaChip value={alpha3y} ret={ret3y} />
-            <ConsistencyDots ret={s.returns} />
+            <ConsistencyDots ret={s.returns} bench={bench} />
           </div>
         </div>
 
@@ -135,11 +137,11 @@ export default async function PmsStrategyPage({ params }: Props) {
 
         {/* returns vs benchmark */}
         <h2 className="font-ui mt-8 mb-2" style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Returns vs {BENCH_NAME}</h2>
-        <ReturnsVsBenchmarkTable returns={s.returns} />
+        <ReturnsVsBenchmarkTable returns={s.returns} bench={bench} />
 
         {/* honest read */}
         <div className="mt-4">
-          <HowToReadThis returns={s.returns} asOn={asOn} />
+          <HowToReadThis returns={s.returns} asOn={asOn} bench={bench} />
         </div>
 
         {/* enquire CTA */}
