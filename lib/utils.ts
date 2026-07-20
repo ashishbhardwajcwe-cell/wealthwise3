@@ -13,6 +13,23 @@ export const fmtINR = (n: number): string => {
   return `₹${Math.round(n).toLocaleString("en-IN")}`;
 };
 
+/**
+ * AUM given in ₹ crore → Indian financial notation.
+ *
+ * Examples:
+ *   638420   → "₹6.38 L Cr"   (lakh crore, 2 decimals)
+ *   100000   → "₹1.00 L Cr"
+ *   21708.57 → "₹21,709 Cr"   (Indian digit grouping, no decimals)
+ *   1000     → "₹1,000 Cr"
+ *   574.44   → "₹574 Cr"
+ *   0 / null / undefined → "—"
+ */
+export const formatAumCr = (aumInCr: number | null | undefined): string => {
+  if (!aumInCr) return "—";
+  if (aumInCr >= 100000) return `₹${(aumInCr / 100000).toFixed(2)} L Cr`;
+  return `₹${Math.round(aumInCr).toLocaleString("en-IN")} Cr`;
+};
+
 export const fmtCurrency = (n: number, currency: string = "INR"): string => {
   if (n === undefined || n === null || isNaN(n)) return currency === "INR" ? "₹0" : "0";
   if (currency === "INR") return fmtINR(n);

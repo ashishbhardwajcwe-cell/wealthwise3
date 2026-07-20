@@ -8,6 +8,7 @@ import {
 import type { LivePmsStrategy } from "@/lib/investment-data";
 import { hasImplausibleReturn } from "@/components/data-tables/LeagueTable";
 import { fmtAsOf, latestAmfiDate } from "@/components/tables/table-utils";
+import { formatAumCr } from "@/lib/utils";
 
 /*
   PlanMyCashflows — PMS Explorer
@@ -88,7 +89,6 @@ const HEADLINE_PERIODS: Period[] = ["1M", "6M", "1Y", "3Y", "5Y", "SI"]; // tile
 
 /* ---------- helpers ---------- */
 const fmtPct = (v: number | null | undefined): string => (v === null || v === undefined ? "N/A" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%`);
-const fmtAum = (cr: number | null): string => (cr === null ? "—" : cr >= 1000 ? `₹${(cr / 1000).toFixed(2)}K Cr` : `₹${cr.toLocaleString("en-IN")} Cr`);
 const toneOf = (v: number | null | undefined): Tone => (v === null || v === undefined ? "flat" : v > 0.0001 ? "pos" : v < -0.0001 ? "neg" : "flat");
 const toneColor: Record<Tone, string> = { pos: "var(--pos)", neg: "var(--neg)", flat: "var(--flat)" };
 const toneBg: Record<Tone, string> = { pos: "var(--pos-bg)", neg: "var(--neg-bg)", flat: "var(--flat-bg)" };
@@ -209,7 +209,7 @@ function StrategyCard({ s, period, selected, onCompare, onBrief }: {
       {/* footer */}
       <div className="mt-3 px-4 py-3 flex items-center justify-between" style={{ borderTop: "1px solid var(--line)" }}>
         <div>
-          <div className="font-num" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{fmtAum(s.aum)}</div>
+          <div className="font-num" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{formatAumCr(s.aum)}</div>
           <div className="font-ui" style={{ fontSize: 11, color: "var(--muted)" }}>AUM · min ₹50L</div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -235,7 +235,7 @@ function BriefSheet({ s, asOn, onClose }: { s: Strategy | null; asOn: string; on
   const nBeat = beats(s.returns, ["1Y", "2Y", "3Y"]);
   const facts: [string, string][] = [
     ...(s.category ? ([["Category", s.category]] as [string, string][]) : []),
-    ["AUM", fmtAum(s.aum)],
+    ["AUM", formatAumCr(s.aum)],
     ["Minimum", "₹50 lakh"],
     ...(s.since ? ([["Since", s.since]] as [string, string][]) : []),
   ];
@@ -321,7 +321,7 @@ function CompareModal({ items, onClose, onRemove }: {
   // enrichment pass hasn't run, instead of rendering a row of dashes.
   const factRows: [string, (s: Strategy) => string][] = [
     ...(items.some((s) => s.category) ? ([["Category", (s: Strategy) => s.category ?? "—"]] as [string, (s: Strategy) => string][]) : []),
-    ["AUM", (s: Strategy) => fmtAum(s.aum)],
+    ["AUM", (s: Strategy) => formatAumCr(s.aum)],
   ];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,26,20,0.5)" }} onClick={onClose}>
