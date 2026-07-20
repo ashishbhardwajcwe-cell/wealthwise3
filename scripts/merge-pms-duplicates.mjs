@@ -20,6 +20,14 @@
  *                                                          # pairs whose categories disagree are skipped for review
  *   node scripts/merge-pms-duplicates.mjs --sweep --apply  # execute the sweep
  *
+ * When the auto-matcher can't pair an empty doc (APMI often bakes the brand
+ * into the strategy name — "Stallion Core Fund" vs a hand-entered "Core
+ * Fund" — which is beyond safe fuzzy range), finish by hand:
+ *
+ *   --suggest                          # read-only: top-3 closest returns-bearing docs per unmatched empty
+ *   --merge=<emptyId>:<keeperId>       # explicit merge (repeatable); validated, dry run unless --apply
+ *   --delete=<docId>                   # delete a true singleton (repeatable); refuses docs that have returns
+ *
  * Required env vars (environment or .env.local):
  *   NEXT_PUBLIC_SANITY_PROJECT_ID
  *   NEXT_PUBLIC_SANITY_DATASET       (default: production)
@@ -128,6 +136,19 @@ export function isNearDuplicate(a, b) {
 }
 
 /**
+ * Fraction of the empty doc's strategy-name tokens that also appear in the
+ * candidate's — catches brand-prefixed APMI names ("Core Fund" ⊂ "Stallion
+ * Core Fund" → 1.0) that Levenshtein misses. Used only to rank --suggest
+ * candidates, never to auto-merge.
+ */
+export function tokenOverlap(a, b) {
+  const ta = stratNorm(a).split(" ").filter(Boolean);
+  const tb = new Set(stratNorm(b).split(" ").filter(Boolean));
+  if (!ta.length) return 0;
+  return ta.filter((t) => tb.has(t)).length / ta.length;
+}
+
+/**
  * Decide what merging an empty doc into a returns-bearing keeper means:
  *  - keeper has no category, empty has one   → copy it over, then delete
  *  - categories agree (or empty has none)    → nothing to copy, just delete
@@ -147,6 +168,9 @@ export function classifyMerge(empty, keeper) {
 async function main() {
   const APPLY = process.argv.includes("--apply");
   const SWEEP = process.argv.includes("--sweep");
+  const SUGGEST = process.argv.includes("--suggest");
+  const mergeArgs = process.argv.filter((a) => a.startsWith("--merge=")).map((a) => a.slice("--merge=".length));
+  const deleteArgs = process.argv.filter((a) => a.startsWith("--delete=")).map((a) => a.slice("--delete=".length));
 
   loadDotEnvLocal();
   projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
@@ -167,18 +191,63 @@ async function main() {
   );
 
   const hasAnyReturn = (d) => RETURN_KEYS.some((k) => typeof d.returns?.[k] === "number");
+  const label = (d) => `${d.manager} — ${d.strategyName}`;
+
+  // ----- explicit mode: --merge= / --delete= pairs decided by a human -----
+  if (mergeArgs.length || deleteArgs.length) {
+    const byId = new Map(docs.map((d) => [d._id, d]));
+    const ops = [];
+    for (const spec of mergeArgs) {
+      const [emptyId, keeperId] = spec.split(":");
+      const empty = byId.get(emptyId);
+      const keeper = byId.get(keeperId);
+      if (!empty || !keeper) { console.log(`  ✗ --merge ${spec}: ${!empty ? emptyId : keeperId} not found`); continue; }
+      if (hasAnyReturn(empty)) { console.log(`  ✗ --merge ${spec}: ${label(empty)} has return figures — refusing to delete it`); continue; }
+      if (!hasAnyReturn(keeper)) { console.log(`  ✗ --merge ${spec}: keeper ${label(keeper)} has no returns — wrong way round?`); continue; }
+      const plan = classifyMerge(empty, keeper);
+      if (plan.action === "conflict") {
+        console.log(`  ✗ --merge ${spec}: category conflict (empty "${empty.category}" vs keeper "${keeper.category}") — align them in the Studio first`);
+        continue;
+      }
+      ops.push({
+        desc: `merge ${label(empty)} → ${label(keeper)}${plan.action === "copy-delete" ? ` (copy category "${plan.category}")` : ""}`,
+        muts: [
+          ...(plan.action === "copy-delete" ? [{ patch: { id: keeper._id, set: { category: plan.category } } }] : []),
+          { delete: { id: empty._id } },
+        ],
+      });
+    }
+    for (const id of deleteArgs) {
+      const doc = byId.get(id);
+      if (!doc) { console.log(`  ✗ --delete ${id}: not found`); continue; }
+      if (hasAnyReturn(doc)) { console.log(`  ✗ --delete ${id}: ${label(doc)} has return figures — refusing`); continue; }
+      ops.push({ desc: `delete ${label(doc)}  [${id}]`, muts: [{ delete: { id } }] });
+    }
+    if (!ops.length) { console.log("Nothing valid to do."); return; }
+    if (!APPLY) {
+      console.log(`PLAN (dry run — add --apply to execute): ${ops.length} operation(s)\n`);
+      for (const op of ops) console.log(`  • ${op.desc}`);
+      return;
+    }
+    for (const op of ops) {
+      await mutate(op.muts);
+      console.log(`  done: ${op.desc}`);
+    }
+    console.log(`\nDone — ${ops.length} operation(s) applied. The site picks the change up on the next revalidation (≤5 min).`);
+    return;
+  }
+
   const empties = docs.filter((d) => !hasAnyReturn(d));
+  const fullsAll = docs.filter((d) => hasAnyReturn(d));
   // Default pass only pairs empties with uncategorised keepers (the merge
   // copies the category over). --sweep widens the net to every returns-
   // bearing doc, turning matches with already-categorised keepers into
   // delete-only merges.
-  const fulls = docs.filter((d) => hasAnyReturn(d) && (SWEEP || !d.category));
+  const fulls = fullsAll.filter((d) => SWEEP || !d.category);
 
   console.log(`${docs.length} pmsStrategy documents in ${projectId}/${dataset}`);
   console.log(`  ${empties.length} with no return figures at all (the "N/A" cards)`);
   console.log(`  ${fulls.length} returns-bearing merge candidates${SWEEP ? " (sweep: categorised keepers included)" : " (no category)"}\n`);
-
-  const label = (d) => `${d.manager} — ${d.strategyName}`;
   const merges = [];
   const ambiguous = [];
   const unmatched = [];
@@ -236,6 +305,24 @@ async function main() {
   }
   for (const d of unmatched) {
     console.log(`  ⚠ NO MATCH (empty doc, no near-duplicate with returns — left in place): ${label(d)} [${d._id}]`);
+    if (SUGGEST) {
+      // Rank every returns-bearing doc by a blend of fuzzy similarity and
+      // token overlap (the latter catches brand-prefixed APMI names).
+      const ranked = fullsAll
+        .map((full) => {
+          const stratSim = similarity(d.strategyName, full.strategyName, stratNorm);
+          const overlap = tokenOverlap(d.strategyName, full.strategyName);
+          const mgrSim = similarity(d.manager, full.manager);
+          return { full, stratSim, overlap, mgrSim, score: 0.6 * Math.max(stratSim, overlap) + 0.4 * mgrSim };
+        })
+        .sort((x, y) => y.score - x.score)
+        .slice(0, 3);
+      for (const r of ranked) {
+        console.log(`      closest: ${label(r.full)}  [${r.full._id}]`);
+        console.log(`               score=${(r.score * 100).toFixed(0)}% (strat=${(r.stratSim * 100).toFixed(0)}% overlap=${(r.overlap * 100).toFixed(0)}% mgr=${(r.mgrSim * 100).toFixed(0)}%)${r.full.category ? ` · keeper category "${r.full.category}"` : ""}`);
+      }
+      console.log(`      → to merge: --merge=${d._id}:<keeperId>   · to remove as a singleton: --delete=${d._id}`);
+    }
   }
 
   if (APPLY && safe.length > 0) {
