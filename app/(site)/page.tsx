@@ -20,6 +20,7 @@ import { StructuredData, faqSchema } from "@/components/StructuredData";
 import { siteConfig } from "@/lib/site-config";
 import { comparisonRows, educationTiles, homeFaqs, industryStats } from "@/lib/home-content";
 import { getLivePmsStrategies } from "@/lib/investment-data";
+import { featuredPmsSubset } from "@/lib/pms";
 
 const PAGE_TITLE = "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies";
 const PAGE_DESCRIPTION =
@@ -47,7 +48,9 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const strategies = await getLivePmsStrategies();
+  // Trim to what FeaturedStrategies renders — serialising the full ~1,700-row
+  // feed into the homepage payload cost hundreds of KB for 6 visible cards.
+  const strategies = featuredPmsSubset(await getLivePmsStrategies());
   return (
     <>
       {/* 1 — Hero: text left, lazy video facade right */}
