@@ -11,6 +11,7 @@ import {
   stockAnalysisSlugsQuery,
   allPmsStrategiesQuery,
   livePmsStrategiesQuery,
+  benchmarkQuery,
   allAifFundsQuery,
   allUnlistedSharesQuery,
 } from "@/sanity/queries";
@@ -81,6 +82,27 @@ export interface LivePmsStrategy {
   source?: string;
 }
 
+/**
+ * The benchmark the PMS explorer measures alpha against (S&P BSE 500 TRI),
+ * with return fields flattened to mirror LivePmsStrategy. Any period may be
+ * null when the benchmark document leaves it blank. getBenchmark() returns
+ * null when Sanity has no benchmark document, and the UI falls back to its
+ * last stored values.
+ */
+export interface LiveBenchmark {
+  name: string;
+  returns1m: number | null;
+  returns3m: number | null;
+  returns6m: number | null;
+  returns1y: number | null;
+  returns2y: number | null;
+  returns3y: number | null;
+  returns5y: number | null;
+  sinceInception: number | null;
+  asOfDate: string | null;
+  source: string | null;
+}
+
 export interface AifFund {
   _id: string;
   fundName: string;
@@ -149,6 +171,16 @@ export async function getPmsStrategies(): Promise<PmsStrategy[]> {
 
 export async function getLivePmsStrategies(): Promise<LivePmsStrategy[]> {
   return safeFetch<LivePmsStrategy[]>(livePmsStrategiesQuery, [], undefined, ["pmsStrategy"]);
+}
+
+/**
+ * The current benchmark document, or null when Sanity isn't configured / has
+ * no benchmark yet / the fetch fails. Callers pass the result through
+ * toBenchmark(), which falls back to the last stored values on null — so the
+ * pages never crash when the document is absent.
+ */
+export async function getBenchmark(): Promise<LiveBenchmark | null> {
+  return safeFetch<LiveBenchmark | null>(benchmarkQuery, null, undefined, ["benchmark"]);
 }
 
 export async function getAifFunds(): Promise<AifFund[]> {

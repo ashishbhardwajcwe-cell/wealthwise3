@@ -10,7 +10,7 @@
  */
 
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
-import type { LivePmsStrategy } from "@/lib/investment-data";
+import type { LivePmsStrategy, LiveBenchmark } from "@/lib/investment-data";
 import { pmsStrategySlug } from "@/lib/pms";
 import { formatAumCr } from "@/lib/utils";
 
@@ -33,13 +33,25 @@ export type Strategy = {
   returns: PeriodReturns;
 };
 
-/* ---- benchmark: S&P BSE 500 TRI, same periods as the cards ----
-   Not in Sanity — hardcoded, so UPDATE THESE VALUES during the monthly
-   data refresh (current figures as on 30 Jun 2026). 5Y and SI stay null:
-   there is no clean like-for-like series for them, so those periods show
-   raw return with no alpha. */
-export const BENCH: Record<Period, number | null> = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
+/* ---- benchmark: S&P BSE 500 TRI ----
+   The live values now live in Sanity (a `benchmark` document, refreshed
+   monthly alongside the strategy returns). The constants below are the
+   FALLBACK the UI drops back to when that document is absent — so the pages
+   never crash, they just show the last stored figures. Keep them roughly
+   current (as on 30 Jun 2026). 5Y and SI are null: there's no clean
+   like-for-like series for them, so those periods show raw return with no
+   alpha until the Sanity document carries values for them. */
+export type BenchmarkReturns = PeriodReturns;
+export type Benchmark = {
+  name: string;
+  returns: BenchmarkReturns;
+  asOfDate: string | null;
+  source: string | null;
+};
+
 export const BENCH_NAME = "S&P BSE 500 TRI";
+export const BENCH_FALLBACK: BenchmarkReturns = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
+export const FALLBACK_BENCHMARK: Benchmark = { name: BENCH_NAME, returns: BENCH_FALLBACK, asOfDate: null, source: null };
 
 export const PERIODS: Period[] = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "SI"];
 
@@ -74,20 +86,44 @@ export function toStrategy(s: LivePmsStrategy, all: LivePmsStrategy[]): Strategy
   };
 }
 
+/** Map the flattened benchmark feed row to the shared shape. When the feed
+ *  carries no benchmark document (`b` is null) fall back to the last stored
+ *  values, so the pages keep rendering. A period left blank in the document
+ *  stays null here — which suppresses alpha for that window (5Y / SI until
+ *  the document provides them). */
+export function toBenchmark(b: LiveBenchmark | null | undefined): Benchmark {
+  if (!b) return FALLBACK_BENCHMARK;
+  return {
+    name: b.name || BENCH_NAME,
+    returns: {
+      "1M": orNull(b.returns1m),
+      "3M": orNull(b.returns3m),
+      "6M": orNull(b.returns6m),
+      "1Y": orNull(b.returns1y),
+      "2Y": orNull(b.returns2y),
+      "3Y": orNull(b.returns3y),
+      "5Y": orNull(b.returns5y),
+      "SI": orNull(b.sinceInception),
+    },
+    asOfDate: b.asOfDate ?? null,
+    source: b.source ?? null,
+  };
+}
+
 /* ---------- helpers ---------- */
 export const fmtPct = (v: number | null | undefined): string => (v === null || v === undefined ? "N/A" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%`);
 export const toneOf = (v: number | null | undefined): Tone => (v === null || v === undefined ? "flat" : v > 0.0001 ? "pos" : v < -0.0001 ? "neg" : "flat");
 export const toneColor: Record<Tone, string> = { pos: "var(--pos)", neg: "var(--neg)", flat: "var(--flat)" };
 export const toneBg: Record<Tone, string> = { pos: "var(--pos-bg)", neg: "var(--neg-bg)", flat: "var(--flat-bg)" };
-export const alphaFor = (ret: PeriodReturns, p: Period): number | null => {
+export const alphaFor = (ret: PeriodReturns, p: Period, bench: BenchmarkReturns): number | null => {
   const r = ret[p];
-  const b = BENCH[p];
+  const b = bench[p];
   if (r === null || b === null) return null;
   return r - b;
 };
-export const beats = (ret: PeriodReturns, periods: Period[]): number =>
+export const beats = (ret: PeriodReturns, periods: Period[], bench: BenchmarkReturns): number =>
   periods.reduce((n, p) => {
-    const a = alphaFor(ret, p);
+    const a = alphaFor(ret, p, bench);
     return n + (a !== null && a > 0 ? 1 : 0);
   }, 0);
 
@@ -95,7 +131,7 @@ export const beats = (ret: PeriodReturns, periods: Period[]): number =>
 export function AlphaChip({ value, ret }: { value: number | null; ret: number | null }) {
   if (value === null) {
     // Missing return → "no data"; return present but no benchmark series
-    // for this period (BENCH[period] null → alpha null) → "no benchmark".
+    // for this period (bench[period] null → alpha null) → "no benchmark".
     return <span className="font-num" style={{ fontSize: 12, color: "var(--muted)" }}>{ret === null ? "no data" : "no benchmark"}</span>;
   }
   const t = toneOf(value);
@@ -109,12 +145,12 @@ export function AlphaChip({ value, ret }: { value: number | null; ret: number | 
   );
 }
 
-export function ConsistencyDots({ ret }: { ret: PeriodReturns }) {
+export function ConsistencyDots({ ret, bench, benchName = BENCH_NAME }: { ret: PeriodReturns; bench: BenchmarkReturns; benchName?: string }) {
   // over 1Y / 2Y / 3Y — the periods that actually matter for selection
   const longPeriods: Period[] = ["1Y", "2Y", "3Y"];
-  const n = beats(ret, longPeriods);
+  const n = beats(ret, longPeriods, bench);
   return (
-    <span className="inline-flex items-center gap-1" title={`Beat ${BENCH_NAME} in ${n} of 3 long-term windows`}>
+    <span className="inline-flex items-center gap-1" title={`Beat ${benchName} in ${n} of 3 long-term windows`}>
       {longPeriods.map((p, i) => (
         <span key={p} className="inline-block rounded-full"
           style={{ width: 7, height: 7, background: i < n ? "var(--green)" : "var(--line)" }} />
@@ -146,7 +182,7 @@ export function FactsGrid({ s }: { s: Strategy }) {
 }
 
 /** Full 1M→SI returns table vs the benchmark, with alpha per row. */
-export function ReturnsVsBenchmarkTable({ returns }: { returns: PeriodReturns }) {
+export function ReturnsVsBenchmarkTable({ returns, bench }: { returns: PeriodReturns; bench: BenchmarkReturns }) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--line)" }}>
       <table className="w-full" style={{ borderCollapse: "collapse" }}>
@@ -160,12 +196,12 @@ export function ReturnsVsBenchmarkTable({ returns }: { returns: PeriodReturns })
         </thead>
         <tbody>
           {PERIODS.map((p) => {
-            const a = alphaFor(returns, p);
+            const a = alphaFor(returns, p, bench);
             return (
               <tr key={p} style={{ borderTop: "1px solid var(--line)" }}>
                 <td className="font-num px-3 py-2" style={{ fontSize: 12, color: "var(--ink)" }}>{p}</td>
                 <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, fontWeight: 600, color: returns[p] === null ? "var(--muted)" : toneColor[toneOf(returns[p])] }}>{fmtPct(returns[p])}</td>
-                <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{BENCH[p] === null ? "—" : fmtPct(BENCH[p])}</td>
+                <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{bench[p] === null ? "—" : fmtPct(bench[p])}</td>
                 <td className="font-num text-right px-3 py-2" style={{ fontSize: 12, fontWeight: 600, color: a === null ? "var(--muted)" : toneColor[toneOf(a)] }}>{a === null ? "—" : `${a > 0 ? "+" : ""}${a.toFixed(1)}`}</td>
               </tr>
             );
@@ -177,8 +213,8 @@ export function ReturnsVsBenchmarkTable({ returns }: { returns: PeriodReturns })
 }
 
 /** The honesty block: how many long-term windows beat the benchmark, and what that means. */
-export function HowToReadThis({ returns, asOn }: { returns: PeriodReturns; asOn: string }) {
-  const nBeat = beats(returns, ["1Y", "2Y", "3Y"]);
+export function HowToReadThis({ returns, asOn, bench }: { returns: PeriodReturns; asOn: string; bench: BenchmarkReturns }) {
+  const nBeat = beats(returns, ["1Y", "2Y", "3Y"], bench);
   return (
     <div className="rounded-xl p-3.5" style={{ background: "var(--green-tint)" }}>
       <div className="font-ui flex items-center gap-1.5 mb-1" style={{ fontSize: 12, fontWeight: 600, color: "var(--green-deep)" }}>
@@ -194,10 +230,10 @@ export function HowToReadThis({ returns, asOn }: { returns: PeriodReturns; asOn:
 }
 
 /** The compliance disclaimer — one source of truth for explorer and strategy pages. */
-export function ComplianceFootnote({ asOn }: { asOn: string }) {
+export function ComplianceFootnote({ asOn, benchName = BENCH_NAME }: { asOn: string; benchName?: string }) {
   return (
     <p className="font-ui mt-8" style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, maxWidth: 720 }}>
-      Returns are Time-Weighted Rate of Return at the strategy level, annualised beyond 1 year, as on {asOn}. Alpha is return minus {BENCH_NAME} for the same window (shown where a like-for-like benchmark exists). Figures are sourced from disclosures and are not verified by SEBI. Past performance is not indicative of future returns. Minimum investment ₹50 lakh (SEBI mandate). This is not investment advice.
+      Returns are Time-Weighted Rate of Return at the strategy level, annualised beyond 1 year, as on {asOn}. Alpha is return minus {benchName} for the same window (shown where a like-for-like benchmark exists). Figures are sourced from disclosures and are not verified by SEBI. Past performance is not indicative of future returns. Minimum investment ₹50 lakh (SEBI mandate). This is not investment advice.
     </p>
   );
 }

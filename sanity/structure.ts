@@ -34,6 +34,16 @@ export const deskStructure: StructureResolver = (S) =>
             .title("Investment Data")
             .items([
               S.documentTypeListItem("pmsStrategy").title("PMS Strategies"),
+              // Singleton — the explorer's alpha benchmark. Pinned to one
+              // document so there's a single row the monthly refresh updates.
+              S.listItem()
+                .title("Benchmark (S&P BSE 500 TRI)")
+                .id("benchmark")
+                .child(
+                  S.document()
+                    .schemaType("benchmark")
+                    .documentId("benchmark-sp-bse-500-tri"),
+                ),
               S.documentTypeListItem("aifFund").title("AIF Funds"),
               S.documentTypeListItem("unlistedShare").title("Unlisted Shares"),
             ]),

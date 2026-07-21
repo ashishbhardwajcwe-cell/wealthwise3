@@ -7,11 +7,20 @@ Sanity documents in one command, so the monthly refresh is:
 ```
 npm run import:pms -- scripts/pms-data.csv
 npm run import:aif -- scripts/aif-data.csv
+npm run fetch:benchmark -- --file scripts/apmi-report.json --asof 2026-06-30
 ```
 
-Both upsert by `manager + name`, so re-running next month **updates** the same
-rows — never duplicates. Validation runs before anything is written; a bad row
-aborts the whole import with a line number.
+The two imports upsert by `manager + name`, so re-running next month
+**updates** the same rows — never duplicates. Validation runs before anything
+is written; a bad row aborts the whole import with a line number.
+
+`fetch:benchmark` keeps the S&P BSE 500 TRI **benchmark** the explorer measures
+alpha against current — it's a Sanity document now, not a hardcoded constant.
+It reads APMI's own investment-approach report (`loadIAReport`) and, if that
+carries the benchmark TRI row, upserts it. If it doesn't, it prints an
+`UPDATE BENCHMARK MANUALLY in Sanity Studio` notice and writes nothing — it
+never scrapes third-party sites for the figure. See
+[Benchmark (S&P BSE 500 TRI)](#benchmark-sp-bse-500-tri) below.
 
 Required env (in `.env.local` or the shell):
 
@@ -58,6 +67,40 @@ Monthly routine (~15 minutes for a 20-strategy list):
    (e.g. `APMI monthly report, Jun 2026`) — both are mandatory, for
    SEBI-compliance attribution on the site.
 4. `npm run import:pms -- scripts/pms-data.csv`
+5. Refresh the benchmark from the same report:
+   `npm run fetch:benchmark -- --file scripts/apmi-report.json --asof <month-end>`
+   (see [Benchmark](#benchmark-sp-bse-500-tri) — it prints a manual-update
+   notice if APMI didn't carry the S&P BSE 500 TRI row that month).
+
+### Benchmark (S&P BSE 500 TRI)
+
+The explorer's alpha, consistency dots and "beat benchmark only" filter all
+compare each strategy against the **S&P BSE 500 TRI**. That series lives in
+Sanity as a single `benchmark` document (Investment Data → *Benchmark (S&P BSE
+500 TRI)*), refreshed each month next to the strategy returns.
+
+APMI's investment-approach report (`loadIAReport`) publishes the benchmark TRI
+rows alongside the strategy rows, so it's the same official source — no
+third-party site involved. Two ways to run it:
+
+```
+# Save the APMI loadIAReport JSON payload, then:
+npm run fetch:benchmark -- --file scripts/apmi-report.json --asof 2026-06-30 \
+    --source "APMI monthly report, Jun 2026"
+
+# Or, if the endpoint is reachable from where you run it:
+npm run fetch:benchmark -- --url "$APMI_REPORT_URL" --asof 2026-06-30
+```
+
+Add `--dry-run` to see the document it would write without touching Sanity.
+
+If the response **doesn't** carry the S&P BSE 500 TRI row (or you didn't hand
+it a report), the script prints an `UPDATE BENCHMARK MANUALLY in Sanity Studio`
+notice and writes nothing. In that case open the Benchmark document and fill in
+1M/3M/6M/1Y/2Y/3Y from the APMI table by hand. Leave **5Y** and **SI** blank
+unless APMI carries a clean like-for-like TRI series — the site suppresses
+alpha for any window the document leaves empty. The site always falls back to
+the last stored benchmark, so it never crashes or blanks while you catch up.
 
 ### AIF — quarterly, not monthly
 

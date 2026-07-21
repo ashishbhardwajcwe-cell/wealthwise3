@@ -2,15 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { getLivePmsStrategies } from "@/lib/investment-data";
+import { getLivePmsStrategies, getBenchmark } from "@/lib/investment-data";
 import { cleanPmsStrategies, findPmsStrategyBySlug, pmsStrategySlug } from "@/lib/pms";
 import { fmtAsOf } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 import {
-  toStrategy, toneOf, toneColor, alphaFor,
+  toStrategy, toBenchmark, toneOf, toneColor, alphaFor,
   AlphaChip, ConsistencyDots,
   FactsGrid, ReturnsVsBenchmarkTable, HowToReadThis, ComplianceFootnote,
-  BENCH_NAME,
 } from "@/components/pms/strategy-shared";
 import { EnquireButton } from "@/components/pms/EnquireButton";
 import { NewsletterBand } from "@/components/pms/NewsletterBand";
@@ -41,7 +40,10 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const clean = cleanPmsStrategies(await getLivePmsStrategies());
+  const [clean, benchmark] = await Promise.all([
+    getLivePmsStrategies().then(cleanPmsStrategies),
+    getBenchmark().then(toBenchmark),
+  ]);
   const s = findPmsStrategyBySlug(clean, slug);
   if (!s) return { title: "Strategy not found" };
 
@@ -49,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // already carries the brand, so mark it absolute to avoid doubling it.
   const title = `${s.strategyName} PMS by ${s.manager} — Returns, AUM & Analysis | PlanMyCashflows`;
   const ret3y = typeof s.returns3y === "number" ? `${s.returns3y.toFixed(1)}% 3Y annualised return` : "returns";
-  const description = `${s.strategyName} by ${s.manager}: ${ret3y} vs ${BENCH_NAME}${s.category ? `, ${s.category} category` : ""}. AUM, minimum investment, alpha and consistency analysis, updated monthly from APMI disclosures.`;
+  const description = `${s.strategyName} by ${s.manager}: ${ret3y} vs ${benchmark.name}${s.category ? `, ${s.category} category` : ""}. AUM, minimum investment, alpha and consistency analysis, updated monthly from APMI disclosures.`;
   const canonical = `${siteConfig.url}/pms/${slug}`;
 
   return {
@@ -70,14 +72,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PmsStrategyPage({ params }: Props) {
   const { slug } = await params;
-  const clean = cleanPmsStrategies(await getLivePmsStrategies());
+  const [clean, benchmark] = await Promise.all([
+    getLivePmsStrategies().then(cleanPmsStrategies),
+    getBenchmark().then(toBenchmark),
+  ]);
   const live = findPmsStrategyBySlug(clean, slug);
   if (!live) notFound();
 
   const s = toStrategy(live, clean);
   const asOn = fmtAsOf(live.asOfDate);
   const ret3y = s.returns["3Y"];
-  const alpha3y = alphaFor(s.returns, "3Y");
+  const alpha3y = alphaFor(s.returns, "3Y", benchmark.returns);
 
   // Up to 6 stablemates from the same category, biggest first, linked.
   const related = live.category
@@ -124,7 +129,7 @@ export default async function PmsStrategyPage({ params }: Props) {
           </div>
           <div className="flex flex-col items-end gap-2 pb-1">
             <AlphaChip value={alpha3y} ret={ret3y} />
-            <ConsistencyDots ret={s.returns} />
+            <ConsistencyDots ret={s.returns} bench={benchmark.returns} benchName={benchmark.name} />
           </div>
         </div>
 
@@ -134,12 +139,12 @@ export default async function PmsStrategyPage({ params }: Props) {
         </div>
 
         {/* returns vs benchmark */}
-        <h2 className="font-ui mt-8 mb-2" style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Returns vs {BENCH_NAME}</h2>
-        <ReturnsVsBenchmarkTable returns={s.returns} />
+        <h2 className="font-ui mt-8 mb-2" style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Returns vs {benchmark.name}</h2>
+        <ReturnsVsBenchmarkTable returns={s.returns} bench={benchmark.returns} />
 
         {/* honest read */}
         <div className="mt-4">
-          <HowToReadThis returns={s.returns} asOn={asOn} />
+          <HowToReadThis returns={s.returns} asOn={asOn} bench={benchmark.returns} />
         </div>
 
         {/* enquire CTA */}
@@ -188,7 +193,7 @@ export default async function PmsStrategyPage({ params }: Props) {
         <NewsletterBand source="pms-strategy-page" />
 
         {/* compliance — same disclaimer as the explorer */}
-        <ComplianceFootnote asOn={asOn} />
+        <ComplianceFootnote asOn={asOn} benchName={benchmark.name} />
       </div>
     </div>
   );
