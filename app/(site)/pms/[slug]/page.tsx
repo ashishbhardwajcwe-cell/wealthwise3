@@ -17,11 +17,12 @@ import { NewsletterBand } from "@/components/pms/NewsletterBand";
 /*
   /pms/[slug] — one SEO page per PMS strategy.
 
-  Statically pre-rendered for every strategy in the live feed
-  (generateStaticParams) and refreshed daily via ISR, so the monthly APMI
-  data updates flow through without a rebuild. Slugs come from
-  pmsStrategySlug() — the same util the explorer's links and the sitemap
-  use — so URLs are deterministic everywhere.
+  The 100 largest strategies (by AUM) are pre-rendered at build time
+  (generateStaticParams); every other strategy page is generated on its
+  first visit and then refreshed daily via ISR — so deploys stay fast and
+  the monthly APMI data updates flow through without a rebuild. Slugs come
+  from pmsStrategySlug() — the same util the explorer's links and the
+  sitemap use — so URLs are deterministic everywhere.
 */
 
 interface Props {
@@ -32,9 +33,17 @@ export const revalidate = 86400; // daily ISR — monthly data refresh flows thr
 
 export async function generateStaticParams() {
   const clean = cleanPmsStrategies(await getLivePmsStrategies());
+  // Pre-build only the 100 largest strategies (by AUM) at deploy time —
+  // building all ~1,700 pushed Netlify builds past 15 minutes. Every other
+  // strategy page is generated on its first visit and then cached for a
+  // day by the `revalidate = 86400` above, so no URL ever goes missing.
+  const top = [...clean]
+    .sort((a, b) => (b.aumCr ?? -1) - (a.aumCr ?? -1))
+    .slice(0, 100);
   // De-duplicate: a strategy duplicated verbatim in the feed (same name AND
-  // manager) collapses onto one slug — emit it once.
-  const slugs = new Set(clean.map((s) => pmsStrategySlug(s, clean)));
+  // manager) collapses onto one slug — emit it once. Slugs are still
+  // computed against the FULL list so they match the explorer's links.
+  const slugs = new Set(top.map((s) => pmsStrategySlug(s, clean)));
   return Array.from(slugs).map((slug) => ({ slug }));
 }
 
