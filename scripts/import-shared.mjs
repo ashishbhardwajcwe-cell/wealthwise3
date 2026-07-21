@@ -68,6 +68,29 @@ export const num = (v) => {
 export const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96);
 
+const MONTHS3 = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+/**
+ * Coerce a human date into ISO "YYYY-MM-DD".
+ * Accepts "YYYY-MM-DD", "DD-MMM-YYYY" / "DD Mon YYYY", and "DD/MM/YYYY".
+ * Returns undefined for blank, null when present-but-unparseable, else the
+ * normalized string.
+ */
+export function normalizeIsoDate(v) {
+  if (v == null) return undefined;
+  const s = String(v).trim();
+  if (s === "") return undefined;
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[-/ ]([A-Za-z]{3,})[-/ ](\d{4})$/);
+  if (m && MONTHS3[m[2].slice(0, 3).toLowerCase()]) {
+    return `${m[3]}-${String(MONTHS3[m[2].slice(0, 3).toLowerCase()]).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  }
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return null;
+}
+
 /** Drop undefined entries; return undefined when nothing remains. */
 export const prune = (o) => {
   const out = Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));

@@ -5,14 +5,18 @@ Sanity documents in one command, so the monthly refresh is:
 **download → paste into CSV → run one command**. No Studio clicking.
 
 ```
-npm run import:pms -- scripts/pms-data.csv
-npm run import:aif -- scripts/aif-data.csv
+npm run import:pms    -- scripts/pms-data.csv
+npm run fetch:sebi-aif -- --asof 2026-06-30          # → scripts/aif-data.csv
+npm run import:aif    -- scripts/aif-data.csv
 npm run fetch:benchmark -- --file scripts/apmi-report.json --asof 2026-06-30
 ```
 
-The two imports upsert by `manager + name`, so re-running next month
-**updates** the same rows — never duplicates. Validation runs before anything
-is written; a bad row aborts the whole import with a line number.
+The imports upsert on a stable key — PMS by `manager + name`, AIF by SEBI
+**registration number** — so re-running next month **updates** the same rows,
+never duplicates. Validation runs before anything is written; a bad row aborts
+the whole import with a line number. See
+[the AIF directory](#aif--a-sebi-registry-directory--performance-for-select-funds)
+below for how `fetch:sebi-aif` pulls SEBI's registered-AIF list.
 
 `fetch:benchmark` keeps the S&P BSE 500 TRI **benchmark** the explorer measures
 alpha against current — it's a Sanity document now, not a hardcoded constant.
@@ -102,22 +106,39 @@ unless APMI carries a clean like-for-like TRI series — the site suppresses
 alpha for any window the document leaves empty. The site always falls back to
 the last stored benchmark, so it never crashes or blanks while you catch up.
 
-### AIF — quarterly, not monthly
+### AIF — a SEBI registry directory (+ performance for select funds)
 
-AIFs have no APMI equivalent with public strategy-level returns; closed-ended
-fund IRRs are vintage-specific and mostly disclosed to investors:
+The AIF page leads with a **directory**: every SEBI-registered Alternative
+Investment Fund, searchable, with Cat I/II/III filters. That base comes from
+SEBI's own public "Recognised Intermediaries" list — the authoritative, free
+source — not from any commercial aggregator.
 
-1. **Manager quarterly letters / PPM data rooms** — as an empanelled
-   distributor you receive these; they're the most accurate source for
-   net IRR / MOIC / DPI / TVPI.
-2. **CRISIL AIF Benchmarks** (free half-yearly summaries) — good for
-   category-level context and sanity checks.
-3. **SEBI AIF disclosures** — registration and aggregate data, not
-   per-fund returns.
+```
+# From a machine that can reach sebi.gov.in:
+npm run fetch:sebi-aif -- --asof <today>            # → scripts/aif-data.csv
+npm run import:aif      -- scripts/aif-data.csv     # upserts by registration no.
+```
 
-Same flow: fill `scripts/aif-data.csv` (template: `scripts/aif-template.csv`),
-then `npm run import:aif -- scripts/aif-data.csv`. Quarterly is the honest
-cadence here — the `asOfDate` shown on the site makes that transparent.
+`fetch:sebi-aif` is **polite** (sequential requests, a delay, a clear
+User-Agent) and only ever reads SEBI. Because the build sandbox can't reach
+sebi.gov.in, its HTML parser is a best-effort, header-driven guess — confirm it
+on the first live run. If it finds 0 funds, re-run with `--dump ./raw` to save
+the pages, then check the column headings. The most reliable path is offline:
+save the list pages from a browser and parse them with no network at all —
+`npm run fetch:sebi-aif -- --dir ./sebi-pages` (or repeated `--file`). See the
+script header for every flag.
+
+Documents are keyed by **SEBI registration number**, so re-running next month
+updates rows in place. `import-aif` never wipes hand-added performance: any
+column the registry CSV omits (net IRR / MOIC / fund size / fees …) is carried
+forward from the existing document.
+
+**Performance** (net IRR / MOIC / DPI / TVPI) is layered onto *select* funds as
+their AMCs share factsheets — add those columns to the CSV row for that fund
+(matched by registration number) and re-import, or edit the fund in Studio.
+Only funds that carry performance appear in the "AIF funds on our radar"
+tracker; everything else stays in the directory. Closed-ended IRRs are
+vintage-specific, so the `asOfDate` on each row keeps that honest.
 
 ---
 
@@ -130,12 +151,13 @@ source* notes`
 — `category` ∈ Multicap, Largecap, Midcap, Smallcap, Thematic, Quant, Hybrid.
 
 **AIF** (`aif-template.csv`):
-`fundName* manager* category vintage fundSizeCr minCommitmentCr tenorYears
-netIrr moic dpi tvpi feesManagement feesCarry feesHurdle asOfDate* source*
-notes`
-— `category` ∈ `Cat I - VC`, `Cat I - Infra`, `Cat I - Social`, `Cat II - PE`,
-`Cat II - Credit`, `Cat II - RE`, `Cat II - FoF`, `Cat III - LS`,
-`Cat III - Quant`.
+`fundName* registrationNo* category registrationDate sponsor manager vintage
+fundSizeCr minCommitmentCr tenorYears netIrr moic dpi tvpi feesManagement
+feesCarry feesHurdle asOfDate* source* notes`
+— `category` is the broad SEBI class: `I`, `II` or `III` (blank allowed).
+`registrationDate` accepts `YYYY-MM-DD`, `DD-MMM-YYYY` or `DD/MM/YYYY`.
+Registry rows use `source = SEBI registered intermediaries list`; the
+performance columns are optional, for the funds you have factsheets for.
 
 `*` = required. Numbers may include `%`, `₹` and commas — they're stripped.
 

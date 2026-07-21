@@ -20,10 +20,12 @@ const inputStyle: CSSProperties = {
   background: "#fff",
 };
 
-export function EnquireModal({ strategy, source, onClose }: {
+export function EnquireModal({ strategy, source, onClose, title = "Enquire" }: {
   strategy: string;
   source: LeadSource;
   onClose: () => void;
+  /** Modal heading — defaults to "Enquire"; the AIF directory passes "Request factsheet". */
+  title?: string;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,7 +53,7 @@ export function EnquireModal({ strategy, source, onClose }: {
       <div className="w-full max-w-sm rounded-2xl bg-white" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 flex items-start justify-between" style={{ borderBottom: "1px solid var(--line)" }}>
           <div>
-            <h2 className="font-display" style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", lineHeight: 1.15 }}>Enquire</h2>
+            <h2 className="font-display" style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", lineHeight: 1.15 }}>{title}</h2>
             <span className="font-ui inline-block rounded-full px-2.5 py-0.5 mt-1.5" style={{ fontSize: 12, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
               {strategy}
             </span>

@@ -71,7 +71,7 @@ export function AIFTable({ funds }: { funds: AifFund[] }) {
               ) : rows.map((f) => (
                 <tr key={f._id} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
                   <td className="px-4 py-3 font-semibold text-[var(--color-navy)]">{f.fundName}</td>
-                  <td className="px-4 py-3 text-[var(--color-slate)]">{f.manager}</td>
+                  <td className="px-4 py-3 text-[var(--color-slate)]">{f.manager ?? f.sponsor ?? "—"}</td>
                   <td className="px-4 py-3 text-[var(--color-slate)] text-xs">{f.category ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{f.vintage ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{f.fundSize ? `₹${f.fundSize.toLocaleString("en-IN")} Cr` : "—"}</td>

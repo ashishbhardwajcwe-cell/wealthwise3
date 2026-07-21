@@ -16,9 +16,9 @@ import { formRateLimit } from "@/lib/redis";
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SOURCES = ["pms-explorer", "pms-strategy-page"];
+const SOURCES = ["pms-explorer", "pms-strategy-page", "aif-directory"];
 
-export type LeadSource = "pms-explorer" | "pms-strategy-page";
+export type LeadSource = "pms-explorer" | "pms-strategy-page" | "aif-directory";
 
 export interface LeadInput {
   name: string;

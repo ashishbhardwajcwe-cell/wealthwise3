@@ -132,10 +132,11 @@ export const benchmarkQuery = groq`
 `;
 
 export const allAifFundsQuery = groq`
-  *[_type == "aifFund"]
-    | order(asOfDate desc)
-    { _id, fundName, manager, category, vintage, fundSize,
-      minCommitmentCr, tenor, fees, returns, asOfDate, notes }
+  *[_type == "aifFund" && !(_id in path("drafts.**"))]
+    | order(fundName asc)
+    { _id, fundName, registrationNo, category, registrationDate, sponsor,
+      manager, vintage, fundSize, minCommitmentCr, tenor, fees, returns,
+      asOfDate, source, notes }
 `;
 
 export const allUnlistedSharesQuery = groq`

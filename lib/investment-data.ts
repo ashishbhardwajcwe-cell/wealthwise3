@@ -106,8 +106,12 @@ export interface LiveBenchmark {
 export interface AifFund {
   _id: string;
   fundName: string;
-  manager: string;
-  category?: string;
+  /** SEBI registration number — the directory's natural key. */
+  registrationNo?: string;
+  category?: string; // broad SEBI category: "I" | "II" | "III"
+  registrationDate?: string;
+  sponsor?: string;
+  manager?: string;
   vintage?: number;
   fundSize?: number;
   minCommitmentCr?: number;
@@ -115,6 +119,7 @@ export interface AifFund {
   fees?: { management?: number; carry?: number; hurdle?: number };
   returns?: { netIrr?: number; moic?: number; dpi?: number; tvpi?: number };
   asOfDate: string;
+  source?: string;
   notes?: string;
 }
 
