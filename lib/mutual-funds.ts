@@ -131,17 +131,49 @@ interface AmfiScheme {
 }
 
 /**
+ * Module-scope memo for the parsed AMFI feed. The feed is ~2.2MB, which is
+ * over Next's 2MB per-item data-cache limit — Next refuses to store it
+ * ("Failed to set Next.js data cache … items over 2MB can not be cached" in
+ * every build log), so `next: { revalidate }` on that fetch silently did
+ * nothing and every caller re-downloaded the full file (twice on /markets
+ * alone: getTopMutualFunds + getMetalETFs). Caching the parsed result here
+ * instead gives one download per server instance per NAV_REVALIDATE window,
+ * and the shared in-flight promise collapses concurrent callers into a
+ * single request. A failed/empty fetch clears the slot so the next render
+ * retries instead of pinning an empty fund list for 6 hours.
+ */
+let amfiMemo: { at: number; promise: Promise<AmfiScheme[]> } | null = null;
+
+function fetchAmfiSchemes(): Promise<AmfiScheme[]> {
+  if (amfiMemo && Date.now() - amfiMemo.at < NAV_REVALIDATE * 1000) {
+    return amfiMemo.promise;
+  }
+  const memo = {
+    at: Date.now(),
+    promise: loadAmfiSchemes().then((schemes) => {
+      if (schemes.length === 0 && amfiMemo === memo) amfiMemo = null;
+      return schemes;
+    }),
+  };
+  amfiMemo = memo;
+  return memo.promise;
+}
+
+/**
  * Parse the full AMFI feed preserving its structure. The feed interleaves:
  *   Open Ended Schemes(Equity Scheme - Large Cap Fund)   ← section header
  *   Axis Mutual Fund                                     ← AMC line
  *   120465;INF846K01EW2;-;Axis Bluechip Fund - Direct Plan - Growth;58.4;01-Jul-2026
  */
-async function fetchAmfiSchemes(): Promise<AmfiScheme[]> {
+async function loadAmfiSchemes(): Promise<AmfiScheme[]> {
   const out: AmfiScheme[] = [];
   try {
+    // Deliberately NOT `next: { revalidate }`: the response is over the 2MB
+    // data-cache limit so Next can't store it anyway — the memo above is the
+    // cache. The timeout keeps a hung AMFI from stalling a build/ISR render.
     const res = await fetch(AMFI_FEED_URL, {
-      next: { revalidate: NAV_REVALIDATE, tags: ["amfi:nav"] },
       headers: { Accept: "text/plain", "User-Agent": BROWSER_UA },
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) return out;
     const text = await res.text();
