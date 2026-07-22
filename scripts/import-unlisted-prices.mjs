@@ -58,10 +58,11 @@ import {
 } from "./unlisted-matching.mjs";
 
 // ---------- args ----------
-const args = { partner: "uz", dryRun: false, seedEditorial: false };
+const args = { partner: "uz", dryRun: false, seedEditorial: false, publish: false };
 for (const a of process.argv.slice(2)) {
   if (a === "--dry-run") args.dryRun = true;
   else if (a === "--seed-editorial") args.seedEditorial = true;
+  else if (a === "--publish") args.publish = true;
   else if (a.startsWith("--partner=")) args.partner = a.slice(10).trim();
   else if (a.startsWith("--date=")) args.date = a.slice(7).trim();
   else if (a === "--help" || a === "-h") { console.log("See the header of scripts/import-unlisted-prices.mjs for usage."); process.exit(0); }
@@ -69,9 +70,17 @@ for (const a of process.argv.slice(2)) {
   else { console.error(`Unknown flag ${a}`); process.exit(1); }
 }
 
+/** Split OCR-fused words ("AplMetals" → "Apl Metals") so auto-created company
+ *  names read cleanly. Conservative: only inserts a space at a lowercase →
+ *  uppercase boundary, which never occurs inside a properly-spaced name. */
+function cleanCompanyName(raw) {
+  return String(raw).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/\s{2,}/g, " ").trim();
+}
+
 if (!args.seedEditorial && !args.file) {
-  console.error("Usage: node scripts/import-unlisted-prices.mjs <file.pdf|file.csv> [--partner=uz] [--date=YYYY-MM-DD] [--dry-run]\n" +
-    "       node scripts/import-unlisted-prices.mjs --seed-editorial [--dry-run]");
+  console.error("Usage: node scripts/import-unlisted-prices.mjs <file.pdf|file.csv> [--publish] [--partner=uz] [--date=YYYY-MM-DD] [--dry-run]\n" +
+    "       node scripts/import-unlisted-prices.mjs --seed-editorial [--dry-run]\n\n" +
+    "  --publish  make every imported company live immediately (skip the manual review gate).");
   process.exit(1);
 }
 
@@ -248,6 +257,10 @@ for (const row of rows) {
     ...(row.depository ? { depository: row.depository } : {}),
     ...(row.lotSize !== undefined ? { lotSize: row.lotSize } : {}),
   };
+  // --publish makes rows live immediately: created docs skip the review gate,
+  // and matched docs that were parked for review on an earlier run get
+  // released too (the public query hides needsReview == true).
+  const publishSet = args.publish ? { needsReview: false } : {};
 
   if (target.doc) {
     if (claimed.has(target.doc._id)) {
@@ -256,7 +269,7 @@ for (const row of rows) {
     }
     claimed.set(target.doc._id, row.name);
     // Partner data may update prices — never an existing doc's company/slug.
-    mutations.push({ patch: { id: target.doc._id, set: priceFields } });
+    mutations.push({ patch: { id: target.doc._id, set: { ...priceFields, ...publishSet } } });
     const knownNames = [target.doc.company, ...(target.doc.aliases ?? [])].map(normalizeCompanyName);
     if (!knownNames.includes(normalizeCompanyName(row.name))) {
       mutations.push({ patch: { id: target.doc._id, setIfMissing: { aliases: [] } } });
@@ -264,7 +277,7 @@ for (const row of rows) {
     }
     updated.push({ name: row.name, company: target.doc.company, price: row.price });
   } else {
-    const company = target.clean ?? splitEllipsis(row.name).clean;
+    const company = cleanCompanyName(target.clean ?? splitEllipsis(row.name).clean);
     const _id = `unlistedShare-${slugify(company)}`;
     if (claimed.has(_id)) {
       skipped.push({ line: row.name, reason: `duplicate of "${claimed.get(_id)}" within this list — kept the first row` });
@@ -279,7 +292,8 @@ for (const row of rows) {
         slug: { _type: "slug", current: slugify(company) },
         aliases: [row.name],
         isActive: true,
-        needsReview: true, // auto-created — stays off the site until reviewed
+        // Auto-created: hidden until reviewed, unless --publish makes it live now.
+        needsReview: !args.publish,
         ...priceFields,
       },
     });
@@ -288,14 +302,17 @@ for (const row of rows) {
 }
 
 // ---------- summary ----------
-console.log(`Price list: ${args.file} · as of ${asOfDate} · partner "${args.partner}"`);
-console.log(`\n${updated.length} updated · ${created.length} created (needs review) · ${skipped.length} skipped`);
+console.log(`Price list: ${args.file} · as of ${asOfDate} · partner "${args.partner}"${args.publish ? " · PUBLISH (live immediately)" : ""}`);
+const createdLabel = args.publish ? "created (live)" : "created (needs review)";
+console.log(`\n${updated.length} updated · ${created.length} ${createdLabel} · ${skipped.length} skipped`);
 if (updated.length) {
   console.log("\nUpdated:");
   for (const u of updated) console.log(`  • ${u.company}  ₹${u.price.toLocaleString("en-IN")}${u.name !== u.company ? `  (list name: "${u.name}")` : ""}`);
 }
 if (created.length) {
-  console.log("\nCreated (review in Studio → Unlisted Shares (needs review) before they go live):");
+  console.log(args.publish
+    ? "\nCreated (live on the site after the next revalidation):"
+    : "\nCreated (review in Studio → Unlisted Shares (needs review) before they go live):");
   for (const c of created) console.log(`  • ${c.name}  ₹${c.price.toLocaleString("en-IN")}`);
 }
 if (skipped.length) {
