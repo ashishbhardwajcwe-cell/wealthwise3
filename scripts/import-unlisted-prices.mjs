@@ -165,6 +165,20 @@ if (isPdf) {
   } finally {
     await parser.destroy();
   }
+
+  // The partner's designed export draws all text as vector outlines (zero
+  // fonts), so text extraction can come back empty. Fall back to rendering
+  // each page and OCRing it — the dealer column is excluded by x-position
+  // inside classifyOcrLine, so it is never read.
+  if (rows.length === 0) {
+    console.log("No text layer found in the PDF — switching to OCR (about 5s per page)…");
+    const { ocrPriceListPdf } = await import("./unlisted-ocr.mjs");
+    const ocr = await ocrPriceListPdf(filePath, { log: (m) => console.log(m) });
+    rows = ocr.rows;
+    skipped.length = 0;
+    skipped.push(...ocr.skipped);
+    if (!headerDateRaw) headerDateRaw = ocr.headerDateRaw;
+  }
 } else {
   const csvRows = parseCsv(readFileSync(filePath, "utf8"));
   if (csvRows.length < 2) { console.error("CSV has no data rows."); process.exit(1); }
