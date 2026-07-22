@@ -5,6 +5,9 @@ import { InvestmentProductPage } from "@/components/InvestmentProductPage";
 import { unlistedSharesData } from "@/lib/product-data";
 import { UnlistedSharesGraph } from "@/components/ProductGraphs";
 import { UnlistedExplorer } from "@/components/unlisted/UnlistedExplorer";
+import { getUnlistedShares } from "@/lib/investment-data";
+import { slugifyHeading } from "@/lib/slugify";
+import type { UnlistedCompany } from "@/lib/unlisted-companies";
 
 export const metadata: Metadata = {
   title: "Unlisted Shares & Pre-IPO Investing in India — 2026 Guide",
@@ -30,7 +33,24 @@ const STEPS = [
   },
 ];
 
-export default function Page() {
+export const revalidate = 300;
+
+export default async function Page() {
+  // Mode 2 — live Sanity feed (indicative prices from the partner's daily
+  // list, layered on the curated editorial content). The query already
+  // filters needsReview / inactive docs. While Sanity has no documents yet,
+  // the explorer falls back to its built-in Mode-1 editorial array.
+  const shares = await getUnlistedShares();
+  const live: UnlistedCompany[] = shares.map((s) => ({
+    name: s.company,
+    slug: s.slug ?? slugifyHeading(s.company),
+    sector: s.sector ?? "Other",
+    about: s.summary ?? "",
+    drhpFiled: s.ipoStatus === "drhp-filed",
+    indicativePrice: s.indicativePriceINR,
+    priceAsOf: s.asOfDate,
+  }));
+
   return (
     <>
       {/* Sticky compliance ribbon — this page only. Sits just below the h-16 header. */}
@@ -56,7 +76,7 @@ export default function Page() {
             </p>
           </div>
 
-          <UnlistedExplorer />
+          <UnlistedExplorer companies={live.length > 0 ? live : undefined} />
         </div>
       </section>
 

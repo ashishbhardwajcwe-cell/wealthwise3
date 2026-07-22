@@ -7,7 +7,7 @@ import {
   useTableSort, sortRows, latestAmfiDate,
 } from "@/components/tables/table-utils";
 
-type SortKey = "company" | "sector" | "priceLowINR" | "ipoStatus";
+type SortKey = "company" | "sector" | "indicativePriceINR" | "ipoStatus";
 
 const TEXT_KEYS = ["company", "sector", "ipoStatus"] as const;
 
@@ -53,7 +53,7 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
             <span className="eyebrow">Live tracker</span>
             <h2 className="mt-2">Unlisted shares we&apos;re tracking</h2>
             <p className="text-sm text-[var(--color-slate)] mt-2">
-              {shares.length} {shares.length === 1 ? "company" : "companies"}. Prices vary across platforms — ranges shown reflect typical spread.
+              {shares.length} {shares.length === 1 ? "company" : "companies"}. All prices are indicative.
               {latestAsOf && <span> Updated: {latestAsOf}</span>}
             </p>
           </div>
@@ -72,10 +72,10 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
               <tr>
                 <Th label="Company" k="company" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
                 <Th label="Sector" k="sector" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <Th label="Price range (₹)" k="priceLowINR" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <PlainTh align="right">Lot</PlainTh>
+                <Th label="Indicative (₹)" k="indicativePriceINR" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <PlainTh align="right">Min lot</PlainTh>
                 <Th label="IPO" k="ipoStatus" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="left" />
-                <PlainTh align="left">Platforms</PlainTh>
+                <PlainTh align="left">Depository</PlainTh>
                 <PlainTh align="right">As of</PlainTh>
               </tr>
             </thead>
@@ -86,7 +86,7 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
                 <tr key={s._id} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
                   <td className="px-4 py-3 font-semibold text-[var(--color-navy)]">{s.company}</td>
                   <td className="px-4 py-3 text-[var(--color-slate)]">{s.sector ?? "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">₹{s.priceLowINR.toLocaleString("en-IN")} – ₹{s.priceHighINR.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{typeof s.indicativePriceINR === "number" ? `₹${s.indicativePriceINR.toLocaleString("en-IN")}` : "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-xs">{s.lotSize ?? "—"}</td>
                   <td className="px-4 py-3">
                     {s.ipoStatus && (
@@ -96,7 +96,7 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-[var(--color-slate)]">
-                    {s.platformsAvailable?.join(", ") ?? "—"}
+                    {s.depository ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-right text-xs text-[var(--color-slate)] tabular-nums">{s.asOfDate ?? "—"}</td>
                 </tr>
@@ -106,9 +106,8 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
         </div>
 
         <p className="text-[11px] text-[var(--color-slate)] mt-4 italic leading-relaxed">
-          Unlisted share prices are platform-dependent and update weekly. Spreads of 5–15% between platforms are common.
-          Prices shown are illustrative ranges; the actual price you pay depends on the platform, lot, and execution.
-          Not a recommendation.
+          Prices are indicative, from partner price lists, and move daily. The actual price you pay depends on lot,
+          availability and execution. Unlisted shares are illiquid and high-risk. Not a recommendation.
         </p>
       </div>
     </section>
@@ -118,7 +117,7 @@ export function UnlistedTable({ shares }: { shares: UnlistedShare[] }) {
 function getValue(s: UnlistedShare, key: SortKey): string | number | undefined {
   if (key === "company") return s.company;
   if (key === "sector") return s.sector;
-  if (key === "priceLowINR") return s.priceLowINR;
+  if (key === "indicativePriceINR") return s.indicativePriceINR;
   if (key === "ipoStatus") return s.ipoStatus;
   return undefined;
 }

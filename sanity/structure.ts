@@ -46,6 +46,16 @@ export const deskStructure: StructureResolver = (S) =>
                 ),
               S.documentTypeListItem("aifFund").title("AIF Funds"),
               S.documentTypeListItem("unlistedShare").title("Unlisted Shares"),
+              // Companies the price importer auto-created but couldn't match.
+              // Fix the name/sector/summary, then untick needsReview to publish.
+              S.listItem()
+                .title("Unlisted Shares (needs review)")
+                .child(
+                  S.documentList()
+                    .title("Needs review")
+                    .filter('_type == "unlistedShare" && needsReview == true')
+                    .apiVersion("2024-09-01"),
+                ),
             ]),
         ),
     ]);
