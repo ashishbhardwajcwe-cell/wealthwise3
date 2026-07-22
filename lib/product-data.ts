@@ -330,17 +330,17 @@ export const unlistedSharesData: ProductPageData = {
   whatItIs: [
     "PlanMyCashflows is an information and education platform for unlisted and pre-IPO shares — not a SEBI-recognised stock exchange or trading platform. We do not execute trades, run a secondary market or hold your money, and every price shown here is indicative only and is not an offer to buy or sell.",
     "Unlisted shares are equity in companies that aren't yet listed on the stock exchanges (NSE/BSE). This includes pre-IPO companies (often within 1–3 years of listing), private companies that may never list, and shares of public-sector unlisted entities (like NSE itself, which is unlisted despite running the exchange).",
-    "In India, the unlisted shares market has matured rapidly since 2020. Platforms like UnlistedArena, Stockify, Precize, and Altius let retail investors access shares that were earlier limited to PE/VC funds. Typical ticket sizes range from ₹50,000 to ₹5,00,000 per investment. You hold the shares in your demat account just like listed stocks.",
+    "In India, the unlisted shares market has matured rapidly since 2020, opening up access to shares that were earlier limited to PE/VC funds. Typical ticket sizes range from ₹50,000 to ₹5,00,000 per investment. You hold the shares in your own demat account just like listed stocks.",
     "Tax treatment is different from listed equity. Long-term holding (>24 months) qualifies for LTCG at 12.5% (with indexation removed post-Jul 2024). Short-term (<24 months) is taxed at your slab rate — which can be a brutal 30%+ for HNIs. There's no STT, no exchange transaction cost — but pricing is opaque and bid-ask spreads can be 5–15%.",
   ],
   keyFacts: [
-    { label: "Minimum investment", value: "₹50,000 typical (platform-dependent)" },
+    { label: "Minimum investment", value: "₹50,000 typical (varies by company & lot)" },
     { label: "Typical returns", value: "Highly variable; 0% to multi-bagger" },
-    { label: "Liquidity", value: "Low — exit via platform secondary or post-IPO" },
+    { label: "Liquidity", value: "Low — exit via off-market sale or post-IPO" },
     { label: "Holding period for LTCG", value: "24 months" },
     { label: "Tax (LTCG)", value: "12.5%" },
     { label: "Tax (STCG)", value: "At your slab rate" },
-    { label: "Regulator", value: "Not directly — platforms are facilitators" },
+    { label: "Regulator", value: "Off-market — not exchange-regulated" },
     { label: "Risk level", value: "Very High" },
   ],
   pros: [
@@ -353,36 +353,36 @@ export const unlistedSharesData: ProductPageData = {
   cons: [
     "Illiquid — you can be stuck for years, especially if IPO is delayed",
     "Bid-ask spreads of 5–15% mean meaningful friction on entry and exit",
-    "Valuation opacity — no daily mark-to-market, prices set by platform demand",
+    "Valuation opacity — no daily mark-to-market, prices set by private demand-supply",
     "STCG at slab rate makes short holds extremely tax-inefficient",
     "Information asymmetry — promoters often know more than buyers in secondary",
   ],
   whoShouldConsider:
     "Consider unlisted shares as a small (3–8%) allocation if your portfolio is already diversified, you can hold for 3+ years, and you understand the company you're buying (financials, sector, why it's likely to IPO). Don't allocate retirement or short-term goal money to unlisted.",
   commonMistakes: [
-    "Buying based on the 'this will IPO at 3x' pitch from a platform RM. Most pre-IPO valuations crash 30–50% from grey-market prices when the actual IPO happens.",
+    "Buying on a 'this will IPO at 3x' sales pitch. Most pre-IPO valuations crash 30–50% from grey-market prices when the actual IPO happens.",
     "Ignoring the 24-month holding period and exiting in 6 months — your STCG eats most of the upside.",
     "Concentrating in one or two hot names. Diversify across 4–6 unlisted holdings to manage single-company risk.",
     "Not checking the company's financials, board, or auditor track record before investing.",
     "Confusing 'pre-IPO' (likely listing soon) with 'unlisted forever' (private company that may never list).",
   ],
   howWeHelp:
-    "We help you evaluate whether a specific unlisted opportunity fits your portfolio, vet the platform you're buying through (custody, settlement, KYC), and time the exit — pre-IPO, at IPO, or post-listing — for maximum after-tax outcome. CashFlow Planner tracks unlisted holdings alongside listed equity and flags upcoming IPO/event windows.",
+    "We help you evaluate whether a specific unlisted opportunity fits your portfolio, check the custody, settlement and KYC on how you're buying, and time the exit — pre-IPO, at IPO, or post-listing — for maximum after-tax outcome. CashFlow Planner tracks unlisted holdings alongside listed equity and flags upcoming IPO/event windows.",
   faqs: [
     {
       question: "Are unlisted shares legal in India?",
       answer:
-        "Yes, fully legal. They're transferred via off-market trades to your demat account. The transaction itself doesn't go through an exchange. Platforms like UnlistedArena, Stockify, and Precize are facilitators, not exchanges. Just ensure your KYC, PAN, and demat are in order.",
+        "Yes, fully legal. They're transferred via off-market trades directly into your own demat account. The transaction itself doesn't go through an exchange — it's a privately facilitated transfer, not exchange trading. Just ensure your KYC, PAN, and demat are in order.",
     },
     {
-      question: "Which platforms should I use?",
+      question: "How do I actually buy unlisted shares?",
       answer:
-        "Established platforms in India include UnlistedArena, Stockify, Precize, Altius, and Sharescart. Each has different inventories. Always verify the platform's track record, settlement process, and how they custody shares before transferring large amounts.",
+        "Unlisted shares change hands through off-market transfers that settle directly into your own demat account — never through a personal account, UPI ID or wallet. Before you transact, verify the counterparty's track record and settlement process, confirm how the shares are custodied, and check the transfer has landed in your demat before releasing payment. We help you evaluate the opportunity and guide you through KYC, paperwork and settlement.",
     },
     {
       question: "How is the price determined?",
       answer:
-        "There's no exchange-determined price. Platforms set prices based on demand-supply, recent funding rounds, peer comparables, and (closer to IPO) grey-market premium. The same share can have 5–15% price differences across platforms on the same day. Always compare before buying.",
+        "There's no exchange-determined price. Prices are set by private demand-supply, recent funding rounds, peer comparables, and (closer to IPO) grey-market premium. The same share can show 5–15% price differences between sellers on the same day. Always compare before buying.",
     },
     {
       question: "What happens when the company IPOs?",
@@ -392,12 +392,12 @@ export const unlistedSharesData: ProductPageData = {
     {
       question: "What if the company never IPOs?",
       answer:
-        "You're holding an illiquid private equity stake. You can sell back to the same platform (often at a discount), find a private buyer, or wait. Some companies do tender offers or buybacks. The risk of being stuck indefinitely is real — size your allocation accordingly.",
+        "You're holding an illiquid private equity stake. You can try to exit in the secondary market (often at a discount), find a private buyer, or wait. Some companies do tender offers or buybacks. The risk of being stuck indefinitely is real — size your allocation accordingly.",
     },
     {
       question: "Are there scams I should watch for?",
       answer:
-        "Yes. Red flags: 'guaranteed' returns, pushy sales pressure, paying via UPI to a personal account (always pay to a legal entity), shares of companies you can't find on MCA records, or platforms with no physical office. Stick to established names and always verify the share transfer in your demat before paying.",
+        "Yes. Red flags: 'guaranteed' returns, pushy sales pressure, paying via UPI to a personal account (always pay to a legal entity), shares of companies you can't find on MCA records, or a counterparty with no verifiable office or track record. Stick to verifiable counterparties and always confirm the share transfer in your demat before paying.",
     },
   ],
   extraDisclaimer:

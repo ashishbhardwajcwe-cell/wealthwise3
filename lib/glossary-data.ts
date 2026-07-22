@@ -59,7 +59,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   { term: "Term insurance", short: "Pure life insurance with no investment component. Pays out if you die during the term. Cheapest form of life cover.", related: "/investment-products/insurance" },
   { term: "TWRR", short: "Time-Weighted Rate of Return — strategy-level return that strips out the timing of cashflows. Used to compare PMS/fund manager performance across investors." },
   { term: "ULIP", short: "Unit Linked Insurance Plan — hybrid product combining insurance and investment. Generally underperforms term + MF combination after charges." },
-  { term: "Unlisted shares", short: "Shares of companies not yet listed on stock exchanges. Includes pre-IPO and private equity. ₹50k+ tickets via platforms like UnlistedArena, Stockify.", related: "/investment-products/unlisted-shares" },
+  { term: "Unlisted shares", short: "Shares of companies not yet listed on stock exchanges. Includes pre-IPO and private equity. Typically ₹50k+ tickets, held in your own demat account.", related: "/investment-products/unlisted-shares" },
   { term: "VDA", short: "Virtual Digital Asset — Indian tax law category covering cryptocurrencies and NFTs. Taxed at 30% flat with 1% TDS over ₹50k/yr." },
   { term: "Yield", short: "Annual income from an investment as % of its current price. Dividend yield, bond yield, rental yield are common variants." },
 ];

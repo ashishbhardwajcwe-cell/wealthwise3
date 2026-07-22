@@ -58,7 +58,7 @@ export default function DisclaimersPage() {
         {
           heading: "Third-party content",
           content: [
-            "Where we reference third-party platforms (UnlistedArena, Stockify, CoinDCX, etc.), AMCs, or PMS managers, this is for educational illustration only and not a recommendation. We have no commercial relationship with these parties unless explicitly disclosed.",
+            "Where we reference third-party platforms, exchanges, AMCs, or PMS managers, this is for educational illustration only and not a recommendation. We have no commercial relationship with any such party unless explicitly disclosed.",
           ],
         },
         {
