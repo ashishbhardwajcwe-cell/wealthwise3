@@ -25,6 +25,10 @@ export interface UnlistedCompany {
   indicativePrice?: number;
   /** Mode 2 only — ISO date the indicative price was recorded. */
   priceAsOf?: string;
+  /** Mode 2 only — minimum lot size (shares). */
+  lotSize?: number;
+  /** Mode 2 only — where the shares can settle, e.g. "NSDL & CDSL". */
+  depository?: string;
 }
 
 export const unlistedCompanies: UnlistedCompany[] = [
