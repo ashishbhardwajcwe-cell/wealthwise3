@@ -109,9 +109,8 @@ export async function sanityQuery(env, query) {
   return body.result;
 }
 
-/** createOrReplace all docs via the Sanity HTTP mutate API. */
-export async function sanityUpsert(env, docs) {
-  const mutations = docs.map((doc) => ({ createOrReplace: doc }));
+/** Run raw mutations (create/patch/…) via the Sanity HTTP mutate API. */
+export async function sanityMutate(env, mutations) {
   const url = `https://${env.projectId}.api.sanity.io/v${env.apiVersion}/data/mutate/${env.dataset}?returnIds=true`;
   const res = await fetch(url, {
     method: "POST",
@@ -124,6 +123,11 @@ export async function sanityUpsert(env, docs) {
       "Most common cause: SANITY_API_TOKEN lacks write (Editor) permission.");
     process.exit(1);
   }
+}
+
+/** createOrReplace all docs via the Sanity HTTP mutate API. */
+export async function sanityUpsert(env, docs) {
+  await sanityMutate(env, docs.map((doc) => ({ createOrReplace: doc })));
 }
 
 /** Read the CSV given on argv, validate it has a header + data rows. */

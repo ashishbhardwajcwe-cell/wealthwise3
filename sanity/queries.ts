@@ -139,12 +139,19 @@ export const allAifFundsQuery = groq`
       asOfDate, source, notes }
 `;
 
+/**
+ * Public unlisted-shares feed. Auto-created docs stay hidden until an editor
+ * clears needsReview; isActive != false keeps soft-deleted rows out. The
+ * `partner` provenance code is deliberately NOT projected — it never renders
+ * on the site.
+ */
 export const allUnlistedSharesQuery = groq`
-  *[_type == "unlistedShare"]
+  *[_type == "unlistedShare" && !(_id in path("drafts.**"))
+    && isActive != false && needsReview != true]
     | order(company asc)
     { _id, company, "slug": slug.current, sector,
-      priceLowINR, priceHighINR, lotSize, ipoStatus,
-      platformsAvailable, asOfDate, summary, risks }
+      indicativePriceINR, depository, lotSize, ipoStatus,
+      asOfDate, summary, risks }
 `;
 
 export const stockAnalysisSlugsQuery = groq`

@@ -106,6 +106,36 @@ unless APMI carries a clean like-for-like TRI series — the site suppresses
 alpha for any window the document leaves empty. The site always falls back to
 the last stored benchmark, so it never crashes or blanks while you catch up.
 
+### Unlisted shares — daily partner price list
+
+Mode 2 of the unlisted section: indicative prices come from the distribution
+partner's daily "Unlisted Shares Price List" (PDF or CSV) and live in the
+`unlistedShare` documents.
+
+```
+npm run import:unlisted -- pricelist.pdf --dry-run     # preview first
+npm run import:unlisted -- pricelist.pdf               # write
+npm run import:unlisted -- prices.csv --date=2026-07-22
+npm run import:unlisted -- --seed-editorial            # one-time content seed
+```
+
+The PDF's "DATE 22 Jul 2026" header sets the as-of date (`--date` overrides;
+everything is zero-padded ISO). Matching runs slug → aliases → normalised
+company name, and truncated list names ("Motilal Oswal Home Fin…") match by
+unique prefix. Matched docs get price/lot/depository refreshed — never their
+company name or slug. Unmatched rows are auto-created with `needsReview`, stay
+**off the site**, and wait in Studio → Investment Data → *Unlisted Shares
+(needs review)*.
+
+> **Confidential:** the partner list also shows a dealer (cost) price. The
+> importer never captures that column, and the schema has no field for it —
+> the Sanity dataset is publicly readable. Don't "improve" either side.
+
+`--seed-editorial` copies the curated Mode-1 content from
+`lib/unlisted-companies.ts` (summary/sector/IPO status) onto matching docs,
+creating them where absent — run it once before the first price import so the
+partner names land on reviewed companies.
+
 ### AIF — a SEBI registry directory (+ performance for select funds)
 
 The AIF page leads with a **directory**: every SEBI-registered Alternative

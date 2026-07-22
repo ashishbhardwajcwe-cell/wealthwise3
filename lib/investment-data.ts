@@ -128,12 +128,13 @@ export interface UnlistedShare {
   company: string;
   slug?: string;
   sector?: string;
-  priceLowINR: number;
-  priceHighINR: number;
+  /** Retail/indicative price per share (₹) from the partner's daily list. */
+  indicativePriceINR?: number;
+  depository?: string;
   lotSize?: number;
   ipoStatus?: string;
-  platformsAvailable?: string[];
-  asOfDate: string;
+  /** Blank until the first price import lands. */
+  asOfDate?: string;
   summary?: string;
   risks?: string[];
 }
