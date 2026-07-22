@@ -127,6 +127,18 @@ company name or slug. Unmatched rows are auto-created with `needsReview`, stay
 **off the site**, and wait in Studio → Investment Data → *Unlisted Shares
 (needs review)*.
 
+**Image-only PDFs (OCR).** The partner's designed export draws every price as
+a vector outline with no text layer, so text extraction finds nothing. The
+importer detects this (0 text rows) and automatically falls back to OCR:
+it renders each page and reads it with tesseract.js (bundled — fully offline,
+~5s/page). The retail price is recovered from per-glyph geometry (the ₹ symbol
+mis-OCRs as a leading `3`/`R`/`%`), and the **dealer column is excluded by its
+x-position** — never read. When OCR can't read a price cleanly (e.g. it turns
+`24` into `2%`), that row is **skipped and listed** for manual entry rather
+than risk a wrong number — expect a handful per list. OCR mode needs the
+`tesseract.js`, `@tesseract.js-data/eng`, `@napi-rs/canvas` and `pdf-parse`
+devDependencies (`npm install`).
+
 > **Confidential:** the partner list also shows a dealer (cost) price. The
 > importer never captures that column, and the schema has no field for it —
 > the Sanity dataset is publicly readable. Don't "improve" either side.
