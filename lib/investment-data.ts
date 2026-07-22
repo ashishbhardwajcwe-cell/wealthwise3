@@ -136,7 +136,6 @@ export interface UnlistedShare {
   /** Blank until the first price import lands. */
   asOfDate?: string;
   summary?: string;
-  risks?: string[];
 }
 
 async function safeFetch<T>(query: string, fallback: T, params?: Record<string, unknown>, tags: string[] = []): Promise<T> {

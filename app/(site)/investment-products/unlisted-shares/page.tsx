@@ -7,12 +7,13 @@ import { UnlistedSharesGraph } from "@/components/ProductGraphs";
 import { UnlistedExplorer } from "@/components/unlisted/UnlistedExplorer";
 import { getUnlistedShares } from "@/lib/investment-data";
 import { slugifyHeading } from "@/lib/slugify";
-import type { UnlistedCompany } from "@/lib/unlisted-companies";
+import { fmtAsOf } from "@/lib/format";
+import { unlistedCompanies, type UnlistedCompany } from "@/lib/unlisted-companies";
 
 export const metadata: Metadata = {
-  title: "Unlisted Shares & Pre-IPO Investing in India — 2026 Guide",
+  title: "Unlisted Shares & Pre-IPO Investing in India — Live Indicative Prices",
   description:
-    "Pre-IPO and unlisted equity investing in India: platforms, tax treatment (LTCG 24mo), liquidity, valuation risks, and how to size your allocation.",
+    "Explore unlisted and pre-IPO shares in India with live indicative prices, minimum lot sizes and depository details — plus tax treatment (LTCG 24mo), liquidity and valuation-risk guidance.",
 };
 
 const STEPS = [
@@ -33,14 +34,18 @@ const STEPS = [
   },
 ];
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export default async function Page() {
-  // Mode 2 — live Sanity feed (indicative prices from the partner's daily
-  // list, layered on the curated editorial content). The query already
-  // filters needsReview / inactive docs. While Sanity has no documents yet,
-  // the explorer falls back to its built-in Mode-1 editorial array.
+  // Mode 2 — live Sanity feed (indicative prices from the daily list, layered
+  // on the curated editorial content). The query already filters
+  // needsReview / inactive docs. We only switch off the Mode-1 fallback once
+  // at least one document actually carries a price, so the page never regresses
+  // to a priceless live feed.
   const shares = await getUnlistedShares();
+  const priced = shares.filter((s) => typeof s.indicativePriceINR === "number");
+  const useLive = priced.length > 0;
+
   const live: UnlistedCompany[] = shares.map((s) => ({
     name: s.company,
     slug: s.slug ?? slugifyHeading(s.company),
@@ -49,7 +54,15 @@ export default async function Page() {
     drhpFiled: s.ipoStatus === "drhp-filed",
     indicativePrice: s.indicativePriceINR,
     priceAsOf: s.asOfDate,
+    lotSize: s.lotSize,
+    depository: s.depository,
   }));
+
+  // Header summary. Counts reflect whichever dataset actually renders; the
+  // "prices as on" clause shows only when live prices exist.
+  const companyCount = useLive ? live.length : unlistedCompanies.length;
+  const latestAsOf =
+    priced.map((s) => s.asOfDate).filter(Boolean).sort().at(-1) ?? null;
 
   return (
     <>
@@ -74,9 +87,15 @@ export default async function Page() {
               Researched company data on unlisted, pre-IPO and ESOP shares — for information and education only, not
               an offer to deal. When you&apos;re ready, we help connect buyers and sellers.
             </p>
+            <p className="mt-4 text-sm font-semibold text-[var(--color-navy)]">
+              {companyCount} {companyCount === 1 ? "company" : "companies"}
+              {latestAsOf && (
+                <span className="font-medium text-[var(--color-slate)]"> · prices as on {fmtAsOf(latestAsOf)}</span>
+              )}
+            </p>
           </div>
 
-          <UnlistedExplorer companies={live.length > 0 ? live : undefined} />
+          <UnlistedExplorer companies={useLive ? live : undefined} />
         </div>
       </section>
 

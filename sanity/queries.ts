@@ -147,11 +147,10 @@ export const allAifFundsQuery = groq`
  */
 export const allUnlistedSharesQuery = groq`
   *[_type == "unlistedShare" && !(_id in path("drafts.**"))
-    && isActive != false && needsReview != true]
+    && isActive == true && needsReview != true]
     | order(company asc)
-    { _id, company, "slug": slug.current, sector,
-      indicativePriceINR, depository, lotSize, ipoStatus,
-      asOfDate, summary, risks }
+    { _id, company, "slug": slug.current, sector, summary, ipoStatus,
+      indicativePriceINR, lotSize, depository, asOfDate }
 `;
 
 export const stockAnalysisSlugsQuery = groq`
