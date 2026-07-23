@@ -39,9 +39,32 @@ import { requireSanityEnv, sanityQuery, sanityMutate } from "./import-shared.mjs
  */
 export function cleanUnlistedName(raw) {
   let s = String(raw ?? "").trim();
+
+  // 1. bracketed monogram: "[J] ", "[Z] "
   s = s.replace(/^\[[A-Za-z0-9]{1,4}\]\s*/, "");
-  s = s.replace(/^["'«»“”#=|~*·•¤%@!^&<>{}\\/]+\s*/, "");
-  s = s.replace(/^[a-z]{1,3}\s+(?=[A-Z0-9])/, "");
+
+  // 2. leading symbols; a lowercase logo remnant ("ex" in "#ex Indian",
+  //    "wx" in "«wx Fusion", "m" in "=m S3V") usually trails a stripped one.
+  let hadSymbol = false;
+  s = s.replace(/^[\s"'`«»“”„#=|~*·•¤%@!^&<>{}()\\/®™+]+/, () => { hadSymbol = true; return ""; });
+  if (hadSymbol) s = s.replace(/^[a-z]{1,3}[.=]?\s+(?=[A-Za-z0-9])/, "");
+
+  // 3. a stray leading single lowercase letter ("w Fino", "x Lakeshore",
+  //    "a= Jai Mata") — never a real company-name start.
+  s = s.replace(/^[a-z][.=]?\s+(?=[A-Z0-9])/, "");
+
+  // 4. an ALL-UPPERCASE logo monogram (or a single uppercase letter) that
+  //    duplicates the following word's initial: "GS Galaxeye" (G==G),
+  //    "HPX Hindustan" (H), "A Arohan" (A). Requiring all-caps protects real
+  //    Capitalised first words ("Tea Time", "Sun Drops", "Apl Metals"); the
+  //    initial-match protects "A One Steel" (A≠O); and needing whitespace
+  //    right after protects alphanumeric names ("B9 Beverages", "HDFC …").
+  const m = s.match(/^([A-Z]{1,3})\.?\s+([A-Za-z])/);
+  if (m && m[1][0] === m[2].toUpperCase()) s = s.slice(m[0].length - 1);
+
+  // 5. trailing OCR junk ("Capgemini Technology Services|")
+  s = s.replace(/[|"'`\\]+$/, "");
+
   return s.replace(/\s{2,}/g, " ").trim();
 }
 
