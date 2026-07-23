@@ -8,6 +8,14 @@ export const pmsStrategy = defineType({
     defineField({ name: "strategyName", title: "Strategy name", type: "string", validation: (r) => r.required() }),
     defineField({ name: "manager", title: "Manager / firm", type: "string", validation: (r) => r.required() }),
     defineField({
+      name: "logo",
+      title: "Manager logo",
+      type: "image",
+      options: { hotspot: true },
+      description:
+        "The manager/firm's logo, shown on the strategy card in place of the monogram. Seeded per-manager by scripts/import-pms-logos.mjs (every strategy of a firm gets the same logo). Replace with a cleaner logo in Studio anytime.",
+    }),
+    defineField({
       name: "category",
       type: "string",
       options: { list: ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid"] },

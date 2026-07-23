@@ -56,6 +56,7 @@ export default async function Page() {
     priceAsOf: s.asOfDate,
     lotSize: s.lotSize,
     depository: s.depository,
+    logoUrl: s.logoUrl,
   }));
 
   // Header summary. Counts reflect whichever dataset actually renders; the

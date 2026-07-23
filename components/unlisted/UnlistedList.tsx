@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { UnlistedCompany } from "@/lib/unlisted-companies";
 import { fmtAsOf } from "@/lib/format";
 import { Th, PlainTh, useTableSort, sortRows } from "@/components/tables/table-utils";
-import { monogram } from "./UnlistedCompanyCard";
+import { CompanyLogo } from "@/components/CompanyLogo";
 
 /**
  * List / comparison view of the unlisted companies — the same data as the
@@ -59,9 +59,12 @@ export function UnlistedList({
               <tr key={c.slug} className="border-t border-[var(--color-silver)]/30 hover:bg-[var(--color-parchment)]/40">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--color-navy)] text-[10px] font-bold text-[var(--color-gold)]">
-                      {monogram(c.name)}
-                    </span>
+                    <CompanyLogo
+                      name={c.name}
+                      logoUrl={c.logoUrl}
+                      logoClassName="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--color-silver)]/50 bg-white p-0.5"
+                      monogramClassName="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--color-navy)] text-[10px] font-bold text-[var(--color-gold)]"
+                    />
                     <span className="font-semibold text-[var(--color-navy)]">{c.name}</span>
                     {c.drhpFiled && (
                       <span className="hidden shrink-0 rounded-full bg-[var(--color-emerald)]/12 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-emerald)] sm:inline">

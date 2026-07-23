@@ -264,10 +264,15 @@ export function classifyOcrLine(words, pageWidth) {
     .filter((w) => w.x1 <= priceWord.x0)
     .sort((a, b) => a.x0 - b.x0);
   const firstLetter = nameWords.findIndex((w) => /[a-z]/i.test(w.text));
-  const name = firstLetter === -1
-    ? ""
-    : nameWords.slice(firstLetter).filter((w) => /[a-z0-9]/i.test(w.text)).map((w) => w.text).join(" ").trim();
+  const selected = firstLetter === -1 ? [] : nameWords.slice(firstLetter).filter((w) => /[a-z0-9]/i.test(w.text));
+  const name = selected.map((w) => w.text).join(" ").trim();
   if (!name) return { error: "no share name to the left of the price", context };
+
+  // Left edge of the real name text — i.e. the right edge of the logo cell.
+  // The logo-extraction pass crops strictly left of this (see
+  // scripts/extract-unlisted-logos.mjs); it is always well left of the retail
+  // price column, so a crop bounded by it can never include a price figure.
+  const nameStartX = Math.min(...selected.map((w) => w.x0));
 
   // Lot: numeric tokens beyond LOT_BOUNDARY only. Numeric tokens between the
   // depository and the boundary are the dealer price — deliberately unread.
@@ -286,6 +291,7 @@ export function classifyOcrLine(words, pageWidth) {
     price,
     depository: canonicalDepository(depoWords.map((w) => w.text).join(" ")),
     ...(lotSize !== undefined ? { lotSize } : {}),
+    nameStartX,
   };
 }
 

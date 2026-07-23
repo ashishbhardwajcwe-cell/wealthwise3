@@ -4,12 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { UnlistedCompany } from "@/lib/unlisted-companies";
 import { fmtAsOf } from "@/lib/format";
-
-/** Two-letter monogram from a company name ("A One Steel" → "AO"). */
-export function monogram(name: string): string {
-  const words = name.replace(/[^a-zA-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
-  return (words.map((w) => w[0]).join("").slice(0, 2) || "•").toUpperCase();
-}
+import { CompanyLogo } from "@/components/CompanyLogo";
 
 /**
  * Company card for the unlisted-shares explorer. Polished regardless of
@@ -35,9 +30,12 @@ export function UnlistedCompanyCard({
       <div className="flex h-full flex-col p-5">
         {/* header */}
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-navy)] text-sm font-bold text-[var(--color-gold)]">
-            {monogram(company.name)}
-          </div>
+          <CompanyLogo
+            name={company.name}
+            logoUrl={company.logoUrl}
+            logoClassName="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--color-silver)]/50 bg-white p-1"
+            monogramClassName="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-navy)] text-sm font-bold text-[var(--color-gold)]"
+          />
           <div className="min-w-0 flex-1">
             <h3 className="text-[15px] font-semibold leading-snug text-[var(--color-navy)]">{company.name}</h3>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

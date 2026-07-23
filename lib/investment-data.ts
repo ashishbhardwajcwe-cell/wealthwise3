@@ -78,6 +78,8 @@ export interface LivePmsStrategy {
   returns3y?: number;
   returns5y?: number;
   sinceInception?: number;
+  /** Manager logo URL (resolved Sanity asset), when seeded. */
+  logoUrl?: string;
   asOfDate: string;
   source?: string;
 }
@@ -136,6 +138,8 @@ export interface UnlistedShare {
   /** Blank until the first price import lands. */
   asOfDate?: string;
   summary?: string;
+  /** Company logo URL (resolved Sanity asset), when seeded. */
+  logoUrl?: string;
 }
 
 async function safeFetch<T>(query: string, fallback: T, params?: Record<string, unknown>, tags: string[] = []): Promise<T> {

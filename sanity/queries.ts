@@ -103,6 +103,7 @@ export const livePmsStrategiesQuery = groq`
       "returns3y": returns.y3,
       "returns5y": returns.y5,
       "sinceInception": returns.sinceInception,
+      "logoUrl": logo.asset->url,
       asOfDate,
       source
     }
@@ -150,7 +151,8 @@ export const allUnlistedSharesQuery = groq`
     && isActive == true && needsReview != true]
     | order(company asc)
     { _id, company, "slug": slug.current, sector, summary, ipoStatus,
-      indicativePriceINR, lotSize, depository, asOfDate }
+      indicativePriceINR, lotSize, depository, asOfDate,
+      "logoUrl": logo.asset->url }
 `;
 
 export const stockAnalysisSlugsQuery = groq`

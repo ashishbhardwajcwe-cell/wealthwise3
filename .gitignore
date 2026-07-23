@@ -36,3 +36,7 @@ yarn-error.log*
 # sitemap (auto-generated)
 public/sitemap*.xml
 public/robots.txt
+
+# logo-seeding local outputs (see scripts/extract-unlisted-logos.mjs, import-pms-logos.mjs)
+unlisted-logos/
+pms-logos.csv
