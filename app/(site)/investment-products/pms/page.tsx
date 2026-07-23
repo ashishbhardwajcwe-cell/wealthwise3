@@ -18,9 +18,20 @@ export const revalidate = 300;
 
 export default async function Page() {
   const [strategies, benchmark] = await Promise.all([getLivePmsStrategies(), getBenchmark()]);
-  return (
+
+  // The live PMS explorer (the data visitors come for) is rendered as
+  // InvestmentProductPage's liveSection so it sits right after the hero,
+  // before the long educational guide — not buried at the bottom.
+  const liveSection = (
     <>
-      <InvestmentProductPage data={{ ...pmsData, graphic: <PMSGraph /> }} />
+      {strategies.length > 0 ? (
+        <PMSExplorer strategies={strategies} benchmark={toBenchmark(benchmark)} />
+      ) : (
+        <DataOnboardingNotice
+          title="PMS performance tracker — coming online"
+          description="We refresh PMS strategy returns monthly from APMI, the SEBI-mandated industry body where every registered portfolio manager publishes standardised TWRR performance. The first dataset is being onboarded — meanwhile, the guide below covers how to evaluate any PMS manager."
+        />
+      )}
       <section className="py-10">
         <div className="container-narrow">
           <div className="card-soft flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -33,14 +44,8 @@ export default async function Page() {
           </div>
         </div>
       </section>
-      {strategies.length > 0 ? (
-        <PMSExplorer strategies={strategies} benchmark={toBenchmark(benchmark)} />
-      ) : (
-        <DataOnboardingNotice
-          title="PMS performance tracker — coming online"
-          description="We refresh PMS strategy returns monthly from APMI, the SEBI-mandated industry body where every registered portfolio manager publishes standardised TWRR performance. The first dataset is being onboarded — meanwhile, the guide above covers how to evaluate any PMS manager."
-        />
-      )}
     </>
   );
+
+  return <InvestmentProductPage data={{ ...pmsData, graphic: <PMSGraph /> }} liveSection={liveSection} />;
 }

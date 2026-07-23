@@ -49,7 +49,6 @@ export function UnlistedList({
             <Th label="Min lot" k="lotSize" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
             <Th label="Min investment" k="minInvestment" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="right" />
             <PlainTh align="left">Depository</PlainTh>
-            <PlainTh align="left">Status</PlainTh>
             <PlainTh align="right">Enquire</PlainTh>
           </tr>
         </thead>
@@ -64,6 +63,11 @@ export function UnlistedList({
                       {monogram(c.name)}
                     </span>
                     <span className="font-semibold text-[var(--color-navy)]">{c.name}</span>
+                    {c.drhpFiled && (
+                      <span className="hidden shrink-0 rounded-full bg-[var(--color-emerald)]/12 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-emerald)] sm:inline">
+                        DRHP
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-[var(--color-slate)]">{c.sector}</td>
@@ -88,15 +92,6 @@ export function UnlistedList({
                   {mi ? `≈ ₹${mi.toLocaleString("en-IN")}` : "—"}
                 </td>
                 <td className="px-4 py-3 text-xs text-[var(--color-slate)]">{c.depository ?? "—"}</td>
-                <td className="px-4 py-3">
-                  {c.drhpFiled ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-emerald)]/12 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-emerald)]">
-                      DRHP filed
-                    </span>
-                  ) : (
-                    <span className="text-xs text-[var(--color-slate)]">—</span>
-                  )}
-                </td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => onEnquire(c.name)}

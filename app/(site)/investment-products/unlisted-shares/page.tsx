@@ -64,6 +64,32 @@ export default async function Page() {
   const latestAsOf =
     priced.map((s) => s.asOfDate).filter(Boolean).sort().at(-1) ?? null;
 
+  // The live explorer — rendered as InvestmentProductPage's liveSection so it
+  // sits right after the hero, before the educational guide (visitors reach
+  // the actual company data without scrolling past the long article).
+  const exploreSection = (
+    <section className="py-16 bg-white border-t border-[var(--color-silver)]/30">
+      <div className="container-wide">
+        <div className="max-w-3xl mb-10">
+          <span className="eyebrow">Unlisted &amp; Pre-IPO Shares</span>
+          <h2 className="mt-3">Explore Unlisted &amp; Pre-IPO Shares</h2>
+          <p className="mt-4 text-[var(--color-slate)] leading-relaxed">
+            Researched company data on unlisted, pre-IPO and ESOP shares — for information and education only, not
+            an offer to deal. When you&apos;re ready, we help connect buyers and sellers.
+          </p>
+          <p className="mt-4 text-sm font-semibold text-[var(--color-navy)]">
+            {companyCount} {companyCount === 1 ? "company" : "companies"}
+            {latestAsOf && (
+              <span className="font-medium text-[var(--color-slate)]"> · prices as on {fmtAsOf(latestAsOf)}</span>
+            )}
+          </p>
+        </div>
+
+        <UnlistedExplorer companies={useLive ? live : undefined} />
+      </div>
+    </section>
+  );
+
   return (
     <>
       {/* Sticky compliance ribbon — this page only. Sits just below the h-16 header. */}
@@ -74,30 +100,11 @@ export default async function Page() {
         </div>
       </div>
 
-      {/* Existing educational content (unchanged), incl. the full extraDisclaimer. */}
-      <InvestmentProductPage data={{ ...unlistedSharesData, graphic: <UnlistedSharesGraph /> }} />
-
-      {/* Explore companies */}
-      <section className="py-16 bg-white border-t border-[var(--color-silver)]/30">
-        <div className="container-wide">
-          <div className="max-w-3xl mb-10">
-            <span className="eyebrow">Unlisted &amp; Pre-IPO Shares</span>
-            <h2 className="mt-3">Explore Unlisted &amp; Pre-IPO Shares</h2>
-            <p className="mt-4 text-[var(--color-slate)] leading-relaxed">
-              Researched company data on unlisted, pre-IPO and ESOP shares — for information and education only, not
-              an offer to deal. When you&apos;re ready, we help connect buyers and sellers.
-            </p>
-            <p className="mt-4 text-sm font-semibold text-[var(--color-navy)]">
-              {companyCount} {companyCount === 1 ? "company" : "companies"}
-              {latestAsOf && (
-                <span className="font-medium text-[var(--color-slate)]"> · prices as on {fmtAsOf(latestAsOf)}</span>
-              )}
-            </p>
-          </div>
-
-          <UnlistedExplorer companies={useLive ? live : undefined} />
-        </div>
-      </section>
+      {/* Hero + the live explorer (liveSection) + the educational guide. */}
+      <InvestmentProductPage
+        data={{ ...unlistedSharesData, graphic: <UnlistedSharesGraph /> }}
+        liveSection={exploreSection}
+      />
 
       {/* How it works */}
       <section className="py-16 bg-[var(--color-parchment)]">
