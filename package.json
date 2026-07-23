@@ -12,6 +12,7 @@
     "fetch:benchmark": "node scripts/fetch-benchmark.mjs",
     "fetch:sebi-aif": "node scripts/fetch-sebi-aif.mjs",
     "import:unlisted": "node scripts/import-unlisted-prices.mjs",
+    "clean:unlisted-names": "node scripts/clean-unlisted-names.mjs",
     "postbuild": "next-sitemap"
   },
   "dependencies": {
