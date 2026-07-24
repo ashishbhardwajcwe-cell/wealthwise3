@@ -79,6 +79,20 @@ const MANAGER_DOMAINS = {
   "ambit": "ambit.co",
   "ithought": "ithought.co.in",
   "helios": "helioscapital.in",
+  "parag parikh": "ppfas.com",
+  "ppfas": "ppfas.com",
+  "anand rathi": "anandrathi.com",
+  "prabhudas lilladher": "plindia.com",
+  "emkay": "emkayglobal.com",
+  "centrum": "centrum.co.in",
+  "equirus": "equirus.com",
+  "aequitas": "aequitasindia.com",
+  "valentis": "valentisadvisors.com",
+  "estee": "esteeadvisors.com",
+  "right horizons": "righthorizons.com",
+  "bonanza": "bonanzaonline.com",
+  "nuvama": "nuvama.com",
+  "quant": "quantmutual.com",
 };
 
 // ---------- args ----------
@@ -108,21 +122,34 @@ function resolveSource(manager, csvMap) {
   return null;
 }
 
-/** A source → { kind: "url"|"file", value }. Bare domain becomes a Clearbit URL. */
+/**
+ * A source → a target with one or more candidate URLs (tried in order until
+ * one returns an image). A bare domain tries the logo CDN first, then Google's
+ * favicon service as a reliable fallback — so a mapped manager still gets a
+ * real mark even if the CDN is unavailable. A full https URL or a local file
+ * path is used as-is.
+ */
 function sourceToTarget(source) {
   const s = String(source).trim();
-  if (/^https?:\/\//i.test(s)) return { kind: "url", value: s };
-  if (existsSync(resolve(s))) return { kind: "file", value: resolve(s) };
-  return { kind: "url", value: `https://logo.clearbit.com/${s.replace(/^\/+/, "")}` };
+  if (/^https?:\/\//i.test(s)) return { kind: "url", label: s, candidates: [s] };
+  if (existsSync(resolve(s))) return { kind: "file", label: resolve(s), value: resolve(s) };
+  const domain = s.replace(/^\/+/, "").replace(/\/.*$/, "");
+  return {
+    kind: "url",
+    label: `${domain} (logo/favicon)`,
+    candidates: [
+      `https://logo.clearbit.com/${domain}?size=256`,
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+    ],
+  };
 }
 
 const CONTENT_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml", ".webp": "image/webp", ".gif": "image/gif" };
 
 // ---------- env ----------
 loadDotEnvLocal();
-const needWrites = !args.dryRun; // template + dry-run don't write; template still needs to read managers
-const hasEnv = !!(process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && process.env.SANITY_API_TOKEN);
-if (!hasEnv) requireSanityEnv(); // we always need to read the manager list from Sanity
+// We always need to read the manager list from Sanity (even for --template /
+// --dry-run); only the write phase is gated by the flags below.
 const env = requireSanityEnv();
 
 // ---------- distinct managers from Sanity ----------
@@ -180,7 +207,7 @@ for (const m of managers) {
 
 console.log(`${resolved.length} managers resolved to a logo source · ${unresolved.length} unresolved.\n`);
 console.log("Resolved:");
-for (const r of resolved) console.log(`  • ${r.manager}  →  ${r.target.value}${r.hasLogo ? "  (already has a logo)" : ""}`);
+for (const r of resolved) console.log(`  • ${r.manager}  →  ${r.target.label}${r.hasLogo ? "  (already has a logo)" : ""}`);
 if (unresolved.length) {
   console.log("\nUnresolved (add them to pms-logos.csv — run with --template to scaffold it):");
   for (const m of unresolved) console.log(`  • ${m}`);
@@ -199,11 +226,18 @@ for (const r of resolved) {
       bytes = readFileSync(r.target.value);
       contentType = CONTENT_TYPES[extname(r.target.value).toLowerCase()] ?? "image/png";
     } else {
-      const res = await fetch(r.target.value, { headers: { Accept: "image/*" } });
-      if (!res.ok) { console.log(`  ✗ ${r.manager} — logo fetch ${res.status} (${r.target.value})`); failed++; continue; }
-      contentType = (res.headers.get("content-type") || "image/png").split(";")[0];
-      if (!/^image\//.test(contentType)) { console.log(`  ✗ ${r.manager} — not an image (${contentType})`); failed++; continue; }
-      bytes = Buffer.from(await res.arrayBuffer());
+      for (const url of r.target.candidates) {
+        try {
+          const res = await fetch(url, { headers: { Accept: "image/*" } });
+          if (!res.ok) continue;
+          const ct = (res.headers.get("content-type") || "").split(";")[0];
+          if (!/^image\//.test(ct)) continue;
+          const b = Buffer.from(await res.arrayBuffer());
+          if (!b.length) continue;
+          bytes = b; contentType = ct; break;
+        } catch { /* try the next candidate */ }
+      }
+      if (!bytes) { console.log(`  ✗ ${r.manager} — no logo from ${r.target.label}`); failed++; continue; }
     }
     if (!bytes?.length) { console.log(`  ✗ ${r.manager} — empty logo`); failed++; continue; }
 
