@@ -26,6 +26,14 @@ export const unlistedShare = defineType({
       options: { source: "company" },
     }),
     defineField({
+      name: "logo",
+      title: "Company logo",
+      type: "image",
+      options: { hotspot: true },
+      description:
+        "The company's own brand mark, shown on the card in place of the monogram. Seeded by scripts/extract-unlisted-logos.mjs (it crops ONLY the left logo cell of the partner list — never a price column). Safe to replace with a cleaner logo in Studio.",
+    }),
+    defineField({
       name: "sector",
       type: "string",
       description: 'Editorial sector label, e.g. "Financial Markets", "Consumer Electronics".',

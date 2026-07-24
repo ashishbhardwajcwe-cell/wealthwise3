@@ -29,6 +29,8 @@ export interface UnlistedCompany {
   lotSize?: number;
   /** Mode 2 only — where the shares can settle, e.g. "NSDL & CDSL". */
   depository?: string;
+  /** Company logo URL (Sanity asset), when seeded. Falls back to a monogram. */
+  logoUrl?: string;
 }
 
 export const unlistedCompanies: UnlistedCompany[] = [

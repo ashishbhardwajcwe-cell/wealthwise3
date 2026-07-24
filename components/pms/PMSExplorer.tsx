@@ -20,6 +20,7 @@ import {
 } from "@/components/pms/strategy-shared";
 import { EnquireModal } from "@/components/pms/EnquireModal";
 import { NewsletterBand } from "@/components/pms/NewsletterBand";
+import { CompanyLogo } from "@/components/CompanyLogo";
 
 /*
   PlanMyCashflows — PMS Explorer
@@ -46,9 +47,6 @@ import { NewsletterBand } from "@/components/pms/NewsletterBand";
 type SortKey = "aum" | "alpha" | "return" | "name";
 
 const HEADLINE_PERIODS: Period[] = ["1M", "6M", "1Y", "3Y", "5Y", "SI"]; // tiles shown on the card
-
-/* ---------- helpers ---------- */
-const monogram = (m: string): string => m.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
 /* ---------- small pieces ---------- */
 function ReturnTile({ label, value }: { label: string; value: number | null }) {
@@ -82,10 +80,14 @@ function StrategyCard({ s, period, benchmark, selected, onCompare, onBrief, onEn
         {/* manager row */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center justify-center rounded-lg shrink-0 font-num"
-              style={{ width: 34, height: 34, background: "var(--green-tint)", color: "var(--green-deep)", fontSize: 12, fontWeight: 600 }}>
-              {monogram(s.manager)}
-            </div>
+            <CompanyLogo
+              name={s.manager}
+              logoUrl={s.logoUrl}
+              logoClassName="flex items-center justify-center shrink-0 overflow-hidden rounded-lg bg-white"
+              logoStyle={{ width: 34, height: 34, border: "1px solid var(--line)", padding: 3 }}
+              monogramClassName="flex items-center justify-center rounded-lg shrink-0 font-num"
+              monogramStyle={{ width: 34, height: 34, background: "var(--green-tint)", color: "var(--green-deep)", fontSize: 12, fontWeight: 600 }}
+            />
             <div className="min-w-0">
               <div className="font-ui truncate" style={{ fontSize: 12, color: "var(--muted)" }}>{s.manager}</div>
               {s.since && <div className="font-num" style={{ fontSize: 11, color: "var(--muted)" }}>Since {s.since}</div>}

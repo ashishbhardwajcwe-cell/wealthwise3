@@ -130,6 +130,29 @@ export async function sanityUpsert(env, docs) {
   await sanityMutate(env, docs.map((doc) => ({ createOrReplace: doc })));
 }
 
+/**
+ * Upload raw image bytes as a Sanity image asset and return the asset document
+ * ({ _id, url, ... }). Callers reference it as
+ *   { _type: "image", asset: { _type: "reference", _ref: doc._id } }.
+ * Sanity dedupes by content hash, so re-uploading the same bytes is cheap and
+ * returns the existing asset.
+ */
+export async function sanityUploadImage(env, bytes, { filename = "logo.png", contentType = "image/png" } = {}) {
+  const url = `https://${env.projectId}.api.sanity.io/v${env.apiVersion}/assets/images/${env.dataset}?filename=${encodeURIComponent(filename)}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": contentType, Authorization: `Bearer ${env.token}` },
+    body: bytes,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    console.error(`Sanity asset upload failed (HTTP ${res.status}):\n${JSON.stringify(body, null, 2)}\n` +
+      "Most common cause: SANITY_API_TOKEN lacks write (Editor) permission.");
+    process.exit(1);
+  }
+  return body.document;
+}
+
 /** Read the CSV given on argv, validate it has a header + data rows. */
 export function readCsvArg(templateName) {
   const csvPath = process.argv[2];
