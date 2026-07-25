@@ -24,6 +24,15 @@ import { StructuredData, breadcrumbSchema } from "@/components/StructuredData";
   the monthly APMI data updates flow through without a rebuild. Slugs come
   from pmsStrategySlug() — the same util the explorer's links and the
   sitemap use — so URLs are deterministic everywhere.
+
+  On fetching the whole feed to render one strategy: slugs are collision-aware
+  across the feed, so resolving one needs all of them. That is cheap because
+  getLivePmsStrategies() is a cached fetch — one hourly fetch is shared by every
+  strategy page rendered in that window, not one per page. This only became
+  true once safeFetch stopped pinning a 300s window that dragged this route's
+  `revalidate = 86400` down with it (see lib/investment-data.ts). If the feed
+  ever outgrows that, persist the resolved slug on the document at import time
+  and query by it directly.
 */
 
 interface Props {
