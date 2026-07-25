@@ -5,7 +5,7 @@ import { pmsData } from "@/lib/product-data";
 import { PMSGraph } from "@/components/ProductGraphs";
 import PMSExplorer from "@/components/pms/PMSExplorer";
 import { DataOnboardingNotice } from "@/components/data-tables/DataOnboardingNotice";
-import { getLivePmsStrategies, getBenchmark } from "@/lib/investment-data";
+import { getLivePmsStrategies, getBenchmark, getPmsManagerLogos } from "@/lib/investment-data";
 import { toBenchmark } from "@/components/pms/strategy-shared";
 
 export const metadata: Metadata = {
@@ -17,7 +17,11 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function Page() {
-  const [strategies, benchmark] = await Promise.all([getLivePmsStrategies(), getBenchmark()]);
+  const [strategies, benchmark, managerLogos] = await Promise.all([
+    getLivePmsStrategies(),
+    getBenchmark(),
+    getPmsManagerLogos(),
+  ]);
 
   // The live PMS explorer (the data visitors come for) is rendered as
   // InvestmentProductPage's liveSection so it sits right after the hero,
@@ -25,7 +29,7 @@ export default async function Page() {
   const liveSection = (
     <>
       {strategies.length > 0 ? (
-        <PMSExplorer strategies={strategies} benchmark={toBenchmark(benchmark)} />
+        <PMSExplorer strategies={strategies} benchmark={toBenchmark(benchmark)} managerLogos={managerLogos} />
       ) : (
         <DataOnboardingNotice
           title="PMS performance tracker — coming online"

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, type CSSProperties } from "react";
+import { useState, useMemo, useDeferredValue, useEffect, type CSSProperties } from "react";
 import Link from "next/link";
 import {
   Search, X, Check, Scale, SlidersHorizontal,
   ArrowUpRight, ChevronRight,
 } from "lucide-react";
-import type { LivePmsStrategy } from "@/lib/investment-data";
+import type { LivePmsStrategy, PmsManagerLogos } from "@/lib/investment-data";
 import { hasImplausibleReturn } from "@/lib/pms";
 import { fmtAsOf, latestAmfiDate } from "@/lib/format";
 import { formatAumCr } from "@/lib/utils";
@@ -21,6 +21,7 @@ import {
 import { EnquireModal } from "@/components/pms/EnquireModal";
 import { NewsletterBand } from "@/components/pms/NewsletterBand";
 import { CompanyLogo } from "@/components/CompanyLogo";
+import { Modal } from "@/components/ui/Modal";
 
 /*
   PlanMyCashflows — PMS Explorer
@@ -48,6 +49,15 @@ type SortKey = "aum" | "alpha" | "return" | "name";
 
 const HEADLINE_PERIODS: Period[] = ["1M", "6M", "1Y", "3Y", "5Y", "SI"]; // tiles shown on the card
 
+/**
+ * Cards rendered per page. The feed is ~1,700 strategies and each card is
+ * ~46 DOM elements, so rendering the whole filtered set put ~80,000 nodes on
+ * the page — seconds of blocked main thread on a mid-range phone, and well
+ * past the point where browsers stay responsive. Filtering and sorting still
+ * run over the entire feed; only the render is windowed.
+ */
+const PAGE_SIZE = 24;
+
 /* ---------- small pieces ---------- */
 function ReturnTile({ label, value }: { label: string; value: number | null }) {
   const t = toneOf(value);
@@ -62,10 +72,11 @@ function ReturnTile({ label, value }: { label: string; value: number | null }) {
 }
 
 /* ---------- card ---------- */
-function StrategyCard({ s, period, benchmark, selected, onCompare, onBrief, onEnquire }: {
+function StrategyCard({ s, period, benchmark, logoUrl, selected, onCompare, onBrief, onEnquire }: {
   s: Strategy;
   period: Period;
   benchmark: Benchmark;
+  logoUrl?: string;
   selected: boolean;
   onCompare: (s: Strategy) => void;
   onBrief: (s: Strategy) => void;
@@ -82,7 +93,7 @@ function StrategyCard({ s, period, benchmark, selected, onCompare, onBrief, onEn
           <div className="flex items-center gap-2 min-w-0">
             <CompanyLogo
               name={s.manager}
-              logoUrl={s.logoUrl}
+              logoUrl={logoUrl}
               logoClassName="flex items-center justify-center shrink-0 overflow-hidden rounded-lg bg-white"
               logoStyle={{ width: 34, height: 34, border: "1px solid var(--line)", padding: 3 }}
               monogramClassName="flex items-center justify-center rounded-lg shrink-0 font-num"
@@ -163,14 +174,22 @@ function BriefSheet({ s, asOn, benchmark, onClose, onEnquire }: {
 }) {
   if (!s) return null;
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" style={{ background: "rgba(15,26,20,0.45)" }} onClick={onClose}>
-      <div className="h-full w-full max-w-md bg-white overflow-y-auto" style={{ boxShadow: "-8px 0 40px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
+    <Modal
+      onClose={onClose}
+      label={`${s.strategy} — brief`}
+      align="end"
+      overlayClassName="fixed inset-0 flex justify-end"
+      overlayStyle={{ background: "rgba(15,26,20,0.45)" }}
+      panelClassName="h-full w-full max-w-md bg-white overflow-y-auto"
+      panelStyle={{ boxShadow: "-8px 0 40px rgba(0,0,0,0.15)" }}
+    >
+      <>
         <div className="sticky top-0 bg-white px-5 py-4 flex items-start justify-between" style={{ borderBottom: "1px solid var(--line)" }}>
           <div>
             <div className="font-ui" style={{ fontSize: 12, color: "var(--muted)" }}>{s.manager}</div>
             <h2 className="font-display" style={{ fontSize: 22, fontWeight: 600, color: "var(--ink)", lineHeight: 1.1 }}>{s.strategy}</h2>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5" style={{ background: "var(--flat-bg)" }}><X size={18} color="var(--ink)" /></button>
+          <button onClick={onClose} aria-label="Close brief" className="rounded-lg p-1.5" style={{ background: "var(--flat-bg)" }}><X size={18} color="var(--ink)" /></button>
         </div>
 
         <div className="p-5">
@@ -198,8 +217,8 @@ function BriefSheet({ s, asOn, benchmark, onClose, onEnquire }: {
             Enquire about {s.strategy}
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 
@@ -218,11 +237,11 @@ function CompareModal({ items, benchmark, onClose, onRemove }: {
     ["AUM", (s: Strategy) => formatAumCr(s.aum)],
   ];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(15,26,20,0.5)" }} onClick={onClose}>
-      <div className="w-full max-w-4xl max-h-[85vh] overflow-auto rounded-2xl bg-white" onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={onClose} label={`Compare ${items.length} strategies`} panelClassName="w-full max-w-4xl max-h-[85vh] overflow-auto rounded-2xl bg-white">
+      <>
         <div className="sticky top-0 bg-white px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--line)" }}>
           <h2 className="font-display" style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>Compare · {items.length} strategies</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5" style={{ background: "var(--flat-bg)" }}><X size={18} color="var(--ink)" /></button>
+          <button onClick={onClose} aria-label="Close comparison" className="rounded-lg p-1.5" style={{ background: "var(--flat-bg)" }}><X size={18} color="var(--ink)" /></button>
         </div>
         <div className="p-5 overflow-x-auto">
           <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 560 }}>
@@ -262,13 +281,22 @@ function CompareModal({ items, benchmark, onClose, onRemove }: {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 
 /* ---------- main ---------- */
-export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK }: { strategies: LivePmsStrategy[]; benchmark?: Benchmark }) {
+export default function PMSExplorer({
+  strategies,
+  benchmark = FALLBACK_BENCHMARK,
+  managerLogos = {},
+}: {
+  strategies: LivePmsStrategy[];
+  benchmark?: Benchmark;
+  /** manager → logo URL; sent as a lookup so the URL isn't repeated per row. */
+  managerLogos?: PmsManagerLogos;
+}) {
   const [category, setCategory] = useState<string>("All");
   const [period, setPeriod] = useState<Period>("3Y");
   const [sort, setSort] = useState<SortKey>("aum");
@@ -278,6 +306,11 @@ export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK
   const [brief, setBrief] = useState<Strategy | null>(null);
   const [enquire, setEnquire] = useState<Strategy | null>(null);
   const [showCompare, setShowCompare] = useState<boolean>(false);
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
+
+  // Keystrokes update the input immediately but the (whole-feed) filter runs
+  // against a deferred copy, so typing never blocks on re-filtering ~1,700 rows.
+  const deferredQuery = useDeferredValue(query);
 
   // Drop reporting artifacts first — same guard as the league table — so
   // cards, categories, count and as-of date all reflect the trustworthy set.
@@ -303,8 +336,8 @@ export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK
 
   const filtered = useMemo<Strategy[]>(() => {
     let list = data.filter((s) => category === "All" || s.category === category);
-    if (query.trim()) {
-      const q = query.toLowerCase();
+    if (deferredQuery.trim()) {
+      const q = deferredQuery.toLowerCase();
       list = list.filter((s) => (s.manager + " " + s.strategy).toLowerCase().includes(q));
     }
     if (beatOnly && benchmark.returns[period] !== null) list = list.filter((s) => (alphaFor(s.returns, period, benchmark.returns) ?? -Infinity) > 0);
@@ -317,7 +350,16 @@ export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK
       return 0;
     });
     return list;
-  }, [data, category, period, sort, query, beatOnly, benchmark]);
+  }, [data, category, period, sort, deferredQuery, beatOnly, benchmark]);
+
+  // Any change to the filter/sort inputs starts the window over, so a narrowed
+  // result set never opens already scrolled deep into "show more" territory.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [category, period, sort, deferredQuery, beatOnly]);
+
+  const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const remaining = filtered.length - visible.length;
 
   const chipStyle = (active: boolean): CSSProperties => ({
     fontSize: 13, fontWeight: 500,
@@ -353,7 +395,7 @@ export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK
               <Search size={16} color="var(--muted)" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search manager or strategy…"
                 className="font-ui w-full outline-none" style={{ fontSize: 14, background: "transparent", color: "var(--ink)" }} />
-              {query && <button onClick={() => setQuery("")}><X size={15} color="var(--muted)" /></button>}
+              {query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={15} color="var(--muted)" /></button>}
             </div>
 
             <div className="flex items-center rounded-xl bg-white overflow-hidden" style={{ border: "1px solid var(--line)" }}>
@@ -404,12 +446,30 @@ export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK
             <p className="font-ui" style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>Try clearing “beat benchmark only,” or widening the category.</p>
           </div>
         ) : (
-          <div className="grid gap-4 mt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
-            {filtered.map((s) => (
-              <StrategyCard key={s.id} s={s} period={period} benchmark={benchmark}
-                selected={isSelected(s)} onCompare={toggleCompare} onBrief={setBrief} onEnquire={setEnquire} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-4 mt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
+              {visible.map((s) => (
+                <StrategyCard key={s.id} s={s} period={period} benchmark={benchmark}
+                  logoUrl={managerLogos[s.manager]}
+                  selected={isSelected(s)} onCompare={toggleCompare} onBrief={setBrief} onEnquire={setEnquire} />
+              ))}
+            </div>
+            {remaining > 0 && (
+              <div className="mt-6 flex flex-col items-center gap-2">
+                <button
+                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                  className="font-ui rounded-xl px-5 py-2.5"
+                  style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", background: "#fff", border: "1px solid var(--line)" }}
+                >
+                  Show {Math.min(remaining, PAGE_SIZE)} more
+                </button>
+                {/* aria-live so the count is announced as the window grows. */}
+                <p className="font-num" aria-live="polite" style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
+                  Showing {visible.length} of {filtered.length}
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* monthly brief signup */}
@@ -427,7 +487,7 @@ export default function PMSExplorer({ strategies, benchmark = FALLBACK_BENCHMARK
               <span className="font-ui shrink-0" style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{compare.length}/3 to compare:</span>
               {compare.map((s) => (
                 <span key={s.id} className="font-ui shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1" style={{ fontSize: 12, background: "rgba(255,255,255,0.12)", color: "#fff" }}>
-                  {s.strategy}<button onClick={() => toggleCompare(s)}><X size={12} /></button>
+                  {s.strategy}<button onClick={() => toggleCompare(s)} aria-label={`Remove ${s.strategy} from comparison`}><X size={12} /></button>
                 </span>
               ))}
             </div>

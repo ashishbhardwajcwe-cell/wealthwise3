@@ -13,6 +13,7 @@ import {
 } from "@/components/pms/strategy-shared";
 import { EnquireButton } from "@/components/pms/EnquireButton";
 import { NewsletterBand } from "@/components/pms/NewsletterBand";
+import { StructuredData, breadcrumbSchema } from "@/components/StructuredData";
 
 /*
   /pms/[slug] — one SEO page per PMS strategy.
@@ -102,8 +103,40 @@ export default async function PmsStrategyPage({ params }: Props) {
         .map((r) => toStrategy(r, clean))
     : [];
 
+  // Structured data. This is the site's largest page type (~1,700 URLs) and
+  // carried none: no breadcrumb trail, no entity markup. FinancialProduct
+  // describes what the page is actually about, with the manager as provider;
+  // returns are deliberately NOT expressed as a rating — they're historical
+  // performance, not a review score, and marking them up as one would be
+  // misleading (and against Google's guidelines for self-serving ratings).
+  const canonical = `${siteConfig.url}/pms/${slug}`;
+  const productSchema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "FinancialProduct",
+    name: `${s.strategy} — ${s.manager}`,
+    url: canonical,
+    description: `${s.strategy}, a ${s.category ? `${s.category} ` : ""}portfolio management service from ${s.manager}. Performance measured against ${benchmark.name}, as on ${asOn}.`,
+    category: s.category ?? "Portfolio Management Service",
+    provider: { "@type": "Organization", name: s.manager },
+    areaServed: { "@type": "Country", name: "India" },
+    ...(typeof live.minInvestmentL === "number"
+      ? {
+          feesAndCommissionsSpecification:
+            `Minimum investment ₹${live.minInvestmentL} lakh (SEBI mandate for PMS).`,
+        }
+      : {}),
+  };
+
   return (
     <div className="font-ui min-h-screen" style={{ background: "var(--page)", color: "var(--ink)" }}>
+      <StructuredData data={productSchema} />
+      <StructuredData
+        data={breadcrumbSchema([
+          { name: "Home", url: siteConfig.url },
+          { name: "PMS", url: `${siteConfig.url}/investment-products/pms` },
+          { name: s.strategy, url: canonical },
+        ])}
+      />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         {/* back to the explorer */}
         <Link href="/investment-products/pms" className="font-ui inline-flex items-center gap-1.5 hover:underline"

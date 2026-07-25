@@ -347,8 +347,29 @@ html.js-reveal .reveal[data-reveal-delay="3"] { transition-delay: .24s; }
 /* Honour reduced-motion: kill all non-essential animation */
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up, .animate-float, .shimmer, .aurora::before { animation: none !important; }
+  .pmc-skel { animation: none !important; }
   html.js-reveal .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
 }
+
+/* Visually hidden but available to screen readers — used by the route-level
+   loading skeletons to announce "Loading…" while the page streams in. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skeleton placeholder block for loading.tsx routes. */
+.pmc-skel {
+  background: linear-gradient(90deg, rgb(15 26 40 / 0.06) 25%, rgb(15 26 40 / 0.11) 37%, rgb(15 26 40 / 0.06) 63%);
+  background-size: 400% 100%;
+  animation: pmc-skel-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pmc-skel-pulse { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 
 /* ============================================================
    PMS Explorer — design tokens + font helpers

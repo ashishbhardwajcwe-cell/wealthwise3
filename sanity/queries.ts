@@ -103,10 +103,25 @@ export const livePmsStrategiesQuery = groq`
       "returns3y": returns.y3,
       "returns5y": returns.y5,
       "sinceInception": returns.sinceInception,
-      "logoUrl": logo.asset->url,
       asOfDate,
       source
     }
+`;
+
+/**
+ * Manager → logo URL, one row per distinct manager.
+ *
+ * Logos are a property of the FIRM, not the strategy, so projecting
+ * `logo.asset->url` onto every strategy row repeated the same ~100-byte URL
+ * across all of that manager's strategies — about 173 KB of the feed's ~893 KB
+ * payload, for ~361 distinct values. The explorer now receives this small
+ * lookup instead and resolves each card's logo from it.
+ */
+export const pmsManagerLogosQuery = groq`
+  *[_type == "pmsStrategy" && !(_id in path("drafts.**")) && defined(logo)]{
+    manager,
+    "logoUrl": logo.asset->url
+  }
 `;
 
 /**

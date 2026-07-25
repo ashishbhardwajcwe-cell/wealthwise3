@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useDeferredValue, useEffect } from "react";
 import { Search, X, LayoutGrid, List as ListIcon } from "lucide-react";
 import { unlistedCompanies, unlistedSectors, type UnlistedCompany } from "@/lib/unlisted-companies";
 import { UnlistedCompanyCard } from "./UnlistedCompanyCard";
@@ -17,24 +17,40 @@ import { EnquireModal } from "@/components/pms/EnquireModal";
  */
 type View = "cards" | "list";
 
+/** Cards rendered per page. The partner list grows with every daily import,
+ *  so the grid is windowed rather than rendering the whole filtered set. */
+const PAGE_SIZE = 24;
+
 export function UnlistedExplorer({ companies = unlistedCompanies }: { companies?: UnlistedCompany[] }) {
   const [sector, setSector] = useState("All");
   const [drhpOnly, setDrhpOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>("cards");
   const [enquire, setEnquire] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Typing stays responsive: the filter runs against a deferred copy.
+  const deferredQuery = useDeferredValue(query);
 
   const sectors = useMemo(() => unlistedSectors(companies), [companies]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = deferredQuery.trim().toLowerCase();
     return companies.filter((c) => {
       if (sector !== "All" && c.sector !== sector) return false;
       if (drhpOnly && !c.drhpFiled) return false;
       if (q && !`${c.name} ${c.sector}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [companies, sector, drhpOnly, query]);
+  }, [companies, sector, drhpOnly, deferredQuery]);
+
+  // Narrowing the filters restarts the window.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [sector, drhpOnly, deferredQuery, view]);
+
+  const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const remaining = filtered.length - visible.length;
 
   const segBtn = (active: boolean) =>
     `inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${
@@ -107,12 +123,29 @@ export function UnlistedExplorer({ companies = unlistedCompanies }: { companies?
           No companies match these filters yet.
         </p>
       ) : view === "cards" ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((c) => (
-            <UnlistedCompanyCard key={c.slug} company={c} onEnquire={setEnquire} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((c) => (
+              <UnlistedCompanyCard key={c.slug} company={c} onEnquire={setEnquire} />
+            ))}
+          </div>
+          {remaining > 0 && (
+            <div className="mt-6 flex flex-col items-center gap-2">
+              <button
+                onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                className="rounded-full border border-[var(--color-navy)] px-5 py-2 text-sm font-semibold text-[var(--color-navy)] transition-colors hover:bg-[var(--color-navy)] hover:text-[var(--color-cream)]"
+              >
+                Show {Math.min(remaining, PAGE_SIZE)} more
+              </button>
+              <p aria-live="polite" className="text-xs text-[var(--color-slate)]">
+                Showing {visible.length} of {filtered.length}
+              </p>
+            </div>
+          )}
+        </>
       ) : (
+        /* The comparison table is the whole filtered set on purpose: sorting a
+           windowed table would silently hide rows that belong at the top. */
         <UnlistedList companies={filtered} onEnquire={setEnquire} />
       )}
 
