@@ -37,22 +37,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Always revalidate the broad type tag.
-    revalidateTag(body._type);
+    const tags = [body._type];
 
     // Revalidate slug-scoped tag when present.
     const slug = body.slug?.current;
-    if (slug) revalidateTag(`${body._type}:${slug}`);
+    if (slug) tags.push(`${body._type}:${slug}`);
 
     // Convenience aliases.
-    if (body._type === "blogPost") revalidateTag("blog");
+    if (body._type === "blogPost") tags.push("blog");
 
-    return NextResponse.json({
-      ok: true,
-      revalidated: [body._type, ...(slug ? [`${body._type}:${slug}`] : []), "blog"],
-      now: Date.now(),
-    });
+    for (const tag of tags) revalidateTag(tag);
+
+    // Report exactly what was revalidated — this previously always claimed
+    // "blog" regardless of the document type.
+    return NextResponse.json({ ok: true, revalidated: tags, now: Date.now() });
   } catch (err) {
+    // parseBody can throw before the signature is verified, so the details
+    // stay server-side rather than going back to an unauthenticated caller.
     console.error("Revalidate webhook error:", err);
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Revalidation failed" }, { status: 500 });
   }
 }

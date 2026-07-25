@@ -38,9 +38,12 @@ export function CompanyLogo({
   monogramClassName?: string;
   monogramStyle?: CSSProperties;
 }) {
-  const [failed, setFailed] = useState(false);
+  // Track WHICH url failed, not just that one did. React reuses this instance
+  // when the parent re-renders with a different company at the same key, and a
+  // plain boolean would keep suppressing the new (perfectly good) logo.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
-  if (logoUrl && !failed) {
+  if (logoUrl && failedUrl !== logoUrl) {
     return (
       <div className={logoClassName} style={logoStyle}>
         {/* Plain <img>: the src is already a resolved Sanity CDN URL, so we
@@ -50,7 +53,7 @@ export function CompanyLogo({
           alt={alt ?? `${name} logo`}
           loading="lazy"
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
-          onError={() => setFailed(true)}
+          onError={() => setFailedUrl(logoUrl)}
         />
       </div>
     );

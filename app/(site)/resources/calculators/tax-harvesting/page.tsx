@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalculatorWrapper } from "@/components/CalculatorWrapper";
+import { CalcInput } from "@/components/calculators/CalcInput";
 import { fmtINR } from "@/lib/utils";
 
 const LTCG_EXEMPTION = 125000;
@@ -40,10 +41,10 @@ export default function TaxHarvestingCalculatorPage() {
       notes="This is an estimate. Actual savings depend on your specific holdings, costs, and execution. Tax harvesting requires actually executing a sale and re-purchase — not just on paper. Direct plans on Coin, Kuvera, MFCentral are easiest."
     >
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Input label="Equity portfolio value (₹)" value={portfolioValue} setValue={setPortfolioValue} min={100000} max={100000000} step={100000} />
-        <Input label="Current unrealised LTCG (₹)" value={unrealisedGain} setValue={setUnrealisedGain} min={0} max={50000000} step={25000} />
-        <Input label="Years until final sale" value={yearsToFinalSale} setValue={setYearsToFinalSale} min={1} max={40} step={1} />
-        <Input label="Expected return % p.a." value={annualReturnPct} setValue={setAnnualReturnPct} min={4} max={18} step={0.5} />
+        <CalcInput label="Equity portfolio value (₹)" value={portfolioValue} setValue={setPortfolioValue} min={100000} max={100000000} step={100000} />
+        <CalcInput label="Current unrealised LTCG (₹)" value={unrealisedGain} setValue={setUnrealisedGain} min={0} max={50000000} step={25000} />
+        <CalcInput label="Years until final sale" value={yearsToFinalSale} setValue={setYearsToFinalSale} min={1} max={40} step={1} />
+        <CalcInput label="Expected return % p.a." value={annualReturnPct} setValue={setAnnualReturnPct} min={4} max={18} step={0.5} />
       </div>
 
       <div className="mt-8 grid sm:grid-cols-3 gap-4">
@@ -65,16 +66,6 @@ export default function TaxHarvestingCalculatorPage() {
         </p>
       </div>
     </CalculatorWrapper>
-  );
-}
-
-function Input({ label, value, setValue, min, max, step }: { label: string; value: number; setValue: (v: number) => void; min: number; max: number; step: number }) {
-  return (
-    <div>
-      <label className="text-sm font-semibold text-[var(--color-navy)] block mb-1.5">{label}</label>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full accent-[var(--color-gold)]" />
-      <input type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full mt-1.5 px-3 py-2 border border-[var(--color-silver)]/40 rounded text-sm" />
-    </div>
   );
 }
 
