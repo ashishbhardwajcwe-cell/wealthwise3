@@ -11,6 +11,7 @@ import {
   stockAnalysisSlugsQuery,
   allPmsStrategiesQuery,
   livePmsStrategiesQuery,
+  pmsManagerLogosQuery,
   benchmarkQuery,
   allAifFundsQuery,
   allUnlistedSharesQuery,
@@ -78,11 +79,15 @@ export interface LivePmsStrategy {
   returns3y?: number;
   returns5y?: number;
   sinceInception?: number;
-  /** Manager logo URL (resolved Sanity asset), when seeded. */
-  logoUrl?: string;
   asOfDate: string;
   source?: string;
 }
+
+/**
+ * manager name → logo URL. Sent to the explorer alongside the feed instead of
+ * stamping the same URL onto all ~1,700 rows (see pmsManagerLogosQuery).
+ */
+export type PmsManagerLogos = Record<string, string>;
 
 /**
  * The benchmark the PMS explorer measures alpha against (S&P BSE 500 TRI),
@@ -142,11 +147,30 @@ export interface UnlistedShare {
   logoUrl?: string;
 }
 
-async function safeFetch<T>(query: string, fallback: T, params?: Record<string, unknown>, tags: string[] = []): Promise<T> {
+/**
+ * Default data-cache window. Deliberately generous: Next resolves a route's
+ * revalidation to the LOWEST revalidate among its fetches, so a short window
+ * pinned here silently overrides every page's own `export const revalidate`.
+ * It previously sat at 300s, which quietly reduced /pms/[slug] (86400) and the
+ * unlisted page (3600) to five minutes — meaning ~1,600 on-demand strategy
+ * pages regenerated every 5 minutes, each re-fetching the full ~1,700-row feed.
+ *
+ * Callers that genuinely need fresher data pass their own `revalidate`; the
+ * rest inherit their route's window, which is what the page authors intended.
+ */
+const DEFAULT_REVALIDATE = 3600;
+
+async function safeFetch<T>(
+  query: string,
+  fallback: T,
+  params?: Record<string, unknown>,
+  tags: string[] = [],
+  revalidate: number = DEFAULT_REVALIDATE,
+): Promise<T> {
   if (!isSanityConfigured) return fallback;
   try {
     return await sanityClient.fetch(query, params ?? {}, {
-      next: { revalidate: 300, tags },
+      next: { revalidate, tags },
     });
   } catch (err) {
     console.warn("Sanity fetch failed:", err);
@@ -154,19 +178,41 @@ async function safeFetch<T>(query: string, fallback: T, params?: Record<string, 
   }
 }
 
-export async function getStockAnalyses(): Promise<StockAnalysisCard[]> {
-  return safeFetch<StockAnalysisCard[]>(allStockAnalysesQuery, [], undefined, ["stockAnalysis"]);
+/**
+ * Per-dataset cache windows, matched to how often each feed actually changes.
+ * Every getter takes an override so a page that needs fresher data can ask for
+ * it explicitly, rather than one short global window silently shortening every
+ * route's ISR interval (see DEFAULT_REVALIDATE above).
+ */
+const REVALIDATE = {
+  /** Editorial, published ad-hoc. */
+  stockAnalysis: 300,
+  /** APMI discloses monthly — an hour is far fresher than the data ever is. */
+  pms: 3600,
+  /** Refreshed monthly alongside the strategy returns. */
+  benchmark: 3600,
+  /** SEBI registry; changes slowly. */
+  aif: 3600,
+  /** Partner price list imports once daily. */
+  unlisted: 3600,
+} as const;
+
+export async function getStockAnalyses(revalidate = REVALIDATE.stockAnalysis): Promise<StockAnalysisCard[]> {
+  return safeFetch<StockAnalysisCard[]>(allStockAnalysesQuery, [], undefined, ["stockAnalysis"], revalidate);
 }
 
-export async function getStockAnalysisSlugs(): Promise<string[]> {
-  return safeFetch<string[]>(stockAnalysisSlugsQuery, [], undefined, ["stockAnalysis"]);
+export async function getStockAnalysisSlugs(revalidate = REVALIDATE.stockAnalysis): Promise<string[]> {
+  return safeFetch<string[]>(stockAnalysisSlugsQuery, [], undefined, ["stockAnalysis"], revalidate);
 }
 
-export async function getStockAnalysis(slug: string): Promise<StockAnalysisDetail | null> {
+export async function getStockAnalysis(
+  slug: string,
+  revalidate = REVALIDATE.stockAnalysis,
+): Promise<StockAnalysisDetail | null> {
   if (!isSanityConfigured) return null;
   try {
     return await sanityClient.fetch(stockAnalysisBySlugQuery, { slug }, {
-      next: { revalidate: 300, tags: ["stockAnalysis", `stockAnalysis:${slug}`] },
+      next: { revalidate, tags: ["stockAnalysis", `stockAnalysis:${slug}`] },
     });
   } catch (err) {
     console.warn("Sanity fetch failed:", err);
@@ -174,12 +220,24 @@ export async function getStockAnalysis(slug: string): Promise<StockAnalysisDetai
   }
 }
 
-export async function getPmsStrategies(): Promise<PmsStrategy[]> {
-  return safeFetch<PmsStrategy[]>(allPmsStrategiesQuery, [], undefined, ["pmsStrategy"]);
+export async function getPmsStrategies(revalidate = REVALIDATE.pms): Promise<PmsStrategy[]> {
+  return safeFetch<PmsStrategy[]>(allPmsStrategiesQuery, [], undefined, ["pmsStrategy"], revalidate);
 }
 
-export async function getLivePmsStrategies(): Promise<LivePmsStrategy[]> {
-  return safeFetch<LivePmsStrategy[]>(livePmsStrategiesQuery, [], undefined, ["pmsStrategy"]);
+export async function getLivePmsStrategies(revalidate = REVALIDATE.pms): Promise<LivePmsStrategy[]> {
+  return safeFetch<LivePmsStrategy[]>(livePmsStrategiesQuery, [], undefined, ["pmsStrategy"], revalidate);
+}
+
+/** Collapse the per-strategy logo rows into one entry per manager. */
+export async function getPmsManagerLogos(revalidate = REVALIDATE.pms): Promise<PmsManagerLogos> {
+  const rows = await safeFetch<{ manager?: string; logoUrl?: string }[]>(
+    pmsManagerLogosQuery, [], undefined, ["pmsStrategy"], revalidate,
+  );
+  const map: PmsManagerLogos = {};
+  for (const r of rows) {
+    if (r.manager && r.logoUrl && !map[r.manager]) map[r.manager] = r.logoUrl;
+  }
+  return map;
 }
 
 /**
@@ -188,14 +246,14 @@ export async function getLivePmsStrategies(): Promise<LivePmsStrategy[]> {
  * toBenchmark(), which falls back to the last stored values on null — so the
  * pages never crash when the document is absent.
  */
-export async function getBenchmark(): Promise<LiveBenchmark | null> {
-  return safeFetch<LiveBenchmark | null>(benchmarkQuery, null, undefined, ["benchmark"]);
+export async function getBenchmark(revalidate = REVALIDATE.benchmark): Promise<LiveBenchmark | null> {
+  return safeFetch<LiveBenchmark | null>(benchmarkQuery, null, undefined, ["benchmark"], revalidate);
 }
 
-export async function getAifFunds(): Promise<AifFund[]> {
-  return safeFetch<AifFund[]>(allAifFundsQuery, [], undefined, ["aifFund"]);
+export async function getAifFunds(revalidate = REVALIDATE.aif): Promise<AifFund[]> {
+  return safeFetch<AifFund[]>(allAifFundsQuery, [], undefined, ["aifFund"], revalidate);
 }
 
-export async function getUnlistedShares(): Promise<UnlistedShare[]> {
-  return safeFetch<UnlistedShare[]>(allUnlistedSharesQuery, [], undefined, ["unlistedShare"]);
+export async function getUnlistedShares(revalidate = REVALIDATE.unlisted): Promise<UnlistedShare[]> {
+  return safeFetch<UnlistedShare[]>(allUnlistedSharesQuery, [], undefined, ["unlistedShare"], revalidate);
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type CSSProperties, type FormEvent } from "react";
+import { useState, useId, type CSSProperties, type FormEvent } from "react";
 import { X, Check, Loader2 } from "lucide-react";
 import { submitPmsLead, type LeadSource } from "@/app/actions/pms-leads";
+import { Modal } from "@/components/ui/Modal";
 
 /**
  * Enquiry modal for one PMS strategy. Opened from the explorer cards, the
@@ -34,6 +35,7 @@ export function EnquireModal({ strategy, source, onClose, title = "Enquire" }: {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const headingId = useId();
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,11 +51,12 @@ export function EnquireModal({ strategy, source, onClose, title = "Enquire" }: {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(15,26,20,0.5)" }} onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl bg-white" onClick={(e) => e.stopPropagation()}>
+    // z-[60]: must sit above the brief sheet's z-50 overlay when opened from it.
+    <Modal onClose={onClose} labelledBy={headingId} zIndex={60} panelClassName="w-full max-w-sm rounded-2xl bg-white">
+      <>
         <div className="px-5 py-4 flex items-start justify-between" style={{ borderBottom: "1px solid var(--line)" }}>
           <div>
-            <h2 className="font-display" style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", lineHeight: 1.15 }}>{title}</h2>
+            <h2 id={headingId} className="font-display" style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", lineHeight: 1.15 }}>{title}</h2>
             <span className="font-ui inline-block rounded-full px-2.5 py-0.5 mt-1.5" style={{ fontSize: 12, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
               {strategy}
             </span>
@@ -112,7 +115,7 @@ export function EnquireModal({ strategy, source, onClose, title = "Enquire" }: {
             </p>
           </form>
         )}
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

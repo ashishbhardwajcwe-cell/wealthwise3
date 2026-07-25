@@ -14,8 +14,7 @@
     "import:unlisted": "node scripts/import-unlisted-prices.mjs",
     "logos:unlisted": "node scripts/extract-unlisted-logos.mjs",
     "logos:pms": "node scripts/import-pms-logos.mjs",
-    "clean:unlisted-names": "node scripts/clean-unlisted-names.mjs",
-    "postbuild": "next-sitemap"
+    "clean:unlisted-names": "node scripts/clean-unlisted-names.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
@@ -30,7 +29,6 @@
     "lucide-react": "^0.451.0",
     "next": "15.5.18",
     "next-sanity": "^9.8.0",
-    "next-sitemap": "^4.2.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.0",

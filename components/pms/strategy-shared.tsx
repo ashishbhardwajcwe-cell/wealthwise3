@@ -31,7 +31,6 @@ export type Strategy = {
   aum: number | null; // ₹ crore
   since: string | null;
   returns: PeriodReturns;
-  logoUrl: string | null; // manager logo, when seeded
 };
 
 /* ---- benchmark: S&P BSE 500 TRI ----
@@ -74,7 +73,6 @@ export function toStrategy(s: LivePmsStrategy, all: LivePmsStrategy[]): Strategy
     // date, not launch). Map it here when the schema gains one — the card,
     // brief sheet and strategy page already hide "Since" while this is null.
     since: null,
-    logoUrl: s.logoUrl ?? null,
     returns: {
       "1M": orNull(s.returns1m),
       "3M": orNull(s.returns3m),
