@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalculatorWrapper } from "@/components/CalculatorWrapper";
+import { CalcInput } from "@/components/calculators/CalcInput";
 import { fmtINR } from "@/lib/utils";
 
 export default function EMICalculatorPage() {
@@ -11,9 +12,13 @@ export default function EMICalculatorPage() {
 
   const r = ratePct / 100 / 12;
   const n = years * 12;
-  const emi = r === 0 ? principal / n : (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  // n === 0 would make the zero-rate branch divide by zero; both inputs are
+  // clamped to a positive minimum, but the guard keeps the maths total.
+  const emi = n <= 0 ? 0 : r === 0 ? principal / n : (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
   const totalPayment = emi * n;
   const totalInterest = totalPayment - principal;
+  // Interest as a share of principal — "NaN%" when the principal was cleared.
+  const interestPctOfPrincipal = principal > 0 ? (totalInterest / principal) * 100 : 0;
 
   return (
     <CalculatorWrapper
@@ -22,9 +27,9 @@ export default function EMICalculatorPage() {
       notes="EMI is calculated on a reducing-balance basis (standard for home and personal loans in India). Actual bank EMIs may differ slightly due to processing fees, GST on interest, and prepayment terms."
     >
       <div className="grid md:grid-cols-3 gap-6">
-        <Input label="Loan amount (₹)" value={principal} setValue={setPrincipal} min={100000} max={100000000} step={100000} />
-        <Input label="Interest rate % p.a." value={ratePct} setValue={setRatePct} min={5} max={36} step={0.25} />
-        <Input label="Tenure (years)" value={years} setValue={setYears} min={1} max={30} step={1} />
+        <CalcInput label="Loan amount (₹)" value={principal} setValue={setPrincipal} min={100000} max={100000000} step={100000} />
+        <CalcInput label="Interest rate % p.a." value={ratePct} setValue={setRatePct} min={5} max={36} step={0.25} />
+        <CalcInput label="Tenure (years)" value={years} setValue={setYears} min={1} max={30} step={1} />
       </div>
 
       <div className="mt-8 grid sm:grid-cols-3 gap-4">
@@ -35,20 +40,10 @@ export default function EMICalculatorPage() {
 
       <p className="mt-6 text-sm text-[var(--color-slate)] leading-relaxed">
         Over {years} years, you&apos;ll pay <strong>{fmtINR(totalInterest)}</strong> in interest — that&apos;s{" "}
-        <strong>{((totalInterest / principal) * 100).toFixed(0)}%</strong> of the principal. Prepaying even ₹{(emi * 2 / 1000).toFixed(0)}k extra per year
+        <strong>{interestPctOfPrincipal.toFixed(0)}%</strong> of the principal. Prepaying even ₹{(emi * 2 / 1000).toFixed(0)}k extra per year
         in early years can reduce total interest by 25-40%.
       </p>
     </CalculatorWrapper>
-  );
-}
-
-function Input({ label, value, setValue, min, max, step }: { label: string; value: number; setValue: (v: number) => void; min: number; max: number; step: number }) {
-  return (
-    <div>
-      <label className="text-sm font-semibold text-[var(--color-navy)] block mb-1.5">{label}</label>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full accent-[var(--color-gold)]" />
-      <input type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full mt-1.5 px-3 py-2 border border-[var(--color-silver)]/40 rounded text-sm" />
-    </div>
   );
 }
 

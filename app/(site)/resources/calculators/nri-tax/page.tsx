@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalculatorWrapper } from "@/components/CalculatorWrapper";
+import { CalcInput } from "@/components/calculators/CalcInput";
 import { fmtINR } from "@/lib/utils";
 
 const COUNTRIES: { code: string; label: string; symbol: string; taxOnLT: number; taxOnST: number; note: string }[] = [
@@ -28,7 +29,9 @@ export default function NRITaxCalculatorPage() {
   const ftcAvailable = Math.min(indiaTax, residentTaxGross);
   const residentTaxNet = Math.max(residentTaxGross - ftcAvailable, 0);
   const totalTax = indiaTax + residentTaxNet;
-  const effectiveRate = (totalTax / gain) * 100;
+  // A zero gain is a legitimate entry, and 0/0 rendered "NaN%" — with no gain
+  // there is no effective rate to quote.
+  const effectiveRate = gain > 0 ? (totalTax / gain) * 100 : 0;
 
   return (
     <CalculatorWrapper
@@ -44,7 +47,7 @@ export default function NRITaxCalculatorPage() {
           </select>
           <p className="text-xs text-[var(--color-slate)] mt-2">{ctry.note}</p>
         </div>
-        <Input label="Capital gain (₹)" value={gain} setValue={setGain} min={10000} max={50000000} step={10000} />
+        <CalcInput label="Capital gain (₹)" value={gain} setValue={setGain} min={10000} max={50000000} step={10000} />
         <div>
           <label className="text-sm font-semibold text-[var(--color-navy)] block mb-1.5">Holding period</label>
           <div className="flex gap-2">
@@ -66,16 +69,6 @@ export default function NRITaxCalculatorPage() {
         avoiding double taxation. The effective tax rate is typically the <strong>higher</strong> of the two countries&apos; rates.
       </p>
     </CalculatorWrapper>
-  );
-}
-
-function Input({ label, value, setValue, min, max, step }: { label: string; value: number; setValue: (v: number) => void; min: number; max: number; step: number }) {
-  return (
-    <div>
-      <label className="text-sm font-semibold text-[var(--color-navy)] block mb-1.5">{label}</label>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full accent-[var(--color-gold)]" />
-      <input type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full mt-1.5 px-3 py-2 border border-[var(--color-silver)]/40 rounded text-sm" />
-    </div>
   );
 }
 

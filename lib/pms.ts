@@ -12,15 +12,26 @@ const PLAUSIBLE_MIN = -95;   // % — below this is a reporting artifact, not a 
 const PLAUSIBLE_MAX = 300;   // % — above this in any period is almost certainly not annualised
 
 /**
- * True when any of the strategy's headline returns falls outside the
- * plausible band for an annualised equity figure. APMI's feed mixes in
- * liquid-fund / structured-product / debt rows whose "return" columns are
- * not annualised equity returns (e.g. −113%, which is mathematically
- * impossible); those must not pollute a public performance table.
+ * True when any of the strategy's ANNUALISED returns falls outside the
+ * plausible band. APMI's feed mixes in liquid-fund / structured-product / debt
+ * rows whose "return" columns are not annualised equity returns (e.g. −113%,
+ * which is mathematically impossible); those must not pollute a public
+ * performance table.
+ *
+ * Covers every annualised window the UI actually renders — 1Y, 2Y, 3Y, 5Y and
+ * since-inception. 2Y and SI were previously missing, which let an artifact row
+ * through whenever only those were corrupt: SI shows on the explorer cards and
+ * in the returns table, and 2Y drives the ConsistencyDots "beat" count, so a
+ * bogus figure in either one skewed exactly the judgement this guard exists to
+ * protect.
+ *
+ * The sub-year windows (1M/3M/6M) are deliberately excluded: they are not
+ * annualised, so the band doesn't describe them and applying it would drop
+ * rows whose long-term figures are perfectly sound.
  */
 export function hasImplausibleReturn(s: LivePmsStrategy): boolean {
-  const vals = [s.returns1y, s.returns3y, s.returns5y];
-  return vals.some((v) => typeof v === "number" && (v < PLAUSIBLE_MIN || v > PLAUSIBLE_MAX));
+  const annualised = [s.returns1y, s.returns2y, s.returns3y, s.returns5y, s.sinceInception];
+  return annualised.some((v) => typeof v === "number" && (v < PLAUSIBLE_MIN || v > PLAUSIBLE_MAX));
 }
 
 /** The trustworthy subset of the feed — the only rows any surface should show. */
