@@ -36,6 +36,9 @@ export function Footer() {
             <h4 className="text-sm font-semibold text-[var(--color-gold-light)] mb-4">Products</h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/investment-products/pms" className="text-[var(--color-silver)] hover:text-white">PMS</Link></li>
+              {/* The A–Z directory: the site-wide entry point to every
+                  individual strategy page, from every page's footer. */}
+              <li><Link href="/pms/all" className="text-[var(--color-silver)] hover:text-white">All PMS Strategies A–Z</Link></li>
               <li><Link href="/investment-products/aif" className="text-[var(--color-silver)] hover:text-white">AIF</Link></li>
               <li><Link href="/investment-products/mutual-funds" className="text-[var(--color-silver)] hover:text-white">Mutual Funds</Link></li>
               <li><Link href="/compare" className="text-[var(--color-silver)] hover:text-white">Compare</Link></li>

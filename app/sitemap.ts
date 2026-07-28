@@ -2,8 +2,12 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/lib/site-config";
 import { investmentProducts, audiences, calculators } from "@/lib/site-config";
 import { getLivePmsStrategies } from "@/lib/investment-data";
-import { cleanPmsStrategies, pmsStrategySlug } from "@/lib/pms";
-import { parseAmfiDate } from "@/lib/format";
+import {
+  cleanPmsStrategies, pmsStrategySlug,
+  groupPmsByManager, pmsCategorySlugsInFeed, strategiesInPmsCategory,
+  pmsDirectoryHref, pmsDirectoryPageCount,
+} from "@/lib/pms";
+import { parseAmfiDate, latestAmfiDate } from "@/lib/format";
 import { getAllBlogSlugs } from "@/lib/blog";
 
 /**
@@ -109,11 +113,50 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
+  // The internal-linking hubs that make every strategy page reachable: the
+  // paginated A–Z directory, one page per portfolio manager, one per category.
+  // They carry a higher priority than the strategy pages they link to — this
+  // is the crawl path, and it should be fetched first.
+  const feedModified = parseAmfiDate(latestAmfiDate(clean.map((s) => s.asOfDate))) ?? undefined;
+
+  const directoryEntries: MetadataRoute.Sitemap =
+    clean.length === 0
+      ? []
+      : Array.from({ length: pmsDirectoryPageCount(clean.length) }, (_, i) => ({
+          url: `${siteConfig.url}${pmsDirectoryHref(i + 1)}`,
+          lastModified: feedModified,
+          changeFrequency: "weekly" as const,
+          // Page 1 is the hub proper; deeper pages matter but rank below it.
+          priority: i === 0 ? 0.9 : 0.6,
+        }));
+
+  const amcEntries: MetadataRoute.Sitemap = groupPmsByManager(clean).map((g) => ({
+    url: `${siteConfig.url}/pms/amc/${g.slug}`,
+    lastModified: parseAmfiDate(latestAmfiDate(g.strategies.map((s) => s.asOfDate))) ?? undefined,
+    changeFrequency: "monthly",
+    priority: 0.85,
+  }));
+
+  const categoryEntries: MetadataRoute.Sitemap = pmsCategorySlugsInFeed(clean).map((slug) => ({
+    url: `${siteConfig.url}/pms/category/${slug}`,
+    lastModified:
+      parseAmfiDate(latestAmfiDate(strategiesInPmsCategory(clean, slug).map((s) => s.asOfDate))) ?? undefined,
+    changeFrequency: "monthly",
+    priority: 0.85,
+  }));
+
   const blogEntries: MetadataRoute.Sitemap = blogSlugs.map((slug) => ({
     url: `${siteConfig.url}/blog/${slug}`,
     changeFrequency: "monthly",
     priority: 0.7,
   }));
 
-  return [...staticEntries, ...strategyEntries, ...blogEntries];
+  return [
+    ...staticEntries,
+    ...directoryEntries,
+    ...amcEntries,
+    ...categoryEntries,
+    ...strategyEntries,
+    ...blogEntries,
+  ];
 }

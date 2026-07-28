@@ -11,7 +11,7 @@
 
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import type { LivePmsStrategy, LiveBenchmark } from "@/lib/investment-data";
-import { pmsStrategySlug } from "@/lib/pms";
+import { pmsStrategySlug, pmsManagerSlug, pmsCategorySlug } from "@/lib/pms";
 import { formatAumCr } from "@/lib/utils";
 
 /* ---------- types ---------- */
@@ -26,8 +26,12 @@ export type Strategy = {
   id: string;
   slug: string;
   manager: string;
+  /** Slug of the manager's /pms/amc/[slug] page. */
+  managerSlug: string;
   strategy: string;
   category: string | null;
+  /** Slug of the category's /pms/category/[slug] page; null when uncategorised. */
+  categorySlug: string | null;
   aum: number | null; // ₹ crore
   since: string | null;
   returns: PeriodReturns;
@@ -66,8 +70,10 @@ export function toStrategy(s: LivePmsStrategy, all: LivePmsStrategy[]): Strategy
     id: s._id,
     slug: pmsStrategySlug(s, all),
     manager: s.manager,
+    managerSlug: pmsManagerSlug(s.manager),
     strategy: s.strategyName,
     category: s.category ?? null,
+    categorySlug: s.category ? pmsCategorySlug(s.category) : null,
     aum: orNull(s.aumCr),
     // pmsStrategy has no inception-date field (asOfDate is the data refresh
     // date, not launch). Map it here when the schema gains one — the card,

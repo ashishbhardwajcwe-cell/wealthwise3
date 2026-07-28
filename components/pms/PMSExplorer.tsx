@@ -100,14 +100,27 @@ function StrategyCard({ s, period, benchmark, logoUrl, selected, onCompare, onBr
               monogramStyle={{ width: 34, height: 34, background: "var(--green-tint)", color: "var(--green-deep)", fontSize: 12, fontWeight: 600 }}
             />
             <div className="min-w-0">
-              <div className="font-ui truncate" style={{ fontSize: 12, color: "var(--muted)" }}>{s.manager}</div>
+              {/* manager → the AMC's own page. Plain <a>, server-rendered:
+                  this is the link that stops each firm's other strategies
+                  from being unreachable. */}
+              <a href={`/pms/amc/${s.managerSlug}`} className="font-ui block truncate hover:underline"
+                style={{ fontSize: 12, color: "var(--muted)" }}>
+                {s.manager}
+              </a>
               {s.since && <div className="font-num" style={{ fontSize: 11, color: "var(--muted)" }}>Since {s.since}</div>}
             </div>
           </div>
           {s.category && (
-            <span className="font-ui shrink-0 rounded-full px-2 py-0.5" style={{ fontSize: 11, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
-              {s.category}
-            </span>
+            s.categorySlug ? (
+              <a href={`/pms/category/${s.categorySlug}`} className="font-ui shrink-0 rounded-full px-2 py-0.5 hover:underline"
+                style={{ fontSize: 11, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
+                {s.category}
+              </a>
+            ) : (
+              <span className="font-ui shrink-0 rounded-full px-2 py-0.5" style={{ fontSize: 11, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
+                {s.category}
+              </span>
+            )
           )}
         </div>
 
@@ -297,7 +310,6 @@ export default function PMSExplorer({
   /** manager → logo URL; sent as a lookup so the URL isn't repeated per row. */
   managerLogos?: PmsManagerLogos;
 }) {
-  const [category, setCategory] = useState<string>("All");
   const [period, setPeriod] = useState<Period>("3Y");
   const [sort, setSort] = useState<SortKey>("aum");
   const [query, setQuery] = useState<string>("");
@@ -319,12 +331,17 @@ export default function PMSExplorer({
   const asOf = useMemo(() => fmtAsOf(latestAmfiDate(clean.map((s) => s.asOfDate))), [clean]);
 
   // Category chips only exist for categories actually present in the data.
-  // While the enrichment pass hasn't run (category mostly empty), this is
-  // [] and the whole filter row hides.
+  // While the enrichment pass hasn't run (category mostly empty), this is []
+  // and the chip row collapses to the A–Z link.
+  //
+  // These used to be client-side filter buttons. They are now plain <a> links
+  // to /pms/category/[slug] — a filtered view that only exists in this
+  // component's state is invisible to a crawler and impossible to link to,
+  // which is how ~1,700 strategy pages ended up orphaned in the first place.
   const categories = useMemo(() => {
-    const set = new Set<string>();
-    data.forEach((s) => { if (s.category) set.add(s.category); });
-    return set.size > 0 ? ["All", ...Array.from(set).sort()] : [];
+    const set = new Map<string, string>();
+    data.forEach((s) => { if (s.category && s.categorySlug) set.set(s.categorySlug, s.category); });
+    return Array.from(set, ([slug, label]) => ({ slug, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [data]);
 
   const toggleCompare = (s: Strategy) => {
@@ -335,7 +352,7 @@ export default function PMSExplorer({
   const isSelected = (s: Strategy) => !!compare.find((x) => x.id === s.id);
 
   const filtered = useMemo<Strategy[]>(() => {
-    let list = data.filter((s) => category === "All" || s.category === category);
+    let list = data;
     if (deferredQuery.trim()) {
       const q = deferredQuery.toLowerCase();
       list = list.filter((s) => (s.manager + " " + s.strategy).toLowerCase().includes(q));
@@ -350,23 +367,23 @@ export default function PMSExplorer({
       return 0;
     });
     return list;
-  }, [data, category, period, sort, deferredQuery, beatOnly, benchmark]);
+  }, [data, period, sort, deferredQuery, beatOnly, benchmark]);
 
   // Any change to the filter/sort inputs starts the window over, so a narrowed
   // result set never opens already scrolled deep into "show more" territory.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [category, period, sort, deferredQuery, beatOnly]);
+  }, [period, sort, deferredQuery, beatOnly]);
 
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
   const remaining = filtered.length - visible.length;
 
-  const chipStyle = (active: boolean): CSSProperties => ({
+  const chipStyle: CSSProperties = {
     fontSize: 13, fontWeight: 500,
-    color: active ? "#fff" : "var(--ink)",
-    background: active ? "var(--ink)" : "#fff",
-    border: `1px solid ${active ? "var(--ink)" : "var(--line)"}`,
-  });
+    color: "var(--ink)",
+    background: "#fff",
+    border: "1px solid var(--line)",
+  };
 
   return (
     <div className="font-ui min-h-screen" style={{ background: "var(--page)", color: "var(--ink)" }}>
@@ -418,12 +435,21 @@ export default function PMSExplorer({
             </div>
           </div>
 
-          {/* category chips (hidden while the data has no categories) + beat-only */}
+          {/* category links (hidden while the data has no categories),
+              the full A–Z directory, then the beat-only toggle */}
           <div className="flex items-center gap-2 mt-2.5 overflow-x-auto pb-1 pmc-scroll">
             {categories.map((c) => (
-              <button key={c} onClick={() => setCategory(c)} className="font-ui whitespace-nowrap rounded-full px-3 py-1.5" style={chipStyle(category === c)}>{c}</button>
+              <a key={c.slug} href={`/pms/category/${c.slug}`} className="font-ui whitespace-nowrap rounded-full px-3 py-1.5 hover:underline" style={chipStyle}>{c.label}</a>
             ))}
-            {categories.length > 0 && <div style={{ width: 1, height: 22, background: "var(--line)", margin: "0 4px" }} />}
+            {/* Hidden while the feed is empty — /pms/all has nothing to list
+                and 404s in that state. */}
+            {data.length > 0 && (
+              <Link href="/pms/all" className="font-ui whitespace-nowrap rounded-full px-3 py-1.5 hover:underline"
+                style={{ fontSize: 13, fontWeight: 600, color: "#fff", background: "var(--ink)", border: "1px solid var(--ink)" }}>
+                All {data.length.toLocaleString("en-IN")} strategies A–Z
+              </Link>
+            )}
+            <div style={{ width: 1, height: 22, background: "var(--line)", margin: "0 4px" }} />
             <button onClick={() => setBeatOnly((v) => !v)} title={benchmark.returns[period] === null ? "No benchmark for this period" : ""}
               disabled={benchmark.returns[period] === null}
               className="font-ui whitespace-nowrap inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
@@ -443,7 +469,7 @@ export default function PMSExplorer({
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <p className="font-display" style={{ fontSize: 20, color: "var(--ink)" }}>No strategies match those filters.</p>
-            <p className="font-ui" style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>Try clearing “beat benchmark only,” or widening the category.</p>
+            <p className="font-ui" style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>Try clearing “beat benchmark only,” or a broader search term.</p>
           </div>
         ) : (
           <>

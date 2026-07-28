@@ -115,6 +115,206 @@ export function findPmsStrategyBySlug(
   return (slugCacheFor(all).bySlug.get(slug) as LivePmsStrategy | undefined) ?? null;
 }
 
+/* ---------------------------------------------------------------------------
+   Portfolio managers (AMCs)
+
+   Every strategy carries its manager as a plain string — there is no manager
+   document — so the AMC pages are derived from the feed by grouping on the
+   manager's slug. Grouping on the SLUG rather than the raw name is deliberate:
+   two spellings that slugify identically ("Marcellus Investment Managers" and
+   "Marcellus Investment Managers.") would otherwise produce one URL serving
+   only one of them, orphaning the other firm's strategies. Sharing the page is
+   the lesser evil, and the label picks the spelling most rows actually use.
+--------------------------------------------------------------------------- */
+
+/** Canonical URL slug for a portfolio manager's /pms/amc/[slug] page. */
+export function pmsManagerSlug(manager: string): string {
+  return slugifyHeading(manager);
+}
+
+export interface PmsManagerGroup {
+  slug: string;
+  /** Display name — the spelling carried by most of the group's rows. */
+  manager: string;
+  strategies: LivePmsStrategy[];
+  /** Sum of the group's per-strategy AUM (₹ crore); null when none publish one. */
+  aumCr: number | null;
+}
+
+/**
+ * One group per portfolio manager, ordered by aggregate AUM (largest first),
+ * with each group's strategies ordered the same way. Callers get a stable,
+ * ready-to-render shape for both the AMC pages and the sitemap.
+ */
+export function groupPmsByManager(clean: LivePmsStrategy[]): PmsManagerGroup[] {
+  const byslug = new Map<string, { names: Map<string, number>; strategies: LivePmsStrategy[] }>();
+  for (const s of clean) {
+    if (!s.manager) continue;
+    const slug = pmsManagerSlug(s.manager);
+    if (!slug) continue;
+    let g = byslug.get(slug);
+    if (!g) {
+      g = { names: new Map(), strategies: [] };
+      byslug.set(slug, g);
+    }
+    g.names.set(s.manager, (g.names.get(s.manager) ?? 0) + 1);
+    g.strategies.push(s);
+  }
+
+  const groups: PmsManagerGroup[] = [];
+  for (const [slug, g] of byslug) {
+    let manager = "";
+    let best = -1;
+    for (const [name, n] of g.names) {
+      if (n > best) { best = n; manager = name; }
+    }
+    const withAum = g.strategies.filter((s) => typeof s.aumCr === "number");
+    groups.push({
+      slug,
+      manager,
+      strategies: [...g.strategies].sort((a, b) => (b.aumCr ?? -1) - (a.aumCr ?? -1)),
+      aumCr: withAum.length ? withAum.reduce((t, s) => t + (s.aumCr ?? 0), 0) : null,
+    });
+  }
+  return groups.sort((a, b) => (b.aumCr ?? -1) - (a.aumCr ?? -1) || a.manager.localeCompare(b.manager));
+}
+
+/** The one group a /pms/amc/[slug] page renders, or null when nothing matches. */
+export function findPmsManagerBySlug(clean: LivePmsStrategy[], slug: string): PmsManagerGroup | null {
+  return groupPmsByManager(clean).find((g) => g.slug === slug) ?? null;
+}
+
+/* ---------------------------------------------------------------------------
+   Categories
+--------------------------------------------------------------------------- */
+
+/** Canonical URL slug for a category value ("Largecap" → "largecap"). */
+export function pmsCategorySlug(category: string): string {
+  return slugifyHeading(category);
+}
+
+export interface PmsCategoryDef {
+  slug: string;
+  /** Heading label. */
+  label: string;
+  /** Short editorial intro — what this category is and who it suits. */
+  intro: string;
+}
+
+/**
+ * Editorial copy for the category landing pages, keyed by the slug of the
+ * `category` value the feed carries. This table supplies COPY ONLY — the route
+ * matches strategies by slugifying each row's own category, so a category that
+ * appears in the data without an entry here still gets a working page (with a
+ * generic intro). Debt is listed because the taxonomy now allows it; while no
+ * row carries it the page 404s rather than publishing an empty listing.
+ */
+export const PMS_CATEGORIES: PmsCategoryDef[] = [
+  {
+    slug: "largecap",
+    label: "Largecap",
+    intro:
+      "Largecap PMS strategies concentrate on India's biggest listed businesses — the top 100 by market capitalisation. They are the least volatile corner of the PMS universe and the hardest place to beat an index, so alpha here is the number worth reading closely.",
+  },
+  {
+    slug: "midcap",
+    label: "Midcap",
+    intro:
+      "Midcap PMS strategies target companies ranked roughly 101–250 by market capitalisation — businesses large enough to be researched properly, small enough to still re-rate. Expect wider drawdowns than largecap in exchange for a longer runway.",
+  },
+  {
+    slug: "smallcap",
+    label: "Smallcap",
+    intro:
+      "Smallcap PMS strategies buy companies below the top 250. This is where dispersion between managers is widest: liquidity is thin, position sizing matters more than the idea, and a strong 1-year number tells you very little on its own. Read the 3-year and 5-year windows first.",
+  },
+  {
+    slug: "multicap",
+    label: "Multicap",
+    intro:
+      "Multicap PMS strategies move across the market-cap curve as opportunity dictates rather than sticking to one band. It is the largest category in Indian PMS, so the manager's stated process — not the label — is what distinguishes one from another.",
+  },
+  {
+    slug: "hybrid",
+    label: "Hybrid",
+    intro:
+      "Hybrid PMS strategies blend equity with debt or arbitrage to soften drawdowns. They usually trail pure-equity strategies in a strong bull market and lose less in a fall, so compare them on risk-adjusted terms rather than headline return.",
+  },
+  {
+    slug: "debt",
+    label: "Debt",
+    intro:
+      "Debt PMS strategies invest in fixed-income instruments — corporate bonds, government securities and structured credit — for investors who want a defined income profile rather than equity growth. Credit quality and duration matter far more than the headline yield.",
+  },
+  {
+    slug: "thematic",
+    label: "Thematic",
+    intro:
+      "Thematic PMS strategies concentrate on a single idea — manufacturing, consumption, financials, exports. Concentration is the point, which also means the theme's cycle, not the manager's stock-picking, drives most of the return in any given year.",
+  },
+  {
+    slug: "quant",
+    label: "Quant",
+    intro:
+      "Quant PMS strategies select and rebalance holdings from a rules-based model rather than discretionary judgement. The questions worth asking are how long the model has run live, and how it behaved in the drawdowns it did not design for.",
+  },
+];
+
+/** Editorial copy for a category slug, when we have written any. */
+export function findPmsCategory(slug: string): PmsCategoryDef | null {
+  return PMS_CATEGORIES.find((c) => c.slug === slug) ?? null;
+}
+
+/** Every strategy whose category maps to `slug`, biggest AUM first. */
+export function strategiesInPmsCategory(clean: LivePmsStrategy[], slug: string): LivePmsStrategy[] {
+  return clean
+    .filter((s) => s.category && pmsCategorySlug(s.category) === slug)
+    .sort((a, b) => (b.aumCr ?? -1) - (a.aumCr ?? -1));
+}
+
+/** Distinct category slugs actually present in the feed, alphabetically. */
+export function pmsCategorySlugsInFeed(clean: LivePmsStrategy[]): string[] {
+  const set = new Set<string>();
+  for (const s of clean) {
+    if (!s.category) continue;
+    const slug = pmsCategorySlug(s.category);
+    if (slug) set.add(slug);
+  }
+  return Array.from(set).sort();
+}
+
+/* ---------------------------------------------------------------------------
+   The A–Z directory (/pms/all)
+--------------------------------------------------------------------------- */
+
+/** Strategies per page of the /pms/all directory. */
+export const PMS_DIRECTORY_PAGE_SIZE = 100;
+
+/** A–Z bucket for a strategy name; anything not starting with a letter → "#". */
+export function pmsAlphaBucket(name: string): string {
+  const c = name.trim().charAt(0).toUpperCase();
+  return c >= "A" && c <= "Z" ? c : "#";
+}
+
+/** The whole feed ordered the way the directory lists it: name, then manager. */
+export function sortPmsAlphabetically(clean: LivePmsStrategy[]): LivePmsStrategy[] {
+  return [...clean].sort(
+    (a, b) =>
+      a.strategyName.localeCompare(b.strategyName, "en") ||
+      a.manager.localeCompare(b.manager, "en"),
+  );
+}
+
+/** Directory URL for a 1-based page number; page 1 is the bare /pms/all. */
+export function pmsDirectoryHref(page: number): string {
+  return page <= 1 ? "/pms/all" : `/pms/all/${page}`;
+}
+
+/** How many directory pages `total` strategies fill (always at least 1). */
+export function pmsDirectoryPageCount(total: number): number {
+  return Math.max(1, Math.ceil(total / PMS_DIRECTORY_PAGE_SIZE));
+}
+
 /**
  * The subset of the feed the homepage's FeaturedStrategies section actually
  * needs, in feed order. The full feed (~1,700 rows) was being serialised into

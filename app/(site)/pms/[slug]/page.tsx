@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getLivePmsStrategies, getBenchmark } from "@/lib/investment-data";
-import { cleanPmsStrategies, findPmsStrategyBySlug, pmsStrategySlug } from "@/lib/pms";
+import {
+  cleanPmsStrategies, findPmsStrategyBySlug, pmsStrategySlug,
+  pmsManagerSlug, pmsCategorySlug,
+} from "@/lib/pms";
 import { fmtAsOf } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 import {
@@ -11,6 +14,7 @@ import {
   AlphaChip, ConsistencyDots,
   FactsGrid, ReturnsVsBenchmarkTable, HowToReadThis, ComplianceFootnote,
 } from "@/components/pms/strategy-shared";
+import { StrategyLinkList, toStrategyLink } from "@/components/pms/StrategyLinks";
 import { EnquireButton } from "@/components/pms/EnquireButton";
 import { NewsletterBand } from "@/components/pms/NewsletterBand";
 import { StructuredData, breadcrumbSchema } from "@/components/StructuredData";
@@ -18,12 +22,15 @@ import { StructuredData, breadcrumbSchema } from "@/components/StructuredData";
 /*
   /pms/[slug] — one SEO page per PMS strategy.
 
-  The 100 largest strategies (by AUM) are pre-rendered at build time
-  (generateStaticParams); every other strategy page is generated on its
-  first visit and then refreshed daily via ISR — so deploys stay fast and
-  the monthly APMI data updates flow through without a rebuild. Slugs come
-  from pmsStrategySlug() — the same util the explorer's links and the
-  sitemap use — so URLs are deterministic everywhere.
+  Every strategy is pre-rendered at build time (generateStaticParams) and
+  refreshed daily via ISR, so the monthly APMI data updates flow through
+  without a rebuild and no visitor ever waits on a cold render. Slugs come
+  from pmsStrategySlug() — the same util the explorer's links, the A–Z
+  directory and the sitemap use — so URLs are deterministic everywhere.
+
+  These pages are no longer orphans: /pms/all lists every one of them, the
+  AMC and category hubs group them, and each page links onward to three
+  stablemates from its manager and three from its category.
 
   On fetching the whole feed to render one strategy: slugs are collision-aware
   across the feed, so resolving one needs all of them. That is cheap because
@@ -41,19 +48,38 @@ interface Props {
 
 export const revalidate = 86400; // daily ISR — monthly data refresh flows through
 
+/**
+ * Pre-render EVERY strategy page, not just the top 100 by AUM.
+ *
+ * The old cap cited a Netlify build that ran past 15 minutes on the full set.
+ * That measurement predates the data-cache fix in lib/investment-data.ts: with
+ * DEFAULT_REVALIDATE at 300s, the ~893 KB feed's cache entry expired part-way
+ * through a long build and every subsequent page re-fetched it. At 3600s the
+ * whole build shares one fetch, and the per-page cost is just the render.
+ *
+ * Re-measured on a 4-CPU container against a 1,766-row feed, whole-build wall
+ * time (`next build`, cold `.next`):
+ *
+ *     no PMS data (~80 pages)     175s
+ *     top 600     (1,066 pages)   169s
+ *     all 1,766   (2,232 pages)   178s
+ *
+ * Generating all ~1,700 strategy pages plus the 361 AMC, 7 category and 18
+ * directory pages costs seconds — the build is dominated by webpack, chiefly
+ * the 1.45 MB /studio bundle. Well inside the 10-minute budget, so nothing is
+ * left to a cold first visit.
+ *
+ * If a much larger feed ever changes that, reinstate a cap by sorting on AUM
+ * and slicing here: `revalidate` above and Next's default `dynamicParams`
+ * still generate any omitted page on first visit, and /pms/all, the AMC pages
+ * and the category pages keep every strategy reachable either way.
+ */
 export async function generateStaticParams() {
   const clean = cleanPmsStrategies(await getLivePmsStrategies());
-  // Pre-build only the 100 largest strategies (by AUM) at deploy time —
-  // building all ~1,700 pushed Netlify builds past 15 minutes. Every other
-  // strategy page is generated on its first visit and then cached for a
-  // day by the `revalidate = 86400` above, so no URL ever goes missing.
-  const top = [...clean]
-    .sort((a, b) => (b.aumCr ?? -1) - (a.aumCr ?? -1))
-    .slice(0, 100);
   // De-duplicate: a strategy duplicated verbatim in the feed (same name AND
   // manager) collapses onto one slug — emit it once. Slugs are still
   // computed against the FULL list so they match the explorer's links.
-  const slugs = new Set(top.map((s) => pmsStrategySlug(s, clean)));
+  const slugs = new Set(clean.map((s) => pmsStrategySlug(s, clean)));
   return Array.from(slugs).map((slug) => ({ slug }));
 }
 
@@ -103,14 +129,30 @@ export default async function PmsStrategyPage({ params }: Props) {
   const ret3y = s.returns["3Y"];
   const alpha3y = alphaFor(s.returns, "3Y", benchmark.returns);
 
-  // Up to 6 stablemates from the same category, biggest first, linked.
-  const related = live.category
+  // "Similar strategies" — the internal links that keep this page from being
+  // a dead end. Three stablemates from the same manager, three from the same
+  // category, biggest AUM first, each a real <a> in the server-rendered HTML.
+  const managerSlug = pmsManagerSlug(live.manager);
+  const categorySlug = live.category ? pmsCategorySlug(live.category) : null;
+
+  const sameAmc = clean
+    .filter((r) => r._id !== live._id && r.manager === live.manager)
+    .sort((a, b) => (b.aumCr ?? -1) - (a.aumCr ?? -1))
+    .slice(0, 3)
+    .map((r) => toStrategyLink(r, clean));
+
+  const sameCategory = live.category
     ? clean
-        .filter((r) => r._id !== live._id && r.category === live.category)
+        .filter(
+          (r) => r._id !== live._id && r.category === live.category && !sameAmc.some((a) => a.id === r._id),
+        )
         .sort((a, b) => (b.aumCr ?? -1) - (a.aumCr ?? -1))
-        .slice(0, 6)
-        .map((r) => toStrategy(r, clean))
+        .slice(0, 3)
+        .map((r) => toStrategyLink(r, clean))
     : [];
+
+  const amcCount = clean.filter((r) => r.manager === live.manager).length;
+  const categoryCount = live.category ? clean.filter((r) => r.category === live.category).length : 0;
 
   // Structured data. This is the site's largest page type (~1,700 URLs) and
   // carried none: no breadcrumb trail, no entity markup. FinancialProduct
@@ -159,12 +201,17 @@ export default async function PmsStrategyPage({ params }: Props) {
             <h1 className="font-display" style={{ fontSize: 34, fontWeight: 600, color: "var(--ink)", lineHeight: 1.1 }}>
               {s.strategy} — {s.manager}
             </h1>
-            <div className="flex items-center gap-2 mt-2.5">
-              {s.category && (
-                <span className="font-ui rounded-full px-2.5 py-0.5" style={{ fontSize: 12, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
+            <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              {s.category && categorySlug && (
+                <a href={`/pms/category/${categorySlug}`} className="font-ui rounded-full px-2.5 py-0.5 hover:underline"
+                  style={{ fontSize: 12, fontWeight: 500, color: "var(--green-deep)", background: "var(--green-tint)" }}>
                   {s.category}
-                </span>
+                </a>
               )}
+              <a href={`/pms/amc/${managerSlug}`} className="font-ui hover:underline"
+                style={{ fontSize: 12, fontWeight: 500, color: "var(--green-deep)" }}>
+                All {s.manager} strategies
+              </a>
               <span className="font-ui" style={{ fontSize: 12, color: "var(--muted)" }}>as on {asOn}</span>
             </div>
           </div>
@@ -207,38 +254,51 @@ export default async function PmsStrategyPage({ params }: Props) {
           </Link>
         </div>
 
-        {/* related strategies */}
-        {related.length > 0 && (
+        {/* similar strategies — same manager, then same category */}
+        {(sameAmc.length > 0 || sameCategory.length > 0) && (
           <div className="mt-10">
-            <h2 className="font-ui mb-3" style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
-              More {s.category} strategies
+            <h2 className="font-display mb-3" style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>
+              Similar strategies
             </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {related.map((r) => {
-                const r3 = r.returns["3Y"];
-                return (
-                  <Link key={r.id} href={`/pms/${r.slug}`}
-                    className="group rounded-xl bg-white p-4 flex items-center justify-between gap-3"
-                    style={{ border: "1px solid var(--line)" }}>
-                    <div className="min-w-0">
-                      <div className="font-ui truncate" style={{ fontSize: 11, color: "var(--muted)" }}>{r.manager}</div>
-                      <div className="font-display truncate group-hover:underline" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>{r.strategy}</div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="text-right">
-                        <div className="font-num" style={{ fontSize: 14, fontWeight: 600, color: r3 === null ? "var(--muted)" : toneColor[toneOf(r3)] }}>
-                          {r3 === null ? "—" : `${r3.toFixed(1)}%`}
-                        </div>
-                        <div className="font-ui" style={{ fontSize: 10, color: "var(--muted)" }}>3Y</div>
-                      </div>
-                      <ArrowRight size={14} color="var(--muted)" />
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="grid gap-5 sm:grid-cols-2">
+              {sameAmc.length > 0 && (
+                <div>
+                  <h3 className="font-ui mb-2" style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
+                    More from {s.manager}
+                  </h3>
+                  <StrategyLinkList items={sameAmc} showManager={false} label={`Other strategies from ${s.manager}`} />
+                  {amcCount > sameAmc.length + 1 && (
+                    <a href={`/pms/amc/${managerSlug}`} className="font-ui inline-block mt-2 hover:underline"
+                      style={{ fontSize: 12.5, fontWeight: 500, color: "var(--green-deep)" }}>
+                      All {amcCount} {s.manager} strategies →
+                    </a>
+                  )}
+                </div>
+              )}
+              {sameCategory.length > 0 && (
+                <div>
+                  <h3 className="font-ui mb-2" style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
+                    More {s.category} strategies
+                  </h3>
+                  <StrategyLinkList items={sameCategory} showCategory={false} label={`Other ${s.category} strategies`} />
+                  {categorySlug && categoryCount > sameCategory.length + 1 && (
+                    <a href={`/pms/category/${categorySlug}`} className="font-ui inline-block mt-2 hover:underline"
+                      style={{ fontSize: 12.5, fontWeight: 500, color: "var(--green-deep)" }}>
+                      All {categoryCount} {s.category} strategies →
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
+
+        {/* Always present, even for a one-strategy manager with no category:
+            every strategy page keeps a link into the full directory. */}
+        <Link href="/pms/all" className="font-ui inline-block mt-4 hover:underline"
+          style={{ fontSize: 13, fontWeight: 500, color: "var(--green-deep)" }}>
+          Browse all {clean.length.toLocaleString("en-IN")} PMS strategies A–Z →
+        </Link>
 
         {/* monthly brief signup */}
         <NewsletterBand source="pms-strategy-page" />
