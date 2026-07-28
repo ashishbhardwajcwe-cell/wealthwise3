@@ -18,7 +18,11 @@ export const pmsStrategy = defineType({
     defineField({
       name: "category",
       type: "string",
-      options: { list: ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid"] },
+      // Each value drives a /pms/category/[slug] landing page (slugified —
+      // "Largecap" → /pms/category/largecap). Editorial copy for the page
+      // lives in PMS_CATEGORIES in lib/pms.ts; add an entry there when adding
+      // a value here, or the page falls back to a generic intro.
+      options: { list: ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid", "Debt"] },
     }),
     defineField({
       name: "aumCr",

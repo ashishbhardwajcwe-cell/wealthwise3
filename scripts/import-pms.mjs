@@ -42,7 +42,9 @@
 import { requireSanityEnv, readCsvArg, num, slugify, prune, sanityUpsert, sanityQuery } from "./import-shared.mjs";
 import { resolveImportTarget } from "./pms-matching.mjs";
 
-const VALID_CATEGORIES = ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid"];
+// Keep in step with the `category` option list in sanity/schemas/pmsStrategy.ts
+// — each value becomes a /pms/category/[slug] landing page.
+const VALID_CATEGORIES = ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid", "Debt"];
 
 // ---------- read + validate ----------
 const env = requireSanityEnv();

@@ -30,7 +30,7 @@ copyrighted reproduction).
    |---|---|---|
    | strategyName | ✅ | e.g. `India Growth Multicap` |
    | manager | ✅ | the PMS firm |
-   | category | – | one of `Multicap, Largecap, Midcap, Smallcap, Thematic, Quant, Hybrid` |
+   | category | – | one of `Multicap, Largecap, Midcap, Smallcap, Thematic, Quant, Hybrid, Debt` — each value gets a `/pms/category/<slugified>` landing page |
    | aumCr | – | AUM in ₹ crore |
    | minInvestmentL | – | minimum in ₹ lakh (SEBI floor is 50) |
    | returns1m / returns3m / returns6m / returns1y / returns2y / returns3y / returns4y / returns5y / sinceInception | – | % as published by APMI (annualised beyond 1Y) |

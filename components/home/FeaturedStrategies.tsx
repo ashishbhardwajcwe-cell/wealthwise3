@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { placeholderStrategies, strategyCategories } from "@/lib/home-content";
 import type { LivePmsStrategy } from "@/lib/investment-data";
+import { pmsManagerSlug } from "@/lib/pms";
 import { fmtPct, fmtAumCr, fmtMinL, fmtAsOf, latestAmfiDate } from "@/components/tables/table-utils";
 
 /** Normalised card shape shared by live and placeholder rows. */
@@ -11,6 +12,9 @@ interface DisplayCard {
   key: string;
   strategy: string;
   house: string;
+  /** /pms/amc/[slug] for live rows; null for the illustrative placeholders,
+   *  whose fund houses aren't real managers in the feed. */
+  houseSlug: string | null;
   category: string;
   returns1y: string;
   returns3y: string;
@@ -37,6 +41,7 @@ export function FeaturedStrategies({ strategies }: { strategies?: LivePmsStrateg
         key: s._id,
         strategy: s.strategyName,
         house: s.manager,
+        houseSlug: pmsManagerSlug(s.manager),
         category: s.category ?? "—",
         returns1y: fmtPct(s.returns1y),
         returns3y: fmtPct(s.returns3y),
@@ -49,6 +54,7 @@ export function FeaturedStrategies({ strategies }: { strategies?: LivePmsStrateg
       key: `${s.category}-${i}`,
       strategy: s.strategy,
       house: s.fundHouse,
+      houseSlug: null,
       category: s.category,
       returns1y: s.returns1y,
       returns3y: s.returns3y,
@@ -109,8 +115,20 @@ export function FeaturedStrategies({ strategies }: { strategies?: LivePmsStrateg
                 <div>
                   <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-slate)]">Strategy</div>
                   <h3 className="text-base font-semibold mt-0.5">{s.strategy}</h3>
+                  {/* Manager → its AMC page: one click from the homepage to a
+                      hub listing that firm's whole range. The strategy name is
+                      deliberately NOT linked here — this component receives a
+                      trimmed subset of the feed (featuredPmsSubset), and
+                      pmsStrategySlug needs the FULL feed to resolve name
+                      collisions, so a slug built here could point at the wrong
+                      page. The manager slug has no such dependency. */}
                   <div className="text-xs text-[var(--color-slate)] mt-1">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold">{houseLabel}</span> · {s.house}
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">{houseLabel}</span> ·{" "}
+                    {s.houseSlug ? (
+                      <a href={`/pms/amc/${s.houseSlug}`} className="hover:underline">{s.house}</a>
+                    ) : (
+                      s.house
+                    )}
                   </div>
                 </div>
                 <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[var(--color-gold)]/15 text-[var(--color-gold-dim)]">
