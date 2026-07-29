@@ -27,6 +27,7 @@ copyrighted reproduction).
 # Save APMI's loadIAReport payload to scripts/apmi-report.json, then:
 npm run fetch:pms -- --file scripts/apmi-report.json --inspect   # check the mapping
 npm run fetch:pms -- --file scripts/apmi-report.json --asof 2026-06-30
+npm run import:pms -- scripts/pms-data.csv --dry-run             # see the plan first
 npm run import:pms -- scripts/pms-data.csv
 ```
 
@@ -77,17 +78,61 @@ what `fetch:benchmark` reads.
 4. Check the output list, then verify on the site (the page revalidates on
    deploy or via the Sanity webhook).
 
-Re-running is safe: the document id is derived from manager + strategy
-name, so each month's run **updates** the same records. Two guards make
-this robust:
+## Dry run first
+
+```bash
+npm run import:pms -- scripts/pms-data.csv --dry-run
+```
+
+Resolves every row against Sanity and prints what it *would* do — nothing is
+written. It reports would-update / renamed-match / would-create / ambiguous
+counts, lists every document it would create with its new id, and names any
+existing document that looks like a collision victim (below). A dry run only
+needs `NEXT_PUBLIC_SANITY_PROJECT_ID` — the dataset reads publicly, so no
+Editor token has to be in the shell. It exits non-zero if the real run would
+abort on ambiguity.
+
+Do this before any month where names or the row count moved noticeably. It is
+the only place the id decisions are visible before they are permanent.
+
+## How rows are matched to documents
+
+A row is matched to an existing document by its **normalised (manager,
+strategyName) pair**, and the row then writes to whatever `_id` that document
+already has. Ids are never used as the lookup key, and an existing document's
+id is never rewritten. Four guards make this robust:
+
+- **Collision-free ids for new documents.** A row that matches nothing gets a
+  fresh id: the manager slug capped at 40 characters, the strategy slug capped
+  at 50, and an 8-character hash of the full `manager|strategyName` pair. It is
+  deterministic, so importing the same CSV twice creates the document once.
+
+  This replaced a single 96-character slug of both fields concatenated, which
+  is a bug worth remembering. APMI publishes full legal names — "360 ONE
+  PORTFOLIO MANAGERS LIMITED (FORMERLY KNOWN AS IIFL WEALTH PORTFOLIO MANAGERS
+  LIMITED)" is 93 characters — so the manager consumed the whole budget and
+  only the first four characters of the strategy name survived. Every
+  "Multicap …" strategy that manager runs derived one identical id: each
+  month's import silently overwrote the previous strategy's numbers with the
+  next one's, and once enough rows collided the run aborted outright with
+  "Ambiguous rows — nothing imported" across 360 ONE, Spark PWM, Neo Asset,
+  Trivantage, Motilal Oswal and HDFC.
+
+- **Collision-victim report.** Every run lists existing documents sitting under
+  one of those old shared ids, with the strategies that claim it. They are
+  reported, never repaired — merging is a human decision. Clean them up
+  afterwards with `scripts/merge-pms-duplicates.mjs` (`--suggest`, then
+  `--merge=<emptyId>:<keeperId>` or `--delete=<docId>`). Rows re-pointed away
+  from such an id are listed too, under "Re-pointed away from a collided id";
+  both keep appearing each month until the duplicates are cleaned up.
 
 - **Rename guard.** If APMI (or you) renames a manager or strategy between
-  months ("Stallion Asset" → "Stallion Asset Private Limited"), the row's
-  derived id no longer matches. Instead of silently creating a duplicate,
-  the importer fuzzy-matches the row against the existing documents: a
-  unique near-duplicate keeps its existing id (reported as "matched despite
-  a rename"), and an ambiguous match aborts the import with the candidate
-  ids so you can pin the right one via the `sanityId` column.
+  months ("Stallion Asset" → "Stallion Asset Private Limited"), the pair no
+  longer matches. Instead of silently creating a duplicate, the importer
+  fuzzy-matches the row against the existing documents: a unique near-duplicate
+  keeps its existing id (reported as "matched despite a rename"), and an
+  ambiguous match aborts the import with the candidate ids so you can pin the
+  right one via the `sanityId` column.
 - **Carry-forward.** Hand-curated fields the CSV doesn't carry — category,
   notes, fees, minInvestmentL — are preserved from the existing document
   instead of being wiped by the update. Returns and AUM always come from
@@ -105,9 +150,21 @@ this robust:
   imported cleanly with `returns1m`, `returns3m`, `returns6m`, `returns2y`
   and `returns4y` absent, and every strategy page shipped with `N/A` in
   those rows. Nothing failed; the gap was only visible on the live site. The
-  column list now has exactly one definition in `scripts/import-pms.mjs`,
+  column list now has exactly one definition in `scripts/pms-csv.mjs`,
   the template is checked against it, and unrecognised column names (a
   typo'd `return3m`) are reported instead of silently importing as blank.
+
+The matching and id rules live in `scripts/pms-matching.mjs` and are covered
+by a dependency-free self-test — run it after touching them:
+
+```bash
+npm run test:pms-matching
+```
+
+It asserts the property that matters and that no normal run can show you: a
+document that already matches a row keeps its `_id` untouched, whatever shape
+that id has. A changed id doesn't error — it forks a second copy of the whole
+~1,700-document universe alongside the first.
 
 Strategies you add by hand in the Studio are never touched unless a CSV row
 matches them. Keep `scripts/pms-data.csv` out of git if you prefer (it

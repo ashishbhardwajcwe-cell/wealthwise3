@@ -6,6 +6,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { createHash } from "node:crypto";
 
 export function loadDotEnvLocal() {
   const p = resolve(process.cwd(), ".env.local");
@@ -18,16 +19,25 @@ export function loadDotEnvLocal() {
   }
 }
 
-export function requireSanityEnv() {
+/**
+ * Sanity connection details from the environment / .env.local.
+ *
+ * `write: false` is for read-only passes (a --dry-run that only queries): the
+ * dataset is publicly readable, so a project id alone is enough and the run
+ * works without an Editor token in reach.
+ */
+export function requireSanityEnv({ write = true } = {}) {
   loadDotEnvLocal();
   const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
   const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
   const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || "2024-09-01";
   const token = process.env.SANITY_API_TOKEN;
-  if (!projectId || !token) {
+  if (!projectId || (write && !token)) {
     console.error(
-      "Missing env vars. Need NEXT_PUBLIC_SANITY_PROJECT_ID and SANITY_API_TOKEN\n" +
-      "(set them in the environment or in .env.local). The token must have write access.",
+      write
+        ? "Missing env vars. Need NEXT_PUBLIC_SANITY_PROJECT_ID and SANITY_API_TOKEN\n" +
+          "(set them in the environment or in .env.local). The token must have write access."
+        : "Missing env var NEXT_PUBLIC_SANITY_PROJECT_ID (set it in the environment or in .env.local).",
     );
     process.exit(1);
   }
@@ -65,8 +75,20 @@ export const num = (v) => {
   return Number.isFinite(n) ? n : undefined;
 };
 
+/**
+ * NOTE the 96-character truncation. Slugifying ONE field is fine; slugifying a
+ * concatenation of two is not, because a long first field can eat the whole
+ * budget and silently erase the second — which is how every strategy from a
+ * long-named PMS manager came to derive one identical document id. When an id
+ * has to carry two fields, budget them separately and add a hash of the pair
+ * (see newStrategyId in ./pms-matching.mjs).
+ */
 export const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96);
+
+/** Short, stable, machine-independent hash — for disambiguating derived ids. */
+export const shortHash = (s, length = 8) =>
+  createHash("sha1").update(String(s), "utf8").digest("hex").slice(0, length);
 
 const MONTHS3 = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
@@ -100,7 +122,9 @@ export const prune = (o) => {
 /** Run a GROQ query via the Sanity HTTP query API. */
 export async function sanityQuery(env, query) {
   const url = `https://${env.projectId}.api.sanity.io/v${env.apiVersion}/data/query/${env.dataset}?query=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${env.token}` } });
+  // The dataset is publicly readable, so a token is optional for reads — a
+  // --dry-run should not need an Editor token in the shell.
+  const res = await fetch(url, { headers: env.token ? { Authorization: `Bearer ${env.token}` } : {} });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     console.error(`Sanity query failed (HTTP ${res.status}):\n${JSON.stringify(body, null, 2)}`);

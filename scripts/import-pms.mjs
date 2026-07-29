@@ -32,25 +32,35 @@
  * Every run prints per-column coverage and refuses to import a dataset whose
  * return period is empty in every row (override with --allow-gaps).
  *
- * The Sanity document _id is derived from manager + strategy name, so
- * re-running the import next month UPDATES the same records instead of
- * duplicating them. Documents created manually in the Studio are untouched.
+ * Rows are matched to existing documents by their normalised (manager,
+ * strategyName) pair, NOT by a name-derived id, so re-running the import next
+ * month UPDATES the same records instead of duplicating them. Documents
+ * created manually in the Studio are untouched.
  *
  * Rename guard: manager/strategy names drift between refreshes ("Stallion
  * Asset" vs "Stallion Asset Private Limited"), which would mint a duplicate
- * document under a fresh _id. Before writing, each row whose _id doesn't
- * already exist is fuzzy-matched against the existing documents; a unique
- * near-duplicate keeps its existing _id, an ambiguous one aborts the import
- * and asks you to pin the target via the optional `sanityId` CSV column.
- * Hand-curated fields the CSV doesn't provide (category, notes, fees,
- * minInvestmentL) are carried forward from the existing document instead of
- * being wiped by the createOrReplace.
+ * document. A row that matches no existing pair is fuzzy-matched against the
+ * existing documents; a unique near-duplicate keeps its existing _id, an
+ * ambiguous one aborts the import and asks you to pin the target via the
+ * optional `sanityId` CSV column. Hand-curated fields the CSV doesn't provide
+ * (category, notes, fees, minInvestmentL) are carried forward from the
+ * existing document instead of being wiped by the createOrReplace.
+ *
+ *   node scripts/import-pms.mjs scripts/pms-data.csv --dry-run
+ *
+ * --dry-run resolves every row against Sanity and prints what it WOULD do —
+ * would-update / would-create / ambiguous counts, plus any existing document
+ * that looks like a victim of the old id scheme — without writing anything.
+ * It needs only NEXT_PUBLIC_SANITY_PROJECT_ID (the dataset reads publicly);
+ * an Editor token is only required for a real run.
  */
 
 import { readFileSync } from "node:fs";
-import { requireSanityEnv, readCsvArg, num, slugify, prune, sanityUpsert, sanityQuery, normalizeIsoDate } from "./import-shared.mjs";
+import { requireSanityEnv, readCsvArg, num, prune, sanityUpsert, sanityQuery, normalizeIsoDate } from "./import-shared.mjs";
 import { CSV_COLUMNS, RETURN_COLUMNS } from "./pms-csv.mjs";
-import { resolveImportTarget } from "./pms-matching.mjs";
+import { resolveImportTarget, buildExistingIndex, legacyStrategyId, pairKey } from "./pms-matching.mjs";
+
+const DRY_RUN = process.argv.includes("--dry-run");
 
 // Keep in step with the `category` option list in sanity/schemas/pmsStrategy.ts
 // — each value becomes a /pms/category/[slug] landing page.
@@ -68,7 +78,7 @@ const VALID_CATEGORIES = ["Multicap", "Largecap", "Midcap", "Smallcap", "Themati
  */
 
 // ---------- read + validate ----------
-const env = requireSanityEnv();
+const env = requireSanityEnv({ write: !DRY_RUN });
 const rows = readCsvArg("pms-template.csv");
 const header = rows[0].map((h) => h.trim());
 const idx = (name) => header.indexOf(name);
@@ -151,10 +161,13 @@ rows.slice(1).forEach((r, i) => {
   }
 
   docs.push({
-    _id: get("sanityId") || `pmsStrategy-${slugify(`${manager}-${strategyName}`)}`,
     _type: "pmsStrategy",
-    // sanityId column set → the target doc is pinned by hand; skip matching.
-    __pinned: !!get("sanityId"),
+    // _id is decided by the matcher below, never derived up front — see the
+    // "rename guard" section. sanityId set → the target doc is pinned by
+    // hand; __legacyId is the id shape earlier imports produced, kept only to
+    // recognise the documents they created.
+    __pinnedId: get("sanityId") || undefined,
+    __legacyId: legacyStrategyId(manager, strategyName),
     strategyName,
     manager,
     ...(category ? { category } : {}),
@@ -223,33 +236,92 @@ if (empty.length) {
   );
   console.warn(`${bar}\n`);
   if (!process.argv.includes("--allow-gaps")) {
-    console.error("Nothing imported. Fix the CSV, or pass --allow-gaps to import anyway.");
-    process.exit(1);
+    // A dry run writes nothing, so it reports the whole picture (matching,
+    // collisions, ambiguity) rather than stopping at the first gate.
+    if (!DRY_RUN) {
+      console.error("Nothing imported. Fix the CSV, or pass --allow-gaps to import anyway.");
+      process.exit(1);
+    }
+    console.warn("(dry run — continuing so the rest of the report is visible; a real run would stop here.)\n");
   }
 }
 
-// ---------- rename guard + carry-forward ----------
+// ---------- match rows to documents + carry-forward ----------
 const existing = await sanityQuery(
   env,
   `*[_type == "pmsStrategy" && !(_id in path("drafts.**"))]{ _id, strategyName, manager, category, notes, minInvestmentL, fees }`,
 );
-const existingById = new Map(existing.map((d) => [d._id, d]));
+const index = buildExistingIndex(existing);
+const existingById = index.byId;
 
 const label = (d) => `${d.manager} — ${d.strategyName}`;
+
+/*
+ * Collision victims from the OLD id scheme.
+ *
+ * Ids used to be `pmsStrategy-<slugify(manager + "-" + strategyName)>`, and
+ * slugify caps at 96 characters. A long manager name ate the whole budget, so
+ * every strategy that manager runs derived ONE id — the last row imported won
+ * the document and the rest of that manager's numbers were overwritten by it.
+ * Any existing document sitting under such an id is holding one strategy's
+ * data under an id several strategies claim.
+ *
+ * Reported, never repaired: merging is scripts/merge-pms-duplicates.mjs's job
+ * and needs a human deciding which document keeps what.
+ */
+const byLegacyId = new Map();
+for (const doc of docs) {
+  if (!byLegacyId.has(doc.__legacyId)) byLegacyId.set(doc.__legacyId, new Map());
+  byLegacyId.get(doc.__legacyId).set(pairKey(doc.manager, doc.strategyName), doc);
+}
+const collisionGroups = [...byLegacyId.entries()]
+  .filter(([, pairs]) => pairs.size > 1)
+  .map(([legacyId, pairs]) => ({ legacyId, rows: [...pairs.values()], victim: existingById.get(legacyId) }))
+  .sort((a, b) => b.rows.length - a.rows.length);
+const victims = collisionGroups.filter((g) => g.victim);
+
+if (collisionGroups.length) {
+  const bar = "─".repeat(64);
+  console.log(`\n${bar}`);
+  console.log(`Legacy id collisions: ${collisionGroups.length} id(s) claimed by 2+ distinct strategies`);
+  console.log(bar);
+  if (victims.length) {
+    console.log(
+      `${victims.length} of them already exist as documents in Sanity — each is holding\n` +
+      "one strategy's data under an id its manager's other strategies also derive.\n" +
+      "They are listed, not touched. Review them and clean up afterwards with\n" +
+      "scripts/merge-pms-duplicates.mjs (--suggest / --merge= / --delete=).\n",
+    );
+  }
+  for (const g of victims) {
+    console.log(`  ⚠ EXISTING DOC  [${g.legacyId}]`);
+    console.log(`      currently holds: ${label(g.victim)}`);
+    console.log(`      ${g.rows.length} CSV strategies derive this same id:`);
+    for (const r of g.rows) console.log(`        · ${label(r)}`);
+    console.log("");
+  }
+  const unseen = collisionGroups.length - victims.length;
+  if (unseen) {
+    console.log(`  ${unseen} further collision group(s) have no document under the legacy id — they`);
+    console.log("  would have collided on the next import; each row now gets its own id.\n");
+  }
+  console.log(`${bar}\n`);
+}
+
 const renamed = [];
 const created = [];
+const updated = [];
 const ambiguous = [];
+const repointed = []; // rows the old id-keyed matcher would have sent elsewhere
 const claimed = new Map(); // target _id → row label, to catch two rows resolving to one doc
 
 for (const doc of docs) {
-  let target;
-  if (doc.__pinned) {
-    target = { id: doc._id, matchType: existingById.has(doc._id) ? "exact" : "new" };
-  } else {
-    target = resolveImportTarget(doc, existingById, existing);
-  }
+  const target = doc.__pinnedId
+    ? { id: doc.__pinnedId, matchType: existingById.has(doc.__pinnedId) ? "exact" : "new" }
+    : resolveImportTarget(doc, index);
+
   if (target.matchType === "ambiguous") {
-    ambiguous.push({ doc, candidates: target.candidates });
+    ambiguous.push({ doc, candidates: target.candidates, note: target.reason });
     continue;
   }
   if (claimed.has(target.id)) {
@@ -258,7 +330,21 @@ for (const doc of docs) {
   }
   claimed.set(target.id, label(doc));
   if (target.matchType === "renamed") renamed.push({ row: label(doc), keeps: label(target.matched), id: target.id });
-  if (target.matchType === "new") created.push(label(doc));
+  if (target.matchType === "new") created.push({ row: label(doc), id: target.id });
+  if (target.matchType === "exact") updated.push({ row: label(doc), id: target.id });
+
+  // The old matcher keyed on the derived id, so a row whose legacy id exists
+  // but is NOT this row's document was silently writing over someone else's
+  // numbers. Surface every one of those before anything is written.
+  if (!doc.__pinnedId && existingById.has(doc.__legacyId) && target.id !== doc.__legacyId) {
+    repointed.push({
+      row: label(doc),
+      from: doc.__legacyId,
+      fromHolds: label(existingById.get(doc.__legacyId)),
+      to: target.id,
+      matchType: target.matchType,
+    });
+  }
   doc._id = target.id;
 
   // createOrReplace would wipe fields the CSV doesn't carry — keep the
@@ -270,23 +356,71 @@ for (const doc of docs) {
     if (doc.minInvestmentL === undefined && prev.minInvestmentL !== undefined) doc.minInvestmentL = prev.minInvestmentL;
     if (!doc.fees && prev.fees) doc.fees = prev.fees;
   }
-  delete doc.__pinned;
+  delete doc.__pinnedId;
+  delete doc.__legacyId;
+}
+
+const reportAmbiguous = (log) => {
+  log(`Ambiguous rows (${ambiguous.length}) — pin each row's target with the \`sanityId\` CSV column and re-run:`);
+  for (const a of ambiguous) {
+    log(`  • ${label(a.doc)}`);
+    if (a.note) log(`      ${a.note}`);
+    for (const c of a.candidates ?? []) log(`      candidate: ${label(c)} [${c._id}]`);
+  }
+};
+
+if (repointed.length) {
+  console.log(`Re-pointed away from a collided id: ${repointed.length} row(s)`);
+  console.log("(the old importer would have written each of these over the document named below)");
+  // Keeps reporting every month until the collided documents are cleaned up
+  // with scripts/merge-pms-duplicates.mjs — which is the point.
+  if (!DRY_RUN) {
+    console.log("Run with --dry-run to see them listed.\n");
+  } else {
+    console.log("");
+    for (const r of repointed) {
+      console.log(`  • ${r.row}`);
+      console.log(`      old target [${r.from}] — holds ${r.fromHolds}`);
+      console.log(`      new target [${r.to}] (${r.matchType})`);
+    }
+    console.log("");
+  }
+}
+
+if (DRY_RUN) {
+  console.log(`DRY RUN — nothing written. ${docs.length} CSV rows against ${existing.length} existing documents in ${env.projectId}/${env.dataset}:`);
+  console.log(`  would update  ${String(updated.length).padStart(5)}  (matched an existing document by name)`);
+  console.log(`  renamed match ${String(renamed.length).padStart(5)}  (matched despite a drifted name — keeps its existing id)`);
+  console.log(`  would create  ${String(created.length).padStart(5)}  (no existing document — new collision-free id)`);
+  console.log(`  ambiguous     ${String(ambiguous.length).padStart(5)}  (would abort the import)`);
+  console.log(`  re-pointed    ${String(repointed.length).padStart(5)}  (old id scheme would have hit the wrong document)`);
+  console.log(`  collision victims in Sanity ${victims.length}  (existing documents shared by 2+ strategies)`);
+  if (renamed.length) {
+    console.log("\nRename matches (CSV name → existing document kept):");
+    for (const r of renamed) console.log(`  • ${r.row} → ${r.keeps}  [${r.id}]`);
+  }
+  if (created.length) {
+    console.log(`\nWould create ${created.length} document(s):`);
+    for (const c of created) console.log(`  • ${c.row}  [${c.id}]`);
+  }
+  if (ambiguous.length) {
+    console.log("");
+    reportAmbiguous(console.log);
+  }
+  console.log("\nRe-run without --dry-run to write.");
+  process.exit(ambiguous.length ? 1 : 0);
 }
 
 if (ambiguous.length) {
-  console.error("Ambiguous rows — nothing imported. Pin each row's target with the `sanityId` CSV column and re-run:");
-  for (const a of ambiguous) {
-    console.error(`  • ${label(a.doc)}`);
-    if (a.note) console.error(`      ${a.note}`);
-    for (const c of a.candidates ?? []) console.error(`      candidate: ${label(c)} [${c._id}]`);
-  }
+  console.error("Ambiguous rows — nothing imported.");
+  reportAmbiguous(console.error);
   process.exit(1);
 }
 
 await sanityUpsert(env, docs);
 
 console.log(`Imported ${docs.length} PMS strategies into Sanity (${env.projectId}/${env.dataset}):`);
-console.log(`  ${docs.length - renamed.length - created.length} updated · ${renamed.length} matched despite a rename · ${created.length} new`);
+console.log(`  ${updated.length} updated · ${renamed.length} matched despite a rename · ${created.length} new`);
 for (const d of docs) console.log(`  • ${d.manager} — ${d.strategyName} (as of ${d.asOfDate})`);
 if (renamed.length) {
   console.log("\nRename matches (CSV name → existing document kept):");

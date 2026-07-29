@@ -15,7 +15,8 @@
     "import:unlisted": "node scripts/import-unlisted-prices.mjs",
     "logos:unlisted": "node scripts/extract-unlisted-logos.mjs",
     "logos:pms": "node scripts/import-pms-logos.mjs",
-    "clean:unlisted-names": "node scripts/clean-unlisted-names.mjs"
+    "clean:unlisted-names": "node scripts/clean-unlisted-names.mjs",
+    "test:pms-matching": "node scripts/pms-matching.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
