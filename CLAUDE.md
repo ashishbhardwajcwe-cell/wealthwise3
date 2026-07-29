@@ -7,7 +7,7 @@
   branch instead — files downloaded to a laptop have already been lost once.
 - Nothing exists until it is committed. Every task ends with a commit and a
   pushed branch or PR — data scripts included.
-- Update `DATA-OPERATIONS.md` whenever a pipeline changes.
+- Update `docs/pms-data-import.md` whenever a pipeline changes.
 
 ## Safety
 - This GitHub repo is PUBLIC. Never commit secrets, tokens, cookies, `.har`
