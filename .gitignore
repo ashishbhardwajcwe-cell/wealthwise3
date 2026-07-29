@@ -36,3 +36,6 @@ yarn-error.log*
 # logo-seeding local outputs (see scripts/extract-unlisted-logos.mjs, import-pms-logos.mjs)
 unlisted-logos/
 pms-logos.csv
+
+# local reference material - never published
+_local/
