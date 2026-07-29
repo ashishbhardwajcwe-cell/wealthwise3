@@ -36,3 +36,26 @@ yarn-error.log*
 # logo-seeding local outputs (see scripts/extract-unlisted-logos.mjs, import-pms-logos.mjs)
 unlisted-logos/
 pms-logos.csv
+
+# Browser captures. A HAR records the FULL request — Cookie and Authorization
+# headers, session ids, anything the browser sent. This repository is public,
+# so a HAR must never land in it, not even briefly: git history is forever and
+# a force-push does not un-leak a credential.
+#
+# To pull the APMI payload out of a capture WITHOUT the headers, extract only
+# the response body (see scripts/apmi-request-notes.md):
+#   jq -r '[.log.entries[] | select(.request.url|test("loadIAReport";"i"))][0].response.content.text' \
+#     capture.har > scripts/apmi-report.json
+*.har
+*.harfile
+
+# Saved APMI payloads and generated CSVs. Public performance data rather than
+# a secret, but it comes out of a browser session — eyeball one before you
+# ever force-add it.
+scripts/apmi-report*.json
+scripts/pms-data*.csv
+/pms-data.csv
+
+# Local reference material staged next to the repo — never published.
+_local/
+_incoming/
