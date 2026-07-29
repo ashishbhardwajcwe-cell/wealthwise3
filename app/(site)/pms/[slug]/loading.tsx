@@ -1,9 +1,9 @@
 /**
  * Skeleton for a strategy page.
  *
- * Only the 100 largest strategies are pre-rendered; the other ~1,600 are
- * generated on first visit, so that visitor waits on a cold server render with
- * nothing on screen. This mirrors the real layout — hero stat, facts grid,
+ * Every strategy is pre-rendered now, so this rarely shows — but it still
+ * covers an ISR revalidation and any strategy added between deploys, which
+ * render on demand. It mirrors the real layout — hero stat, facts grid,
  * returns table — so the wait reads as loading rather than as a broken page.
  */
 function Bar({ w, h = 14 }: { w: string; h?: number }) {

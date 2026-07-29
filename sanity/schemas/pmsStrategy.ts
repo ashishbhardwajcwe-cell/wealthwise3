@@ -18,7 +18,11 @@ export const pmsStrategy = defineType({
     defineField({
       name: "category",
       type: "string",
-      options: { list: ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid"] },
+      // Each value drives a /pms/category/[slug] landing page (slugified —
+      // "Largecap" → /pms/category/largecap). Editorial copy for the page
+      // lives in PMS_CATEGORIES in lib/pms.ts; add an entry there when adding
+      // a value here, or the page falls back to a generic intro.
+      options: { list: ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid", "Debt"] },
     }),
     defineField({
       name: "aumCr",
@@ -30,6 +34,13 @@ export const pmsStrategy = defineType({
       title: "Minimum investment (₹ lakhs)",
       type: "number",
       initialValue: 50,
+    }),
+    defineField({
+      name: "inceptionDate",
+      title: "Inception date",
+      type: "date",
+      description:
+        "When the investment approach launched, as published by APMI. Distinct from 'Data as of', which is the month-end the returns refer to. Shown as 'Since …' on the strategy card, brief sheet and strategy page — and it's what tells a reader whether a since-inception figure covers two years or twenty.",
     }),
     defineField({
       name: "returns",

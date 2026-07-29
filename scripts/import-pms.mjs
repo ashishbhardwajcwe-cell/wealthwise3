@@ -16,13 +16,21 @@
  *   NEXT_PUBLIC_SANITY_DATASET      e.g. production
  *   SANITY_API_TOKEN                token with Editor (write) access
  *
- * CSV columns (header row required, order doesn't matter):
- *   strategyName*  manager*  category  aumCr  minInvestmentL
+ * CSV columns (header row required, order doesn't matter) — the canonical
+ * list is CSV_COLUMNS in ./pms-csv.mjs, and this run prints it on any header
+ * error:
+ *   strategyName*  manager*  category  aumCr  minInvestmentL  inceptionDate
  *   returns1m  returns3m  returns6m  returns1y  returns2y  returns3y  returns4y  returns5y  sinceInception
  *   feesFixed  feesPerformance  feesHurdle
  *   asOfDate*  (YYYY-MM-DD)   source*   notes
  *   (* = required — every published figure must carry its as-of date and
  *    source, per the SEBI-compliance rules in this project.)
+ *
+ * Build the CSV with `npm run fetch:pms` (scripts/fetch-pms.mjs) rather than
+ * by hand where you can: it extracts all nine return windows from APMI's own
+ * report, and a hand-built file is how 1M/3M/6M/2Y came to be blank sitewide.
+ * Every run prints per-column coverage and refuses to import a dataset whose
+ * return period is empty in every row (override with --allow-gaps).
  *
  * The Sanity document _id is derived from manager + strategy name, so
  * re-running the import next month UPDATES the same records instead of
@@ -39,10 +47,25 @@
  * being wiped by the createOrReplace.
  */
 
-import { requireSanityEnv, readCsvArg, num, slugify, prune, sanityUpsert, sanityQuery } from "./import-shared.mjs";
+import { readFileSync } from "node:fs";
+import { requireSanityEnv, readCsvArg, num, slugify, prune, sanityUpsert, sanityQuery, normalizeIsoDate } from "./import-shared.mjs";
+import { CSV_COLUMNS, RETURN_COLUMNS } from "./pms-csv.mjs";
 import { resolveImportTarget } from "./pms-matching.mjs";
 
-const VALID_CATEGORIES = ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid"];
+// Keep in step with the `category` option list in sanity/schemas/pmsStrategy.ts
+// — each value becomes a /pms/category/[slug] landing page.
+const VALID_CATEGORIES = ["Multicap", "Largecap", "Midcap", "Smallcap", "Thematic", "Quant", "Hybrid", "Debt"];
+
+/*
+ * CSV_COLUMNS / RETURN_COLUMNS live in ./pms-csv.mjs — one definition shared
+ * with scripts/fetch-pms.mjs, which writes the file this reads.
+ *
+ * They were moved out of this file because a second, hand-maintained copy is
+ * what broke the data: the "expected header" printed here had gone stale,
+ * listing only returns1y/3y/5y/sinceInception, so a CSV built from it imported
+ * cleanly with returns1m/3m/6m/2y/4y absent and every strategy page shipped
+ * showing N/A for those windows.
+ */
 
 // ---------- read + validate ----------
 const env = requireSanityEnv();
@@ -51,10 +74,37 @@ const header = rows[0].map((h) => h.trim());
 const idx = (name) => header.indexOf(name);
 for (const required of ["strategyName", "manager", "asOfDate", "source"]) {
   if (idx(required) === -1) {
-    console.error(`CSV is missing the required column "${required}". Expected header:\n` +
-      "strategyName,manager,category,aumCr,minInvestmentL,returns1y,returns3y,returns5y,sinceInception,feesFixed,feesPerformance,feesHurdle,asOfDate,source,notes");
+    console.error(`CSV is missing the required column "${required}". Expected header:\n${CSV_COLUMNS.join(",")}`);
     process.exit(1);
   }
+}
+
+// The template is what people copy to build a month's CSV, so it drifting
+// from CSV_COLUMNS would reintroduce the exact bug this list exists to stop.
+try {
+  const templateHeader = readFileSync(new URL("./pms-template.csv", import.meta.url), "utf8")
+    .split("\n")[0].trim().split(",").map((h) => h.trim());
+  if (templateHeader.join(",") !== CSV_COLUMNS.join(",")) {
+    console.warn(
+      "WARNING: scripts/pms-template.csv no longer matches this importer's column list.\n" +
+      `         template: ${templateHeader.join(",")}\n` +
+      `         importer: ${CSV_COLUMNS.join(",")}\n` +
+      "         Bring them back in step — the template is what next month's CSV is built from.\n",
+    );
+  }
+} catch {
+  // Template missing (script copied elsewhere) — not worth failing the import.
+}
+
+// A misspelled column ("return1m", "returns_3m", a stray Excel export column)
+// used to import as a silent blank. Name them so they can be fixed.
+const unknown = header.filter((h) => h && !CSV_COLUMNS.includes(h));
+if (unknown.length) {
+  console.warn(
+    `WARNING: ${unknown.length} unrecognised CSV column(s), ignored: ${unknown.join(", ")}\n` +
+    `         Recognised columns: ${CSV_COLUMNS.join(",")}\n` +
+    "         A misspelled column imports as blank — check these before continuing.\n",
+  );
 }
 
 const docs = [];
@@ -92,6 +142,14 @@ rows.slice(1).forEach((r, i) => {
     hurdle: num(get("feesHurdle")),
   };
 
+  // APMI publishes each investment approach's inception date. It's the one
+  // date that tells a reader whether a "since inception" figure covers two
+  // years or twenty, so a blank one is tolerated but a malformed one is not.
+  const inceptionDate = normalizeIsoDate(get("inceptionDate"));
+  if (inceptionDate === null) {
+    return errors.push(`line ${line}: inceptionDate "${get("inceptionDate")}" is not a date I can read (use YYYY-MM-DD, DD-MMM-YYYY or DD/MM/YYYY)`);
+  }
+
   docs.push({
     _id: get("sanityId") || `pmsStrategy-${slugify(`${manager}-${strategyName}`)}`,
     _type: "pmsStrategy",
@@ -102,6 +160,7 @@ rows.slice(1).forEach((r, i) => {
     ...(category ? { category } : {}),
     ...(num(get("aumCr")) !== undefined ? { aumCr: num(get("aumCr")) } : {}),
     ...(num(get("minInvestmentL")) !== undefined ? { minInvestmentL: num(get("minInvestmentL")) } : {}),
+    ...(inceptionDate ? { inceptionDate } : {}),
     ...(prune(returns) ? { returns: prune(returns) } : {}),
     ...(prune(fees) ? { fees: prune(fees) } : {}),
     asOfDate,
@@ -117,6 +176,56 @@ if (errors.length) {
 if (!docs.length) {
   console.error("No valid data rows found — nothing to import.");
   process.exit(1);
+}
+
+// ---------- coverage report ----------
+/**
+ * How many rows actually carry each field. A blank column is valid CSV and
+ * imports without complaint, so the only way a whole missing period shows up
+ * is on the live site months later — which is how 1M, 3M, 6M and 2Y came to
+ * read N/A on every strategy page. Print the counts every run, and shout when
+ * a period is empty across the board.
+ */
+function coverage(label, present) {
+  const pct = Math.round((present / docs.length) * 100);
+  const bar = "█".repeat(Math.round(pct / 5)).padEnd(20, "·");
+  return `  ${label.padEnd(14)} ${bar} ${String(present).padStart(5)}/${docs.length}  ${String(pct).padStart(3)}%`;
+}
+
+const empty = [];
+console.log(`\nColumn coverage across ${docs.length} rows:`);
+for (const [col, periodLabel, sanityKey] of RETURN_COLUMNS) {
+  const n = docs.filter((d) => d.returns?.[sanityKey] !== undefined).length;
+  console.log(coverage(`${periodLabel} return`, n));
+  if (n === 0) empty.push({ col, periodLabel });
+}
+for (const [label, test] of [
+  ["category", (d) => !!d.category],
+  ["AUM", (d) => d.aumCr !== undefined],
+  ["inception", (d) => !!d.inceptionDate],
+]) {
+  console.log(coverage(label, docs.filter(test).length));
+}
+
+if (empty.length) {
+  const bar = "─".repeat(64);
+  console.warn(`\n${bar}`);
+  console.warn(`WARNING: ${empty.length} return period(s) are empty in EVERY row`);
+  console.warn(bar);
+  console.warn(`Empty: ${empty.map((e) => e.periodLabel).join(", ")}`);
+  console.warn(
+    `\nThose periods will render "N/A" on every strategy page, in the explorer's\n` +
+    "tile grid and in the compare table — the site has no other source for them.\n" +
+    `Check the CSV actually has the ${empty.map((e) => e.col).join(", ")} ` +
+    `column${empty.length > 1 ? "s" : ""}, and that ${empty.length > 1 ? "they are" : "it is"} filled.\n` +
+    "APMI publishes all nine windows in the same table.\n" +
+    "\nRe-run with --allow-gaps if the periods really are unpublished this month.",
+  );
+  console.warn(`${bar}\n`);
+  if (!process.argv.includes("--allow-gaps")) {
+    console.error("Nothing imported. Fix the CSV, or pass --allow-gaps to import anyway.");
+    process.exit(1);
+  }
 }
 
 // ---------- rename guard + carry-forward ----------
