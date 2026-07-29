@@ -115,8 +115,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // The internal-linking hubs that make every strategy page reachable: the
   // paginated A–Z directory, one page per portfolio manager, one per category.
-  // They carry a higher priority than the strategy pages they link to — this
-  // is the crawl path, and it should be fetched first.
+  //
+  // lastModified on all three comes from the same source as the strategy
+  // entries above — the APMI asOfDate the rows carry — so a hub's freshness
+  // signal moves with the data it summarises, and the monthly refresh tells
+  // crawlers to re-fetch the hubs and the strategy pages together.
   const feedModified = parseAmfiDate(latestAmfiDate(clean.map((s) => s.asOfDate))) ?? undefined;
 
   const directoryEntries: MetadataRoute.Sitemap =
@@ -130,11 +133,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           priority: i === 0 ? 0.9 : 0.6,
         }));
 
+  // One entry per distinct manager. The slug comes from groupPmsByManager,
+  // which builds it with pmsManagerSlug — the same function every link in the
+  // UI calls. Nothing here re-implements the slugify rule, so a sitemap URL
+  // and the link pointing at it cannot drift apart into a 404.
   const amcEntries: MetadataRoute.Sitemap = groupPmsByManager(clean).map((g) => ({
     url: `${siteConfig.url}/pms/amc/${g.slug}`,
     lastModified: parseAmfiDate(latestAmfiDate(g.strategies.map((s) => s.asOfDate))) ?? undefined,
     changeFrequency: "monthly",
-    priority: 0.85,
+    priority: 0.7,
   }));
 
   const categoryEntries: MetadataRoute.Sitemap = pmsCategorySlugsInFeed(clean).map((slug) => ({
@@ -142,7 +149,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified:
       parseAmfiDate(latestAmfiDate(strategiesInPmsCategory(clean, slug).map((s) => s.asOfDate))) ?? undefined,
     changeFrequency: "monthly",
-    priority: 0.85,
+    priority: 0.6,
   }));
 
   const blogEntries: MetadataRoute.Sitemap = blogSlugs.map((slug) => ({

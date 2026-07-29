@@ -198,8 +198,14 @@ export default async function PmsStrategyPage({ params }: Props) {
         {/* header */}
         <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
+            {/* The manager name in the h1 is itself the link to its AMC page —
+                a plain server-rendered <a>, so it is in the HTML a crawler
+                receives, not something hydration adds. */}
             <h1 className="font-display" style={{ fontSize: 34, fontWeight: 600, color: "var(--ink)", lineHeight: 1.1 }}>
-              {s.strategy} — {s.manager}
+              {s.strategy} —{" "}
+              <a href={`/pms/amc/${managerSlug}`} className="hover:underline" style={{ color: "inherit" }}>
+                {s.manager}
+              </a>
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               {s.category && categorySlug && (
@@ -208,10 +214,6 @@ export default async function PmsStrategyPage({ params }: Props) {
                   {s.category}
                 </a>
               )}
-              <a href={`/pms/amc/${managerSlug}`} className="font-ui hover:underline"
-                style={{ fontSize: 12, fontWeight: 500, color: "var(--green-deep)" }}>
-                All {s.manager} strategies
-              </a>
               <span className="font-ui" style={{ fontSize: 12, color: "var(--muted)" }}>as on {asOn}</span>
             </div>
           </div>
