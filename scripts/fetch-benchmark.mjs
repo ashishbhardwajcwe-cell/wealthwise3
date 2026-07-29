@@ -40,9 +40,8 @@
  *   NEXT_PUBLIC_SANITY_PROJECT_ID, SANITY_API_TOKEN (Editor/write token).
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { requireSanityEnv, num, sanityUpsert } from "./import-shared.mjs";
+import { requireSanityEnv, sanityUpsert } from "./import-shared.mjs";
+import { loadApmiReport, extractReturns, detectAsOf } from "./apmi.mjs";
 
 const BENCHMARK_ID = "benchmark-sp-bse-500-tri";
 const BENCHMARK_NAME = "S&P BSE 500 TRI";
@@ -84,7 +83,7 @@ function manualNotice(reason) {
     "Open Sanity Studio → Investment Data → Benchmark (S&P BSE 500 TRI) and set,\n" +
     "straight from the APMI monthly report:\n" +
     `  • Name:       ${BENCHMARK_NAME}\n` +
-    "  • 1M · 3M · 6M · 1Y · 2Y · 3Y   (leave 5Y / SI blank unless APMI\n" +
+    "  • 1M · 3M · 6M · 1Y · 2Y · 3Y · 4Y   (leave 5Y / SI blank unless APMI\n" +
     "                                   carries a clean like-for-like TRI series)\n" +
     "  • Data as of: the month-end, YYYY-MM-DD\n" +
     '  • Source:     e.g. "APMI monthly report, Jun 2026"\n\n' +
@@ -96,34 +95,13 @@ function manualNotice(reason) {
 }
 
 // ---------- load the APMI report ----------
+// The reader lives in ./apmi.mjs, shared with fetch-pms.mjs — one parser for
+// one payload, so the benchmark row and the strategy rows can never be read
+// by two implementations that disagree.
 async function loadReport() {
-  if (args.file) {
-    let raw;
-    try {
-      raw = readFileSync(resolve(args.file), "utf8");
-    } catch (e) {
-      manualNotice(`Couldn't read --file "${args.file}": ${e.message}`);
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      manualNotice(`--file "${args.file}" is not valid JSON — expected the APMI loadIAReport payload.`);
-    }
-  }
-  const url = args.url || process.env.APMI_REPORT_URL;
-  if (!url) {
-    manualNotice(
-      "No APMI report to read: pass --file <apmi.json> (a saved loadIAReport\n" +
-      "payload) or --url <endpoint> / set APMI_REPORT_URL.",
-    );
-  }
-  try {
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) manualNotice(`APMI report fetch failed (HTTP ${res.status}) from ${url}.`);
-    return await res.json();
-  } catch (e) {
-    manualNotice(`APMI report fetch failed (${e.message}) from ${url}.`);
-  }
+  const loaded = await loadApmiReport({ file: args.file, url: args.url });
+  if (!loaded.ok) manualNotice(loaded.reason);
+  return loaded.report;
 }
 
 // ---------- parsing ----------
@@ -151,87 +129,6 @@ function findBenchmarkRow(node, seen = new Set()) {
   }
   for (const v of Object.values(node)) {
     const hit = findBenchmarkRow(v, seen);
-    if (hit) return hit;
-  }
-  return null;
-}
-
-const PERIOD_SPECS = [
-  { key: "m1", res: [/^r?1\s*m(o(nth)?)?$/i, /1[-_ ]?month/i] },
-  { key: "m3", res: [/^r?3\s*m(o(nth)?)?$/i, /3[-_ ]?month/i] },
-  { key: "m6", res: [/^r?6\s*m(o(nth)?)?$/i, /6[-_ ]?month/i] },
-  { key: "y1", res: [/^r?1\s*y(ea)?r?$/i, /1[-_ ]?year/i, /^12\s*m(o(nth)?)?$/i, /12[-_ ]?month/i] },
-  { key: "y2", res: [/^r?2\s*y(ea)?r?$/i, /2[-_ ]?year/i] },
-  { key: "y3", res: [/^r?3\s*y(ea)?r?$/i, /3[-_ ]?year/i] },
-  { key: "y5", res: [/^r?5\s*y(ea)?r?$/i, /5[-_ ]?year/i] },
-  { key: "sinceInception", res: [/since[-_ ]?inception/i, /^si$/i, /inception/i] },
-];
-
-/** Flatten a benchmark row into [label, value] pairs — direct fields, one
- *  level of nested objects, and array-of-entry shapes like
- *  performance:[{period:"1Y", value:12.3}, …]. */
-function labelValuePairs(row) {
-  const pairs = [];
-  const pushObj = (obj) => {
-    for (const [k, v] of Object.entries(obj)) {
-      if (v == null) continue;
-      if (typeof v === "object" && !Array.isArray(v)) pushObj(v);
-      else if (typeof v !== "object") pairs.push([k, v]);
-    }
-  };
-  pushObj(row);
-  for (const v of Object.values(row)) {
-    if (!Array.isArray(v)) continue;
-    for (const item of v) {
-      if (!item || typeof item !== "object") continue;
-      const label = item.period ?? item.label ?? item.tenure ?? item.tenor ?? item.horizon ?? item.name;
-      const val = item.value ?? item.return ?? item.returns ?? item.performance ?? item.cagr ?? item.twrr;
-      if (label != null && val != null) pairs.push([String(label), val]);
-    }
-  }
-  return pairs;
-}
-
-/** Pull the eight period returns out of a benchmark row. */
-function extractReturns(row) {
-  const pairs = labelValuePairs(row);
-  const returns = {};
-  for (const { key, res } of PERIOD_SPECS) {
-    for (const [label, value] of pairs) {
-      if (res.some((re) => re.test(String(label).trim()))) {
-        const n = num(value);
-        if (n !== undefined) { returns[key] = n; break; }
-      }
-    }
-  }
-  return returns;
-}
-
-/** Best-effort as-of date from the payload — a YYYY-MM-DD or DD-MMM-YYYY
- *  string under a date-ish key. */
-function detectAsOf(node, depth = 0, seen = new Set()) {
-  if (!node || typeof node !== "object" || depth > 4 || seen.has(node)) return null;
-  seen.add(node);
-  const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
-  const toIso = (s) => {
-    const v = String(s).trim();
-    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-    m = v.match(/^(\d{1,2})[-/ ]([A-Za-z]{3})[a-z]*[-/ ](\d{4})$/);
-    if (m && MONTHS[m[2].toLowerCase()]) {
-      return `${m[3]}-${String(MONTHS[m[2].toLowerCase()]).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-    }
-    return null;
-  };
-  const entries = Array.isArray(node) ? node.map((v, i) => [String(i), v]) : Object.entries(node);
-  for (const [k, v] of entries) {
-    if (typeof v === "string" && /as[-_ ]?on|as[-_ ]?of|report.*date|date|period|month/i.test(k)) {
-      const iso = toIso(v);
-      if (iso) return iso;
-    }
-  }
-  for (const [, v] of entries) {
-    const hit = detectAsOf(v, depth + 1, seen);
     if (hit) return hit;
   }
   return null;
@@ -270,8 +167,8 @@ const doc = {
   source,
 };
 
-const order = ["m1", "m3", "m6", "y1", "y2", "y3", "y5", "sinceInception"];
-const labels = { m1: "1M", m3: "3M", m6: "6M", y1: "1Y", y2: "2Y", y3: "3Y", y5: "5Y", sinceInception: "SI" };
+const order = ["m1", "m3", "m6", "y1", "y2", "y3", "y4", "y5", "sinceInception"];
+const labels = { m1: "1M", m3: "3M", m6: "6M", y1: "1Y", y2: "2Y", y3: "3Y", y4: "4Y", y5: "5Y", sinceInception: "SI" };
 console.log(`Parsed ${BENCHMARK_NAME} from the APMI report (as of ${asOfDate}):`);
 console.log("  " + order.map((k) => `${labels[k]}=${k in returns ? returns[k] : "—"}`).join("  "));
 console.log(`  source: ${source}`);

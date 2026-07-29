@@ -21,6 +21,31 @@ copyrighted reproduction).
 
 ## Monthly workflow (10–15 minutes)
 
+**Fastest path — extract the whole table instead of typing it:**
+
+```bash
+# Save APMI's loadIAReport payload to scripts/apmi-report.json, then:
+npm run fetch:pms -- --file scripts/apmi-report.json --inspect   # check the mapping
+npm run fetch:pms -- --file scripts/apmi-report.json --asof 2026-06-30
+npm run import:pms -- scripts/pms-data.csv
+```
+
+`fetch:pms` writes every column below — including all nine return windows —
+straight from APMI's own report, so no period can be left out by hand. Run
+`--inspect` first on each new month's payload: it prints the table it found,
+which payload label it mapped to each column, and anything it couldn't place,
+without writing. If a column comes up `NOT FOUND`, pin it and re-run:
+
+```bash
+npm run fetch:pms -- --file scripts/apmi-report.json --map y2=RET_2YR --map manager=PM_NAME
+```
+
+APMI's benchmark/index rows share the table with the approaches; `fetch:pms`
+leaves them out of the strategy CSV (and says which it skipped) — those are
+what `fetch:benchmark` reads.
+
+**Manual path**, when you only want a shortlist:
+
 1. Open APMI's monthly performance section and pick the strategies you
    feature (start with your shortlist of ~20).
 2. Copy `scripts/pms-template.csv` to `scripts/pms-data.csv` and fill one
@@ -33,7 +58,8 @@ copyrighted reproduction).
    | category | – | one of `Multicap, Largecap, Midcap, Smallcap, Thematic, Quant, Hybrid, Debt` — each value gets a `/pms/category/<slugified>` landing page |
    | aumCr | – | AUM in ₹ crore |
    | minInvestmentL | – | minimum in ₹ lakh (SEBI floor is 50) |
-   | returns1m / returns3m / returns6m / returns1y / returns2y / returns3y / returns4y / returns5y / sinceInception | – | % as published by APMI (annualised beyond 1Y) |
+   | inceptionDate | – | when the approach launched, as published by APMI. `YYYY-MM-DD`, `DD-MMM-YYYY` or `DD/MM/YYYY`. Renders as "Since …" and is what tells a reader whether a since-inception figure covers two years or twenty |
+   | returns1m / returns3m / returns6m / returns1y / returns2y / returns3y / returns4y / returns5y / sinceInception | – | % as published by APMI (annualised beyond 1Y). **Fill every one of the nine** — APMI publishes them in a single table, and a column you leave out renders as `N/A` for that period on every strategy page. The importer refuses the run if a period is empty in all rows (see below) |
    | feesFixed / feesPerformance / feesHurdle | – | % figures from the manager's disclosure |
    | asOfDate | ✅ | `YYYY-MM-DD` — the month-end the APMI numbers refer to |
    | source | ✅ | e.g. `APMI monthly report, May 2026` |
@@ -67,6 +93,21 @@ this robust:
   instead of being wiped by the update. Returns and AUM always come from
   the CSV (never carried forward), so stale numbers can't survive under a
   fresh as-of date.
+- **Coverage gate.** Every run prints how many rows carry each return
+  period, plus category, AUM and inception. If a period is empty in *every*
+  row the import stops rather than writing a dataset that renders `N/A`
+  sitewide for that window. Pass `--allow-gaps` when a period genuinely
+  isn't published this month.
+
+  This gate exists because it already happened. The importer's own
+  "expected header" help text had gone stale — it listed only
+  `returns1y, returns3y, returns5y, sinceInception` — so a CSV built from it
+  imported cleanly with `returns1m`, `returns3m`, `returns6m`, `returns2y`
+  and `returns4y` absent, and every strategy page shipped with `N/A` in
+  those rows. Nothing failed; the gap was only visible on the live site. The
+  column list now has exactly one definition in `scripts/import-pms.mjs`,
+  the template is checked against it, and unrecognised column names (a
+  typo'd `return3m`) are reported instead of silently importing as blank.
 
 Strategies you add by hand in the Studio are never touched unless a CSV row
 matches them. Keep `scripts/pms-data.csv` out of git if you prefer (it

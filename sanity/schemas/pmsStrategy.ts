@@ -36,6 +36,13 @@ export const pmsStrategy = defineType({
       initialValue: 50,
     }),
     defineField({
+      name: "inceptionDate",
+      title: "Inception date",
+      type: "date",
+      description:
+        "When the investment approach launched, as published by APMI. Distinct from 'Data as of', which is the month-end the returns refer to. Shown as 'Since …' on the strategy card, brief sheet and strategy page — and it's what tells a reader whether a since-inception figure covers two years or twenty.",
+    }),
+    defineField({
       name: "returns",
       title: "Returns (% CAGR)",
       type: "object",

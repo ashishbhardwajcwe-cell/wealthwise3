@@ -71,12 +71,15 @@ export interface LivePmsStrategy {
   category?: string;
   aumCr?: number;
   minInvestmentL?: number;
+  /** When the approach launched (ISO date). Distinct from asOfDate. */
+  inceptionDate?: string;
   returns1m?: number;
   returns3m?: number;
   returns6m?: number;
   returns1y?: number;
   returns2y?: number;
   returns3y?: number;
+  returns4y?: number;
   returns5y?: number;
   sinceInception?: number;
   asOfDate: string;
@@ -104,6 +107,7 @@ export interface LiveBenchmark {
   returns1y: number | null;
   returns2y: number | null;
   returns3y: number | null;
+  returns4y: number | null;
   returns5y: number | null;
   sinceInception: number | null;
   asOfDate: string | null;

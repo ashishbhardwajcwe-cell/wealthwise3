@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "fetch:pms": "node scripts/fetch-pms.mjs",
     "import:pms": "node scripts/import-pms.mjs",
     "import:aif": "node scripts/import-aif.mjs",
     "fetch:benchmark": "node scripts/fetch-benchmark.mjs",
