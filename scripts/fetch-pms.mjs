@@ -35,6 +35,9 @@
  *   --aum-unit <u>     cr (default) | lakh | rupees — AUM is written in ₹
  *                      crore; --inspect prints samples so you can check the
  *                      magnitude before trusting it.
+ *   --probe [N]        Print the first N (default 3) fully mapped records with
+ *                      every period, plus fill rates; write nothing. Run this
+ *                      before importing.
  *   --inspect          Describe the payload and the mapping; write nothing.
  *   --dry-run          Print the CSV to stdout instead of writing it.
  *
@@ -42,13 +45,14 @@
  * writing, and its coverage gate refuses a dataset with an empty period.
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { num, normalizeIsoDate } from "./import-shared.mjs";
+import { num } from "./import-shared.mjs";
 import { CSV_COLUMNS, RETURN_COLUMNS, toCsv } from "./pms-csv.mjs";
 import {
   loadApmiReport, findRowArray, nodeAtPath, labelValuePairs,
   extractReturns, extractField, detectAsOf, parseMapFlags, isIndexRow,
+  dropImplausible, PLAUSIBLE_MIN, PLAUSIBLE_MAX, toIsoDate,
 } from "./apmi.mjs";
 
 /* ---------- args ---------- */
@@ -58,6 +62,10 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === "--inspect") out.inspect = true;
     else if (a === "--dry-run") out.dryRun = true;
+    else if (a === "--probe") {
+      const next = Number(argv[i + 1]);
+      out.probe = Number.isInteger(next) && next > 0 ? (i++, next) : true;
+    }
     else if (a === "--file") out.file = argv[++i];
     else if (a === "--url") out.url = argv[++i];
     else if (a === "--out") out.out = argv[++i];
@@ -119,21 +127,34 @@ const toCrore = (v) => {
 };
 
 /* ---------- map one row ---------- */
+/** period key → implausible values removed, accumulated across all rows. */
+const blankedTotals = {};
+/** inception dates that were present in the payload but couldn't be parsed. */
+const unreadableDates = [];
+
 function mapRow(row, asOfDate, source) {
-  const returns = extractReturns(row, overrides);
+  const raw = extractReturns(row, overrides);
+  const { returns, blanked } = dropImplausible(raw);
+  for (const [key, values] of Object.entries(blanked)) {
+    (blankedTotals[key] ??= []).push(...values);
+  }
   const out = {
     strategyName: extractField(row, "strategyName", overrides),
     manager: extractField(row, "manager", overrides),
     category: extractField(row, "category", overrides),
     aumCr: toCrore(extractField(row, "aumCr", overrides)),
-    inceptionDate: normalizeIsoDate(extractField(row, "inceptionDate", overrides)) ?? undefined,
+    inceptionDate: undefined, // set below, so an unreadable one can be counted
     asOfDate,
     source,
   };
   for (const [col, , key] of RETURN_COLUMNS) out[col] = returns[key];
-  // normalizeIsoDate returns null for present-but-unparseable — don't write
-  // "null" into the CSV, leave it blank and let the count below flag it.
-  if (out.inceptionDate === null) out.inceptionDate = undefined;
+
+  // A date that is present but unreadable must not become a silent blank —
+  // that is how a format change on APMI's side would hide itself. Count it.
+  const rawInception = extractField(row, "inceptionDate", overrides);
+  const iso = toIsoDate(rawInception);
+  if (iso) out.inceptionDate = iso;
+  else if (rawInception != null && String(rawInception).trim() !== "") unreadableDates.push(String(rawInception));
   return out;
 }
 
@@ -220,19 +241,109 @@ if (indexRows.length) {
 }
 console.log(`  rows at: ${rowsPath}`);
 
-console.log("\nExtraction coverage:");
-for (const [col, display] of RETURN_COLUMNS) {
-  const n = usable.filter((r) => r[col] !== undefined).length;
-  const pct = Math.round((n / usable.length) * 100);
-  const flag = n === 0 ? "  ← EMPTY: pin it with --map, or the site shows N/A for this window" : "";
-  console.log(`  ${display.padEnd(4)} ${String(n).padStart(5)}/${usable.length}  ${String(pct).padStart(3)}%${flag}`);
+printFillRates();
+
+/**
+ * Per-period fill rate. A window at 0% is the one outcome that must not pass
+ * quietly: it means either APMI genuinely doesn't publish it this month, or
+ * the label moved and the mapping missed it — and the difference matters,
+ * because the second is a bug and the first isn't. Say which, loudly, and
+ * name the flag that fixes it.
+ */
+function printFillRates() {
+  const n = usable.length;
+  const empty = [];
+  console.log("\nPer-period fill rate:");
+  for (const [col, display, key] of RETURN_COLUMNS) {
+    const filled = usable.filter((r) => r[col] !== undefined).length;
+    const pct = Math.round((filled / n) * 100);
+    const cut = blankedTotals[key]?.length ?? 0;
+    const note = cut ? `   (${cut} blanked as implausible)` : "";
+    console.log(`  ${display.padEnd(3)} ${String(filled).padStart(6)}/${String(n).padEnd(6)} ${String(pct).padStart(3)}% populated${note}`);
+    if (filled === 0) empty.push({ col, display, key });
+  }
+  for (const col of ["category", "aumCr", "inceptionDate"]) {
+    const filled = usable.filter((r) => r[col] !== undefined && r[col] !== "").length;
+    console.log(`  ${col.padEnd(3)} ${String(filled).padStart(6)}/${String(n).padEnd(6)} ${String(Math.round((filled / n) * 100)).padStart(3)}% populated`);
+  }
+
+  if (unreadableDates.length) {
+    const sample = [...new Set(unreadableDates)].slice(0, 5).join(", ");
+    console.log(
+      `\n${unreadableDates.length} inception date(s) present but unreadable, left blank: ${sample}` +
+      "\n  If that's a format APMI now uses, toIsoDate() in scripts/apmi.mjs needs to learn it.",
+    );
+  }
+
+  const cutTotal = Object.values(blankedTotals).reduce((t, v) => t + v.length, 0);
+  if (cutTotal) {
+    console.log(`\n${cutTotal} value(s) outside ${PLAUSIBLE_MIN}%…${PLAUSIBLE_MAX}% blanked (feed artifacts, not returns):`);
+    for (const [key, values] of Object.entries(blankedTotals)) {
+      const sample = values.slice(0, 4).map((v) => `${v}%`).join(", ");
+      console.log(`  ${key.padEnd(15)} ${values.length}  e.g. ${sample}${values.length > 4 ? ", …" : ""}`);
+    }
+    console.log("  The row is kept — only the bad figure is dropped, so its other windows survive.");
+  }
+
+  if (empty.length) {
+    const bar = "═".repeat(66);
+    console.log(`\n${bar}`);
+    console.log(`0% POPULATED: ${empty.map((e) => e.display).join(", ")}`);
+    console.log(bar);
+    console.log(
+      "Not one row carried these windows. Two possibilities, and they need\n" +
+      "different responses:\n\n" +
+      "  1. The mapping missed them — APMI renamed the column this month.\n" +
+      "     Run --inspect, find the real label in the unmapped list, then:\n" +
+      `       npm run fetch:pms -- --file <payload> ${empty.map((e) => `--map ${e.key}=<Label>`).join(" ")}\n\n` +
+      "  2. APMI genuinely doesn't publish them this month. Then this is the\n" +
+      "     truth about the source, not a bug — import as-is and those windows\n" +
+      "     read N/A on the site until APMI carries them.\n\n" +
+      "--inspect tells you which, in about five seconds. Do that before importing.",
+    );
+    console.log(`${bar}`);
+  }
 }
-for (const col of ["category", "aumCr", "inceptionDate"]) {
-  const n = usable.filter((r) => r[col] !== undefined && r[col] !== "").length;
-  console.log(`  ${col.padEnd(4)} ${String(n).padStart(5)}/${usable.length}  ${String(Math.round((n / usable.length) * 100)).padStart(3)}%`);
+
+/* ---------- probe: show fully mapped records before importing ---------- */
+if (args.probe) {
+  const n = Number.isInteger(args.probe) ? args.probe : 3;
+  console.log(`\nFirst ${n} mapped record(s), every period spelled out:`);
+  for (const r of usable.slice(0, n)) {
+    console.log(`\n  ${"─".repeat(62)}`);
+    console.log(`  strategyName   ${r.strategyName}`);
+    console.log(`  manager        ${r.manager}`);
+    console.log(`  category       ${r.category ?? "—"}`);
+    console.log(`  aumCr          ${r.aumCr ?? "—"}`);
+    console.log(`  inceptionDate  ${r.inceptionDate ?? "—"}`);
+    console.log(`  asOfDate       ${r.asOfDate}`);
+    console.log(`  source         ${r.source}`);
+    console.log(`  returns        ${RETURN_COLUMNS.map(([col, d]) => `${d}=${r[col] ?? "—"}`).join("  ")}`);
+  }
+  console.log(`\n  ${"─".repeat(62)}`);
+  console.log("\n--probe: nothing written. Re-run without it to write the CSV.");
+  process.exit(0);
 }
 
 const csv = toCsv(usable, CSV_COLUMNS);
+
+// The importer reads by column NAME, so a header mismatch wouldn't crash — it
+// would import the missing columns as blank, which is the failure this whole
+// change exists to stop. Check it here, where it's cheap.
+try {
+  const templateHeader = readFileSync(new URL("./pms-template.csv", import.meta.url), "utf8").split("\n")[0].trim();
+  if (csv.split("\n")[0] !== templateHeader) {
+    die(
+      "The CSV header doesn't match scripts/pms-template.csv.\n" +
+      `  written : ${csv.split("\n")[0]}\n` +
+      `  template: ${templateHeader}\n` +
+      "Both derive from CSV_COLUMNS in scripts/pms-csv.mjs — bring them back in step.",
+    );
+  }
+} catch (e) {
+  if (e?.code !== "ENOENT") throw e;
+}
+
 if (args.dryRun) {
   console.log(`\n--dry-run: not written. CSV that WOULD be written to ${args.out}:\n`);
   console.log(csv);

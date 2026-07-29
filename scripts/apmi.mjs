@@ -181,6 +181,78 @@ export function nodeAtPath(report, path) {
   return node;
 }
 
+/* ---------- dates ---------- */
+
+/**
+ * A payload date → zero-padded "YYYY-MM-DD", or null when it can't be read.
+ *
+ * normalizeIsoDate (import-shared.mjs) handles "YYYY-MM-DD", "DD-MMM-YYYY"
+ * and "DD/MM/YYYY", but its ISO branch requires two-digit month and day. A
+ * JSON API emitting "2019-7-1" is perfectly ordinary and would fall through
+ * every branch and come back null — silently dropping the inception date for
+ * whichever rows happen to land on a single-digit day. Pad first, then hand
+ * off. Deliberately wrapped here rather than loosened in import-shared, so
+ * the importer's validation keeps behaving exactly as it does today.
+ */
+export function toIsoDate(value) {
+  if (value == null) return undefined;
+  const s = String(value).trim();
+  if (s === "") return undefined;
+  const loose = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (loose) return `${loose[1]}-${loose[2].padStart(2, "0")}-${loose[3].padStart(2, "0")}`;
+  // Timestamps ("2019-07-01T00:00:00Z", "/Date(1561939200000)/" is not ISO —
+  // only the former is worth handling; the date half is unambiguous.
+  const stamp = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T ]/);
+  if (stamp) return `${stamp[1]}-${stamp[2].padStart(2, "0")}-${stamp[3].padStart(2, "0")}`;
+  return normalizeIsoDate(s);
+}
+
+/* ---------- plausibility ---------- */
+
+/**
+ * The same band lib/pms.ts uses at render time: below −95% or above +300% is
+ * a reporting artifact, not a return. APMI's feed mixes in liquid-fund,
+ * structured-product and debt rows whose "return" columns are not annualised
+ * equity returns (−113% is not mathematically possible), and those must not
+ * reach the site.
+ */
+export const PLAUSIBLE_MIN = -95;
+export const PLAUSIBLE_MAX = 300;
+
+/** The windows the band was written for — annualised, so comparable. */
+export const ANNUALISED_KEYS = ["y1", "y2", "y3", "y4", "y5", "sinceInception"];
+/** Cumulative windows. lib/pms.ts deliberately exempts these at render time
+ *  (the band doesn't describe a non-annualised figure), so applying it here is
+ *  a stricter choice — the caller reports every value it blanks, and the
+ *  fill-rate summary makes over-reach obvious rather than silent. */
+export const CUMULATIVE_KEYS = ["m1", "m3", "m6"];
+
+/**
+ * Blank any period outside the band, rather than dropping the whole strategy.
+ *
+ * Dropping the row is right on the site — lib/pms.ts does exactly that, so a
+ * strategy with one corrupt annualised figure is hidden entirely. It is the
+ * wrong move in the extractor: a row whose 2Y is garbage still has eight sound
+ * windows, and silently shrinking the CSV would look identical to APMI not
+ * publishing the strategy at all. So: keep the row, drop the bad figure, and
+ * hand the caller a per-period count of what was removed.
+ *
+ * Returns { returns, blanked } where blanked maps period key → [values].
+ */
+export function dropImplausible(returns, keys = [...ANNUALISED_KEYS, ...CUMULATIVE_KEYS]) {
+  const out = { ...returns };
+  const blanked = {};
+  for (const key of keys) {
+    const v = out[key];
+    if (typeof v !== "number") continue;
+    if (v < PLAUSIBLE_MIN || v > PLAUSIBLE_MAX) {
+      (blanked[key] ??= []).push(v);
+      delete out[key];
+    }
+  }
+  return { returns: out, blanked };
+}
+
 /* ---------- benchmark rows ---------- */
 
 /**
