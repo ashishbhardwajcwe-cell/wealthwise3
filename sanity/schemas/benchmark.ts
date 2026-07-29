@@ -36,6 +36,7 @@ export const benchmark = defineType({
         { name: "y1", title: "1-year", type: "number" },
         { name: "y2", title: "2-year", type: "number" },
         { name: "y3", title: "3-year", type: "number" },
+        { name: "y4", title: "4-year", type: "number" },
         { name: "y5", title: "5-year", type: "number" },
         { name: "sinceInception", title: "Since inception", type: "number" },
       ],

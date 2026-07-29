@@ -5,11 +5,22 @@ Sanity documents in one command, so the monthly refresh is:
 **download → paste into CSV → run one command**. No Studio clicking.
 
 ```
+npm run fetch:pms     -- --file scripts/apmi-report.json --asof 2026-06-30   # → scripts/pms-data.csv
 npm run import:pms    -- scripts/pms-data.csv
 npm run fetch:sebi-aif -- --asof 2026-06-30          # → scripts/aif-data.csv
 npm run import:aif    -- scripts/aif-data.csv
 npm run fetch:benchmark -- --file scripts/apmi-report.json --asof 2026-06-30
 ```
+
+`fetch:pms` turns one saved APMI `loadIAReport` payload into the import CSV
+with **all nine return windows** (1M · 3M · 6M · 1Y · 2Y · 3Y · 4Y · 5Y · SI),
+plus AUM, category and inception date. Use it instead of hand-building the
+CSV: the site shipped with 1M, 3M, 6M and 2Y reading `N/A` on every strategy
+page because a hand-built file simply lacked those columns, and nothing in the
+pipeline noticed. `import:pms` now prints per-column coverage and refuses a
+dataset whose return window is empty in every row (`--allow-gaps` to override).
+Run `fetch:pms --inspect` on a new month's payload before trusting it — APMI's
+field names aren't contractual, and `--inspect` shows exactly what mapped where.
 
 The imports upsert on a stable key — PMS by `manager + name`, AIF by SEBI
 **registration number** — so re-running next month **updates** the same rows,

@@ -12,10 +12,11 @@
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import type { LivePmsStrategy, LiveBenchmark } from "@/lib/investment-data";
 import { pmsStrategySlug, pmsManagerSlug, pmsCategorySlug } from "@/lib/pms";
+import { fmtAsOf } from "@/lib/format";
 import { formatAumCr } from "@/lib/utils";
 
 /* ---------- types ---------- */
-export type Period = "1M" | "3M" | "6M" | "1Y" | "2Y" | "3Y" | "5Y" | "SI";
+export type Period = "1M" | "3M" | "6M" | "1Y" | "2Y" | "3Y" | "4Y" | "5Y" | "SI";
 export type Tone = "pos" | "neg" | "flat";
 
 /** Return figures keyed by period; null where a figure isn't published. */
@@ -54,10 +55,10 @@ export type Benchmark = {
 };
 
 export const BENCH_NAME = "S&P BSE 500 TRI";
-export const BENCH_FALLBACK: BenchmarkReturns = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "5Y": null, "SI": null };
+export const BENCH_FALLBACK: BenchmarkReturns = { "1M": -0.17, "3M": -2.34, "6M": -5.39, "1Y": -0.07, "2Y": 4.14, "3Y": 13.47, "4Y": null, "5Y": null, "SI": null };
 export const FALLBACK_BENCHMARK: Benchmark = { name: BENCH_NAME, returns: BENCH_FALLBACK, asOfDate: null, source: null };
 
-export const PERIODS: Period[] = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "SI"];
+export const PERIODS: Period[] = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "4Y", "5Y", "SI"];
 
 /* ---------- data mapping ---------- */
 const orNull = (v: number | null | undefined): number | null => (typeof v === "number" ? v : null);
@@ -75,10 +76,11 @@ export function toStrategy(s: LivePmsStrategy, all: LivePmsStrategy[]): Strategy
     category: s.category ?? null,
     categorySlug: s.category ? pmsCategorySlug(s.category) : null,
     aum: orNull(s.aumCr),
-    // pmsStrategy has no inception-date field (asOfDate is the data refresh
-    // date, not launch). Map it here when the schema gains one — the card,
-    // brief sheet and strategy page already hide "Since" while this is null.
-    since: null,
+    // APMI publishes each approach's inception date; it lands on the document
+    // as `inceptionDate` (asOfDate is the data refresh date, not the launch).
+    // Still null for any strategy whose row doesn't carry one — the card,
+    // brief sheet and strategy page hide "Since" in that case.
+    since: s.inceptionDate ? fmtAsOf(s.inceptionDate) : null,
     returns: {
       "1M": orNull(s.returns1m),
       "3M": orNull(s.returns3m),
@@ -86,6 +88,7 @@ export function toStrategy(s: LivePmsStrategy, all: LivePmsStrategy[]): Strategy
       "1Y": orNull(s.returns1y),
       "2Y": orNull(s.returns2y),
       "3Y": orNull(s.returns3y),
+      "4Y": orNull(s.returns4y),
       "5Y": orNull(s.returns5y),
       "SI": orNull(s.sinceInception),
     },
@@ -108,6 +111,7 @@ export function toBenchmark(b: LiveBenchmark | null | undefined): Benchmark {
       "1Y": orNull(b.returns1y),
       "2Y": orNull(b.returns2y),
       "3Y": orNull(b.returns3y),
+      "4Y": orNull(b.returns4y),
       "5Y": orNull(b.returns5y),
       "SI": orNull(b.sinceInception),
     },
