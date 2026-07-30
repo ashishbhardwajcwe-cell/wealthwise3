@@ -6,7 +6,6 @@
 
 import type { LivePmsStrategy } from "@/lib/investment-data";
 import { slugifyHeading } from "@/lib/slugify";
-import { latestAmfiDate } from "@/lib/format";
 
 const PLAUSIBLE_MIN = -95;   // % — below this is a reporting artifact, not a real annualised return
 const PLAUSIBLE_MAX = 300;   // % — above this in any period is almost certainly not annualised
@@ -315,41 +314,10 @@ export function pmsDirectoryPageCount(total: number): number {
   return Math.max(1, Math.ceil(total / PMS_DIRECTORY_PAGE_SIZE));
 }
 
-/**
- * The subset of the feed the homepage's FeaturedStrategies section actually
- * needs, in feed order. The full feed (~1,700 rows) was being serialised into
- * the homepage payload to render at most 6 cards per tab. The component shows,
- * per tab, the FIRST `maxCards` rows in feed order ("All" = first `maxCards`
- * overall), derives its tab list from the categories present, and reports the
- * latest asOfDate — so this keeps: the first `maxCards` rows overall, the
- * first `maxCards` of every category, and the newest-dated row (for the
- * "as on" line). Renders pixel-identically to passing the whole feed.
+/*
+ * The homepage's featured selection used to live here as `featuredPmsSubset`
+ * (first ~6 rows of the alphabetical feed). It is now a rules-based selection
+ * in lib/pms-featured.ts — which has to import `beats` from
+ * components/pms/strategy-shared.tsx, so it cannot live in this file without
+ * closing an import cycle.
  */
-export function featuredPmsSubset(
-  strategies: LivePmsStrategy[],
-  maxCards = 6,
-): LivePmsStrategy[] {
-  const keep = new Set<LivePmsStrategy>();
-  strategies.slice(0, maxCards).forEach((s) => keep.add(s));
-
-  const perCategory = new Map<string, number>();
-  for (const s of strategies) {
-    if (!s.category) continue;
-    const n = perCategory.get(s.category) ?? 0;
-    if (n < maxCards) {
-      perCategory.set(s.category, n + 1);
-      keep.add(s);
-    }
-  }
-
-  // The "as on" line shows latestAmfiDate() over the props — keep a row
-  // carrying that exact winning date string, chosen by the same function,
-  // so the trimmed props produce the same answer.
-  const latest = latestAmfiDate(strategies.map((s) => s.asOfDate));
-  if (latest) {
-    const carrier = strategies.find((s) => s.asOfDate === latest);
-    if (carrier) keep.add(carrier);
-  }
-
-  return strategies.filter((s) => keep.has(s));
-}
