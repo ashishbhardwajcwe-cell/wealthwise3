@@ -94,9 +94,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // The root layout templates titles as "%s | PlanMyCashflows" — this title
   // already carries the brand, so mark it absolute to avoid doubling it.
-  const title = `${s.strategyName} PMS by ${s.manager} — Returns, AUM & Analysis | PlanMyCashflows`;
+  //
+  // Length-aware: some strategy/AMC names alone run past the 60/160-char SERP
+  // budget (family-office AMCs with parenthetical legal names are the worst
+  // offenders — one runs 97 chars by itself), so degrade in stages rather
+  // than let every one of these ~1,700 pages truncate mid-sentence. The AMC
+  // name and "Returns, AUM & Analysis" framing already live in the H1 and
+  // body, so dropping them from the title/description costs nothing readers
+  // can't get a scroll away.
+  const titleBase = `${s.strategyName} PMS`;
+  const titleWithBrand = `${titleBase} | PlanMyCashflows`;
+  const title = titleWithBrand.length <= 60 ? titleWithBrand : titleBase;
+
   const ret3y = typeof s.returns3y === "number" ? `${s.returns3y.toFixed(1)}% 3Y annualised return` : "returns";
-  const description = `${s.strategyName} by ${s.manager}: ${ret3y} vs ${benchmark.name}${s.category ? `, ${s.category} category` : ""}. AUM, minimum investment, alpha and consistency analysis, updated monthly from APMI disclosures.`;
+  const descWithManager = `${s.strategyName} by ${s.manager}: ${ret3y} vs ${benchmark.name}. AUM, minimum investment & alpha, updated monthly from APMI.`;
+  const descWithoutManager = `${s.strategyName} PMS: ${ret3y} vs ${benchmark.name}. AUM, minimum investment & alpha, updated monthly from APMI.`;
+  const description =
+    descWithManager.length <= 160
+      ? descWithManager
+      : descWithoutManager.length <= 160
+        ? descWithoutManager
+        : `${descWithoutManager.slice(0, 157)}...`;
   const canonical = `${siteConfig.url}/pms/${slug}`;
 
   return {
