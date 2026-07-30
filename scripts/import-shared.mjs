@@ -90,6 +90,29 @@ export const slugify = (s) =>
 export const shortHash = (s, length = 8) =>
   createHash("sha1").update(String(s), "utf8").digest("hex").slice(0, length);
 
+/**
+ * Last calendar day of a month — lastDayOfMonth(2026, 2) → 28,
+ * (2026, 7) → 31. `month` is 1-based. Day 0 of the FOLLOWING month is the
+ * last day of this one, and Date.UTC handles leap years.
+ */
+export function lastDayOfMonth(year, month) {
+  return new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
+}
+
+/**
+ * A month's real month-end as strict zero-padded `YYYY-MM-DD`
+ * (monthEndIso(2026, 7) → "2026-07-31").
+ *
+ * Every date this project publishes is zero-padded — `2026-6-30` is rejected
+ * by import-pms.mjs, and a hardcoded day of 30 is wrong for seven months of
+ * the year and badly wrong for February.
+ */
+export function monthEndIso(year, month) {
+  const m = String(Number(month)).padStart(2, "0");
+  const d = String(lastDayOfMonth(year, month)).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+}
+
 const MONTHS3 = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
 /**

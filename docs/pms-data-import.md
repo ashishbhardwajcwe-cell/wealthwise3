@@ -19,17 +19,83 @@ and republishing their data without permission violates their terms and the
 project's own compliance rules (CLAUDE-level rule: cite source, no
 copyrighted reproduction).
 
-## Monthly workflow (10–15 minutes)
+## The monthly sequence
 
-**Fastest path — extract the whole table instead of typing it:**
+Four steps, in this order. Step 1 is not optional — once step 4 runs, the
+previous month's figures are gone from Sanity and the archive is the only
+record that they were ever displayed.
 
 ```bash
-# Save APMI's loadIAReport payload to scripts/apmi-report.json, then:
-npm run fetch:pms -- --file scripts/apmi-report.json --inspect   # check the mapping
-npm run fetch:pms -- --file scripts/apmi-report.json --asof 2026-06-30
-npm run import:pms -- scripts/pms-data.csv --dry-run             # see the plan first
+# 1. ARCHIVE what the site is showing right now, before anything overwrites it.
+npm run archive:pms
+git add scripts/archive && git commit -m "Archive PMS data as on 2026-06-30"
+
+# 2. FETCH the new month from APMI.
+node scripts/fetch-apmi-pms.mjs 7 2026 --probe     # check the request + parse first
+node scripts/fetch-apmi-pms.mjs 7 2026             # writes scripts/pms-data.csv
+#    …or, from a saved loadIAReport payload:
+npm run fetch:pms -- --file scripts/apmi-report.json --inspect
+npm run fetch:pms -- --file scripts/apmi-report.json --asof 2026-07-31
+
+# 3. DRY RUN the import. Read the counts before writing anything.
+npm run import:pms -- scripts/pms-data.csv --dry-run
+
+# 4. IMPORT.
 npm run import:pms -- scripts/pms-data.csv
 ```
+
+Between steps 3 and 4, deal with anything the dry run flags: ambiguous rows
+(record them in `scripts/pms-pins.json` — it prints paste-ready entries),
+pins that matched nothing, and collision victims. Steps 2 and 3 write nothing
+to Sanity, so they are safe to repeat.
+
+### Step 1 — archive (`npm run archive:pms`)
+
+Reads every `pmsStrategy` document as it currently stands and writes two files
+into `scripts/archive/`, named for the **data's** as-on date rather than the
+day it ran:
+
+| file | what it is |
+|---|---|
+| `pms-YYYY-MM-DD.csv` | one row per strategy in the `pms-template.csv` column shape, plus each document's real `_id` in the `sanityId` column |
+| `pms-YYYY-MM-DD.pdf` | the same data, readable — cover page with as-on date, strategy count and total AUM; then every strategy with manager, category, AUM and all nine return windows; source footer on every page |
+
+**Commit both.** They are not gitignored and must not be: `git diff` between
+two months' CSVs answers "what changed, and when" directly, which is what a
+compliance query or a disputed figure actually asks. The data is public, so
+nothing here is unsafe for a public repo. See `scripts/archive/README.md`.
+
+It refuses to overwrite an existing archive for the same date unless
+`--force`. Reading needs only `NEXT_PUBLIC_SANITY_PROJECT_ID` — no Editor
+token, and it never writes to Sanity.
+
+```bash
+npm run archive:pms                       # archive the current state
+npm run archive:pms -- --date 2026-06-30  # name it explicitly
+npm run archive:pms -- --force            # replace an existing archive
+```
+
+### Step 2 — dates
+
+`fetch-apmi-pms.mjs` derives both dates from the month you ask for. They are
+deliberately not the same value:
+
+- **CSV `asOfDate`** is always strict zero-padded `YYYY-MM-DD` at the month's
+  real last day — `2026-07-31`, not `2026-7-30`. The day used to be hardcoded
+  to 30 (wrong in every 31-day month, and by two days in February) and the
+  month was not padded, which `import-pms.mjs` rejects outright.
+- **The APMI POST body's `asOnDate`** keeps the unpadded shape the endpoint was
+  originally written against, with the day corrected to the real month-end.
+  That format has never been confirmed against a live response. `--probe`
+  prints exactly what would be sent; `--ason <literal>` sends a specific string
+  once a live capture shows what APMI wants.
+
+### Step 2 — the two fetchers
+
+`fetch-apmi-pms.mjs` calls APMI live but parses the response table by column
+*position*. `fetch:pms` reads a saved payload but maps by column *label*, so it
+survives APMI reordering columns. Prefer `fetch:pms` whenever the layout may
+have moved; use the live fetcher when it hasn't.
 
 `fetch:pms` writes every column below — including all nine return windows —
 straight from APMI's own report, so no period can be left out by hand. Run
@@ -65,7 +131,7 @@ what `fetch:benchmark` reads.
    | asOfDate | ✅ | `YYYY-MM-DD` — the month-end the APMI numbers refer to |
    | source | ✅ | e.g. `APMI monthly report, May 2026` |
    | notes | – | one-line editorial note, educational framing only |
-   | sanityId | – | pin the row to an exact existing document `_id` — only needed when the importer reports an ambiguous rename match |
+   | sanityId | – | pin the row to an exact existing document `_id`, for a **one-off** override. A pin that should survive next month's fetch belongs in `scripts/pms-pins.json` instead — see below |
 
 3. Run the import (needs a Sanity **write** token; the read-only token used
    by the website is not enough — create an Editor token once in
@@ -132,7 +198,46 @@ id is never rewritten. Four guards make this robust:
   fuzzy-matches the row against the existing documents: a unique near-duplicate
   keeps its existing id (reported as "matched despite a rename"), and an
   ambiguous match aborts the import with the candidate ids so you can pin the
-  right one via the `sanityId` column.
+  right one.
+
+- **Persistent pins — `scripts/pms-pins.json`.** A few strategies are genuinely
+  ambiguous by name (two HDFC "MF Select" variants; Neo's Club Moderate /
+  Moderately Conservative / Moderately Aggressive set). The importer refuses to
+  guess between them, so the answer has to be recorded — and it has to be
+  recorded somewhere that survives, because `scripts/pms-data.csv` is
+  regenerated from APMI every month. Pins used to live in that CSV's `sanityId`
+  column, so every fetch deleted them and the same rows aborted the import
+  every single month.
+
+  Pins are keyed by the normalised `(manager, strategyName)` pair — the same
+  key the matcher uses — so a pin survives punctuation and abbreviation drift.
+  The CSV's own `sanityId` column still works and still wins, as a one-off
+  override.
+
+  ```jsonc
+  {
+    "pins": [
+      {
+        "manager": "Neo Asset Management Private Limited",
+        "strategyName": "Club Moderately Conservative",
+        "sanityId": "pmsStrategy-…",
+        "note": "why this document and not its sibling"
+      }
+    ]
+  }
+  ```
+
+  You do not have to write these by hand. The dry run prints a paste-ready
+  entry for every ambiguous row, with the candidate document ids filled in —
+  pick the right one, paste, commit. Every run then reports how many pins
+  matched, and flags four kinds of trouble loudly:
+
+  | flag | meaning |
+  |---|---|
+  | `UNRESOLVED` | the entry names a known-ambiguous row but its `sanityId` is still empty, so nothing is pinned |
+  | `UNMATCHED` | no CSV row matches this pin — almost always a strategy the manager has renamed, which means it is unpinned this month and may abort |
+  | `STALE` | the pinned `sanityId` matches no document, so importing would *create* one under that id rather than update |
+  | `TOO BROAD` | one pin matches several CSV rows, which would write them all to a single document |
 - **Carry-forward.** Hand-curated fields the CSV doesn't carry — category,
   notes, fees, minInvestmentL — are preserved from the existing document
   instead of being wiped by the update. Returns and AUM always come from
@@ -154,17 +259,25 @@ id is never rewritten. Four guards make this robust:
   the template is checked against it, and unrecognised column names (a
   typo'd `return3m`) are reported instead of silently importing as blank.
 
-The matching and id rules live in `scripts/pms-matching.mjs` and are covered
-by a dependency-free self-test — run it after touching them:
+The parts of this pipeline that fail *silently* are covered by a
+dependency-free self-test — run it after touching any of them:
 
 ```bash
-npm run test:pms-matching
+npm run test:pms
 ```
 
-It asserts the property that matters and that no normal run can show you: a
-document that already matches a row keeps its `_id` untouched, whatever shape
-that id has. A changed id doesn't error — it forks a second copy of the whole
-~1,700-document universe alongside the first.
+It asserts the three properties no normal run can show you:
+
+- a document that already matches a row keeps its `_id` untouched, whatever
+  shape that id has (`scripts/pms-matching.mjs`). A changed id doesn't error —
+  it forks a second copy of the whole ~1,700-document universe alongside the
+  first;
+- month-end dates are the real last day and always zero-padded
+  (`scripts/import-shared.mjs`). A wrong date imports perfectly happily and
+  mislabels the entire site;
+- the pins file loads, rejects malformed entries, and never treats an empty
+  `sanityId` as a pin (`scripts/pms-pins.mjs`). A pin that quietly fails to
+  load surfaces a month later as an ambiguity abort.
 
 Strategies you add by hand in the Studio are never touched unless a CSV row
 matches them. Keep `scripts/pms-data.csv` out of git if you prefer (it

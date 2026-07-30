@@ -53,12 +53,21 @@
  * that looks like a victim of the old id scheme — without writing anything.
  * It needs only NEXT_PUBLIC_SANITY_PROJECT_ID (the dataset reads publicly);
  * an Editor token is only required for a real run.
+ *
+ * Pins: the rows that are genuinely ambiguous (two HDFC "MF Select" variants,
+ * Neo's Club Moderate / Moderately Conservative / Moderately Aggressive set)
+ * are resolved once in scripts/pms-pins.json and applied automatically here.
+ * They used to be recorded in the CSV's own sanityId column — which the
+ * monthly APMI fetch regenerates, so the answer was deleted every month and
+ * the same rows aborted the import every month. The CSV column still works
+ * and still wins, as a one-off override.
  */
 
 import { readFileSync } from "node:fs";
 import { requireSanityEnv, readCsvArg, num, prune, sanityUpsert, sanityQuery, normalizeIsoDate } from "./import-shared.mjs";
 import { CSV_COLUMNS, RETURN_COLUMNS } from "./pms-csv.mjs";
 import { resolveImportTarget, buildExistingIndex, legacyStrategyId, pairKey } from "./pms-matching.mjs";
+import { loadPins, pinSuggestion } from "./pms-pins.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -165,8 +174,10 @@ rows.slice(1).forEach((r, i) => {
     // _id is decided by the matcher below, never derived up front — see the
     // "rename guard" section. sanityId set → the target doc is pinned by
     // hand; __legacyId is the id shape earlier imports produced, kept only to
-    // recognise the documents they created.
+    // recognise the documents they created. The persistent pins file is
+    // applied further down, where it can report what matched.
     __pinnedId: get("sanityId") || undefined,
+    __pinnedBy: get("sanityId") ? "csv" : undefined,
     __legacyId: legacyStrategyId(manager, strategyName),
     strategyName,
     manager,
@@ -257,6 +268,77 @@ const existingById = index.byId;
 const label = (d) => `${d.manager} — ${d.strategyName}`;
 
 /*
+ * ---------- persistent pins ----------
+ * Applied before matching, so a pinned row never reaches the fuzzy matcher.
+ * A CSV sanityId still wins: the file is the standing answer, the column is
+ * the one-off override.
+ */
+const pinsIdx = process.argv.indexOf("--pins");
+const pins = loadPins(pinsIdx !== -1 ? new URL(process.argv[pinsIdx + 1], `file://${process.cwd()}/`) : undefined);
+if (pins.errors.length) {
+  console.error(`${pins.displayPath} is unusable — nothing imported:`);
+  for (const e of pins.errors) console.error(`  • ${e}`);
+  process.exit(1);
+}
+
+for (const doc of docs) {
+  if (doc.__pinnedId) continue; // CSV column wins
+  const pin = pins.byKey.get(pairKey(doc.manager, doc.strategyName));
+  if (!pin) continue;
+  pin.matched++;
+  doc.__pinnedId = pin.sanityId;
+  doc.__pinnedBy = "pins-file";
+}
+
+const pinsMatched = pins.resolved.filter((p) => p.matched > 0);
+const rowsPinnedByFile = docs.filter((d) => d.__pinnedBy === "pins-file").length;
+const pinsFromCsv = docs.filter((d) => d.__pinnedBy === "csv").length;
+const pinsUnmatched = pins.resolved.filter((p) => p.matched === 0);
+// A pin pointing at an id that no longer exists would silently CREATE a
+// document under that id rather than updating one — worth saying out loud.
+const pinsStale = pinsMatched.filter((p) => !existingById.has(p.sanityId));
+// One pin key can catch two rows: pairKey normalises away the decorations
+// ("Core Fund" and "Core Strategy" are one key), so an over-broad pin would
+// aim both rows at a single document. The import aborts on that anyway; say
+// which pin caused it.
+const pinsOverBroad = pinsMatched.filter((p) => p.matched > 1);
+
+if (pins.resolved.length || pins.unresolved.length || pinsFromCsv) {
+  console.log(`\nPins: ${pinsMatched.length} of ${pins.resolved.length} in ${pins.displayPath} matched — ${rowsPinnedByFile} row(s) pinned` +
+    `${pinsFromCsv ? ` · ${pinsFromCsv} pinned inline by the CSV's sanityId column` : ""}`);
+}
+
+const pinProblems = pinsUnmatched.length + pins.unresolved.length + pinsStale.length + pinsOverBroad.length;
+if (pinProblems) {
+  const bar = "─".repeat(64);
+  console.warn(`\n${bar}`);
+  console.warn(`PINS NEED ATTENTION — ${pinProblems} entr${pinProblems === 1 ? "y" : "ies"} in ${pins.displayPath}`);
+  console.warn(bar);
+  for (const p of pinsUnmatched) {
+    console.warn(`  ⚠ UNMATCHED  ${p.manager} — ${p.strategyName}`);
+    console.warn("      No CSV row normalises to this pin. The manager has almost certainly renamed the");
+    console.warn("      strategy, which means this month's row is unpinned and may abort as ambiguous.");
+    console.warn(`      Fix: re-run with --dry-run, find the new name, update pins[${p.index}].`);
+  }
+  for (const p of pins.unresolved) {
+    console.warn(`  ⚠ UNRESOLVED ${p.manager} — ${p.strategyName}`);
+    console.warn(`      Declared as ambiguous but sanityId is empty, so nothing is pinned.${p.note ? `\n      note: ${p.note}` : ""}`);
+    console.warn(`      Fix: run --dry-run, copy the paste-ready block it prints into pins[${p.index}].`);
+  }
+  for (const p of pinsStale) {
+    console.warn(`  ⚠ STALE      ${p.manager} — ${p.strategyName}`);
+    console.warn(`      sanityId ${p.sanityId} matches no document in ${env.projectId}/${env.dataset}.`);
+    console.warn("      Importing would CREATE a document under that id rather than update one.");
+  }
+  for (const p of pinsOverBroad) {
+    console.warn(`  ⚠ TOO BROAD  ${p.manager} — ${p.strategyName}`);
+    console.warn(`      Matches ${p.matched} CSV rows, which would all be written to ${p.sanityId}.`);
+    console.warn("      Give each row its own pin — the names differ only by a word the matcher strips.");
+  }
+  console.warn(`${bar}\n`);
+}
+
+/*
  * Collision victims from the OLD id scheme.
  *
  * Ids used to be `pmsStrategy-<slugify(manager + "-" + strategyName)>`, and
@@ -325,7 +407,13 @@ for (const doc of docs) {
     continue;
   }
   if (claimed.has(target.id)) {
-    ambiguous.push({ doc, note: `resolves to the same document as row "${claimed.get(target.id)}" (${target.id})` });
+    ambiguous.push({
+      doc,
+      note: `resolves to the same document as row "${claimed.get(target.id)}" (${target.id})`,
+      // The contested document IS the candidate — one of these two rows owns
+      // it and the other needs a different target.
+      candidates: existingById.has(target.id) ? [existingById.get(target.id)] : [],
+    });
     continue;
   }
   claimed.set(target.id, label(doc));
@@ -357,16 +445,24 @@ for (const doc of docs) {
     if (!doc.fees && prev.fees) doc.fees = prev.fees;
   }
   delete doc.__pinnedId;
+  delete doc.__pinnedBy;
   delete doc.__legacyId;
 }
 
 const reportAmbiguous = (log) => {
-  log(`Ambiguous rows (${ambiguous.length}) — pin each row's target with the \`sanityId\` CSV column and re-run:`);
+  log(`Ambiguous rows (${ambiguous.length}) — record each row's target in ${pins.displayPath} and re-run:`);
   for (const a of ambiguous) {
     log(`  • ${label(a.doc)}`);
     if (a.note) log(`      ${a.note}`);
     for (const c of a.candidates ?? []) log(`      candidate: ${label(c)} [${c._id}]`);
   }
+  // Paste-ready, because hand-typing a document id into JSON is how a pin ends
+  // up pointing at the wrong strategy. Pick the right candidate per block.
+  log(`\nPaste into the "pins" array of ${pins.displayPath} (check the id against the candidates above):`);
+  for (const a of ambiguous) {
+    for (const line of pinSuggestion(a.doc, a.candidates ?? []).split("\n")) log(`  ${line}`);
+  }
+  log("");
 };
 
 if (repointed.length) {
