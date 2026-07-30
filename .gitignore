@@ -45,3 +45,6 @@ scripts/pms-data.csv
 scripts/apmi-report.json
 pms-explorer.jsx
 pms-newsletter*.html
+
+# generated reports
+*.pdf
