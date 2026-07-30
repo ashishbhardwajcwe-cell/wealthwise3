@@ -201,17 +201,17 @@ const REVALIDATE = {
   unlisted: 3600,
 } as const;
 
-export async function getStockAnalyses(revalidate = REVALIDATE.stockAnalysis): Promise<StockAnalysisCard[]> {
+export async function getStockAnalyses(revalidate: number = REVALIDATE.stockAnalysis): Promise<StockAnalysisCard[]> {
   return safeFetch<StockAnalysisCard[]>(allStockAnalysesQuery, [], undefined, ["stockAnalysis"], revalidate);
 }
 
-export async function getStockAnalysisSlugs(revalidate = REVALIDATE.stockAnalysis): Promise<string[]> {
+export async function getStockAnalysisSlugs(revalidate: number = REVALIDATE.stockAnalysis): Promise<string[]> {
   return safeFetch<string[]>(stockAnalysisSlugsQuery, [], undefined, ["stockAnalysis"], revalidate);
 }
 
 export async function getStockAnalysis(
   slug: string,
-  revalidate = REVALIDATE.stockAnalysis,
+  revalidate: number = REVALIDATE.stockAnalysis,
 ): Promise<StockAnalysisDetail | null> {
   if (!isSanityConfigured) return null;
   try {
@@ -224,16 +224,16 @@ export async function getStockAnalysis(
   }
 }
 
-export async function getPmsStrategies(revalidate = REVALIDATE.pms): Promise<PmsStrategy[]> {
+export async function getPmsStrategies(revalidate: number = revalidate: number.pms): Promise<PmsStrategy[]> {
   return safeFetch<PmsStrategy[]>(allPmsStrategiesQuery, [], undefined, ["pmsStrategy"], revalidate);
 }
 
-export async function getLivePmsStrategies(revalidate = REVALIDATE.pms): Promise<LivePmsStrategy[]> {
+export async function getLivePmsStrategies(revalidate: number = REVALIDATE.pms): Promise<LivePmsStrategy[]> {
   return safeFetch<LivePmsStrategy[]>(livePmsStrategiesQuery, [], undefined, ["pmsStrategy"], revalidate);
 }
 
 /** Collapse the per-strategy logo rows into one entry per manager. */
-export async function getPmsManagerLogos(revalidate = REVALIDATE.pms): Promise<PmsManagerLogos> {
+export async function getPmsManagerLogos(revalidate: number = REVALIDATE.pms): Promise<PmsManagerLogos> {
   const rows = await safeFetch<{ manager?: string; logoUrl?: string }[]>(
     pmsManagerLogosQuery, [], undefined, ["pmsStrategy"], revalidate,
   );
@@ -250,14 +250,14 @@ export async function getPmsManagerLogos(revalidate = REVALIDATE.pms): Promise<P
  * toBenchmark(), which falls back to the last stored values on null — so the
  * pages never crash when the document is absent.
  */
-export async function getBenchmark(revalidate = REVALIDATE.benchmark): Promise<LiveBenchmark | null> {
+export async function getBenchmark(revalidate: number = REVALIDATE.benchmark): Promise<LiveBenchmark | null> {
   return safeFetch<LiveBenchmark | null>(benchmarkQuery, null, undefined, ["benchmark"], revalidate);
 }
 
-export async function getAifFunds(revalidate = REVALIDATE.aif): Promise<AifFund[]> {
+export async function getAifFunds(revalidate: number = REVALIDATE.aif): Promise<AifFund[]> {
   return safeFetch<AifFund[]>(allAifFundsQuery, [], undefined, ["aifFund"], revalidate);
 }
 
-export async function getUnlistedShares(revalidate = REVALIDATE.unlisted): Promise<UnlistedShare[]> {
+export async function getUnlistedShares(revalidate: number = REVALIDATE.unlisted): Promise<UnlistedShare[]> {
   return safeFetch<UnlistedShare[]>(allUnlistedSharesQuery, [], undefined, ["unlistedShare"], revalidate);
 }
