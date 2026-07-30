@@ -19,8 +19,11 @@ import { HomeNewsletter } from "@/components/home/HomeNewsletter";
 import { StructuredData, faqSchema } from "@/components/StructuredData";
 import { siteConfig } from "@/lib/site-config";
 import { comparisonRows, educationTiles, homeFaqs, industryStats } from "@/lib/home-content";
-import { getLivePmsStrategies } from "@/lib/investment-data";
-import { featuredPmsSubset } from "@/lib/pms";
+import { getLivePmsStrategies, getBenchmark, getPmsManagerLogos } from "@/lib/investment-data";
+import { toBenchmark } from "@/components/pms/strategy-shared";
+import { selectFeaturedStrategies, featuredRuleSentence } from "@/lib/pms-featured";
+import { cleanPmsStrategies } from "@/lib/pms";
+import { fmtAsOf, latestAmfiDate } from "@/lib/format";
 
 const PAGE_TITLE = "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies";
 const PAGE_DESCRIPTION =
@@ -48,9 +51,32 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  // Trim to what FeaturedStrategies renders — serialising the full ~1,700-row
-  // feed into the homepage payload cost hundreds of KB for 6 visible cards.
-  const strategies = featuredPmsSubset(await getLivePmsStrategies());
+  const [feed, benchmarkDoc, allLogos] = await Promise.all([
+    getLivePmsStrategies(),
+    // The featured grid is selected on alpha over the benchmark, so the
+    // homepage needs the real series — same fetch the PMS explorer uses, not
+    // the hardcoded FALLBACK_BENCHMARK. toBenchmark() still falls back to the
+    // last stored figures when the Sanity document is absent.
+    getBenchmark(),
+    getPmsManagerLogos(),
+  ]);
+  const benchmark = toBenchmark(benchmarkDoc);
+
+  // Selection runs here, over the FULL feed, and only the chosen rows are
+  // serialised — sending all ~1,700 rows to render 6 cards cost hundreds of KB.
+  // Resolving the rows server-side also settles each card's slug against the
+  // complete feed, which a trimmed client-side subset cannot do.
+  const featured = selectFeaturedStrategies(feed, benchmark);
+  const strategies = featured.strategies;
+  const asOf = fmtAsOf(latestAmfiDate(cleanPmsStrategies(feed).map((s) => s.asOfDate)));
+
+  // Logos are a manager → URL map over the whole feed; trim it to the managers
+  // actually on screen so the payload doesn't quietly grow back.
+  const featuredManagers = new Set(strategies.map((s) => s.manager));
+  const managerLogos = Object.fromEntries(
+    Object.entries(allLogos).filter(([manager]) => featuredManagers.has(manager)),
+  );
+
   return (
     <>
       {/* 1 — Hero: text left, lazy video facade right */}
@@ -389,18 +415,30 @@ export default async function HomePage() {
             <span className="eyebrow">Featured strategies</span>
             <h2 className="mt-3 text-balance">Explore Curated Strategies</h2>
             <p className="mt-4 text-lg text-[var(--color-slate)] leading-relaxed">
-              Browse a selection of PMS and AIF strategies across categories.{" "}
-              {strategies.length === 0 && (
-                <em className="text-sm">
-                  (Live performance data is being integrated — the cards below are illustrative examples of what
-                  you&apos;ll be able to explore and compare.)
-                </em>
+              {strategies.length > 0 ? (
+                /* The actual selection rule, generated from the criteria that
+                   applied — so the line can't drift from the code, and says so
+                   plainly if a thin month forced a looser floor. */
+                featuredRuleSentence(featured.rule, benchmark.name, asOf)
+              ) : (
+                <>
+                  Browse a selection of PMS and AIF strategies across categories.{" "}
+                  <em className="text-sm">
+                    (Live performance data is being integrated — the cards below are illustrative examples of what
+                    you&apos;ll be able to explore and compare.)
+                  </em>
+                </>
               )}
             </p>
           </div>
 
           <div className="reveal">
-            <FeaturedStrategies strategies={strategies} />
+            <FeaturedStrategies
+              strategies={strategies}
+              benchmark={benchmark}
+              managerLogos={managerLogos}
+              asOf={asOf}
+            />
           </div>
 
           <p className="text-xs text-[var(--color-slate)] italic text-center mt-8 max-w-3xl mx-auto reveal">
