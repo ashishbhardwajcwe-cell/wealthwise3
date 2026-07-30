@@ -224,8 +224,7 @@ export async function getStockAnalysis(
   }
 }
 
-export async function getPmsStrategies(revalidate: number = revalidate: number.pms): Promise<PmsStrategy[]> {
-  return safeFetch<PmsStrategy[]>(allPmsStrategiesQuery, [], undefined, ["pmsStrategy"], revalidate);
+export async function getPmsStrategies(revalidate: number = REVALIDATE.pms): Promise<PmsStrategy[]> {  return safeFetch<PmsStrategy[]>(allPmsStrategiesQuery, [], undefined, ["pmsStrategy"], revalidate);
 }
 
 export async function getLivePmsStrategies(revalidate: number = REVALIDATE.pms): Promise<LivePmsStrategy[]> {
