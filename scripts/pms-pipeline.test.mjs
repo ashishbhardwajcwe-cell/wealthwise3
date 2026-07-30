@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 /**
- * Self-test for the pmsStrategy identity rules in ./pms-matching.mjs.
+ * Self-test for the parts of the monthly PMS pipeline that fail silently.
  *
- *   node scripts/pms-matching.test.mjs      (or: npm run test:pms-matching)
+ *   node scripts/pms-pipeline.test.mjs      (or: npm run test:pms)
  *
- * No dependencies, no network, no Sanity. It exists because the thing this
- * code has to guarantee — "re-running the import must not change the _id of
- * a document that already matches" — is invisible in a normal run and
- * expensive to get wrong: a changed id doesn't error, it quietly forks a
- * second copy of ~1,700 documents.
+ * No dependencies, no network, no Sanity. Three things are covered, all of
+ * them invisible in a normal run and expensive to get wrong:
+ *
+ *  - Document identity (./pms-matching.mjs). Re-running the import must not
+ *    change the _id of a document that already matches. A changed id doesn't
+ *    error — it quietly forks a second copy of ~1,700 documents.
+ *  - Month-end dates (./import-shared.mjs). A hardcoded day of 30 imports
+ *    perfectly happily and puts the wrong date on the whole site.
+ *  - The pins file (./pms-pins.mjs). A pin that silently fails to load takes
+ *    the import down with an ambiguity abort a month later.
  *
  * The manager names below are the shape APMI actually publishes: full legal
  * names carrying a "(formerly known as …)" suffix, long enough on their own
@@ -16,6 +21,9 @@
  */
 
 import { strict as assert } from "node:assert";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   buildExistingIndex,
   legacyStrategyId,
@@ -23,6 +31,8 @@ import {
   resolveImportTarget,
   pairKey,
 } from "./pms-matching.mjs";
+import { lastDayOfMonth, monthEndIso } from "./import-shared.mjs";
+import { loadPins } from "./pms-pins.mjs";
 
 let passed = 0;
 const failures = [];
@@ -199,6 +209,98 @@ test("an unmatched row is created under a new id, never the legacy one", () => {
   const target = resolve(row(LONG_MANAGER, "Multicap Advantage"), []);
   assert.equal(target.matchType, "new");
   assert.notEqual(target.id, legacyStrategyId(LONG_MANAGER, "Multicap Advantage"));
+});
+
+/* ---------- month-end dates ---------- */
+
+test("month-end is the real last day, in every month and every February", () => {
+  const expected = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  expected.forEach((d, i) => assert.equal(lastDayOfMonth(2026, i + 1), d, `month ${i + 1}`));
+  assert.equal(lastDayOfMonth(2024, 2), 29, "leap year");
+  assert.equal(lastDayOfMonth(2000, 2), 29, "400-year leap rule");
+  assert.equal(lastDayOfMonth(1900, 2), 28, "100-year non-leap rule");
+});
+
+test("the CSV date is always zero-padded YYYY-MM-DD", () => {
+  // The two the old hardcoded `-30` got wrong, and the padding the importer
+  // rejects the run over.
+  assert.equal(monthEndIso(2026, 7), "2026-07-31");
+  assert.equal(monthEndIso(2026, 2), "2026-02-28");
+  assert.equal(monthEndIso(2026, 6), "2026-06-30");
+  for (let m = 1; m <= 12; m++) assert.match(monthEndIso(2026, m), /^\d{4}-\d{2}-\d{2}$/);
+  // argv gives strings, not numbers
+  assert.equal(monthEndIso("2026", "7"), "2026-07-31");
+});
+
+/* ---------- pins ---------- */
+
+const withPinsFile = (contents, fn) => {
+  const dir = mkdtempSync(join(tmpdir(), "pms-pins-"));
+  const path = join(dir, "pins.json");
+  writeFileSync(path, typeof contents === "string" ? contents : JSON.stringify(contents));
+  return fn(loadPins(new URL(`file://${path}`)));
+};
+
+test("a pin is found by the normalised name pair, through drift", () => {
+  withPinsFile(
+    { pins: [{ manager: "Neo Asset Management Private Limited", strategyName: "Club Moderately Conservative", sanityId: "pmsStrategy-neo-cmc" }] },
+    (pins) => {
+      assert.equal(pins.errors.length, 0);
+      assert.equal(pins.resolved.length, 1);
+      // Same strategy as APMI might spell it next month.
+      const drifted = pairKey("Neo Asset Management Private Limited", "PMS Club Moderately Conservative Strategy");
+      assert.equal(pins.byKey.get(drifted)?.sanityId, "pmsStrategy-neo-cmc");
+    },
+  );
+});
+
+test("a pin with no sanityId is reported, never applied", () => {
+  withPinsFile(
+    { pins: [{ manager: "HDFC Asset Management Company Limited", strategyName: "MF Select", sanityId: "" }] },
+    (pins) => {
+      assert.equal(pins.resolved.length, 0, "an empty id must not become a pin");
+      assert.equal(pins.unresolved.length, 1);
+      assert.equal(pins.byKey.size, 0);
+    },
+  );
+});
+
+test("two pins claiming one strategy is an error, not a silent last-wins", () => {
+  withPinsFile(
+    { pins: [
+      { manager: "Neo Asset Management", strategyName: "Club Moderate", sanityId: "pmsStrategy-a" },
+      { manager: "Neo Asset Management", strategyName: "PMS Club Moderate Fund", sanityId: "pmsStrategy-b" },
+    ] },
+    (pins) => {
+      assert.equal(pins.errors.length, 1);
+      assert.match(pins.errors[0], /duplicates pins\[0\]/);
+    },
+  );
+});
+
+test("a malformed pins file fails loudly instead of importing unpinned", () => {
+  withPinsFile("{ not json", (pins) => {
+    assert.equal(pins.errors.length, 1);
+    assert.match(pins.errors[0], /not valid JSON/);
+  });
+  withPinsFile({ pins: "nope" }, (pins) => assert.match(pins.errors[0], /must have a "pins" array/));
+  withPinsFile({ pins: [{ manager: "Only A Manager", sanityId: "x" }] }, (pins) => {
+    assert.match(pins.errors[0], /both required/);
+  });
+});
+
+test("a missing pins file is fine — not every project has ambiguous rows", () => {
+  const pins = loadPins(new URL("file:///nonexistent/pms-pins.json"));
+  assert.equal(pins.errors.length, 0);
+  assert.equal(pins.resolved.length, 0);
+});
+
+test("the committed pins file parses and every entry is well-formed", () => {
+  const pins = loadPins();
+  assert.deepEqual(pins.errors, [], "scripts/pms-pins.json is broken");
+  for (const p of [...pins.resolved, ...pins.unresolved]) {
+    assert.ok(p.manager && p.strategyName, "every entry needs both names");
+  }
 });
 
 /* ---------- report ---------- */
