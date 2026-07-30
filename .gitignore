@@ -39,3 +39,9 @@ pms-logos.csv
 
 # local reference material - never published
 _local/
+_incoming/
+pms-data.csv
+scripts/pms-data.csv
+scripts/apmi-report.json
+pms-explorer.jsx
+pms-newsletter*.html

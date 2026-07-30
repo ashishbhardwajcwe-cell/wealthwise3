@@ -15,12 +15,12 @@ export const metadata: Metadata = {
     "Portfolio Management Services in India: ₹50L minimum, fee structures, top strategies, how to evaluate a manager, and PMS vs Mutual Funds vs AIF.",
 };
 
-export const revalidate = 300;
+export const revalidate = 86400;
 
 export default async function Page() {
   const [strategies, benchmark, managerLogos] = await Promise.all([
     getLivePmsStrategies(),
-    getBenchmark(),
+    getBenchmark(86400),
     getPmsManagerLogos(),
   ]);
 
