@@ -128,6 +128,8 @@ npm run import:unlisted -- pricelist.pdf --dry-run     # preview first
 npm run import:unlisted -- pricelist.pdf               # write
 npm run import:unlisted -- prices.csv --date=2026-07-22
 npm run import:unlisted -- --seed-editorial            # one-time content seed
+npm run audit:unlisted                                 # read-only health check
+npm run test:unlisted                                  # parser/guard self-test
 ```
 
 The PDF's "DATE 22 Jul 2026" header sets the as-of date (`--date` overrides;
@@ -140,7 +142,8 @@ company name or slug. Unmatched rows are auto-created with `needsReview`, stay
 
 **Image-only PDFs (OCR).** The partner's designed export draws every price as
 a vector outline with no text layer, so text extraction finds nothing. The
-importer detects this (0 text rows) and automatically falls back to OCR:
+importer detects this (0 text rows — or a text layer whose names come back with
+prices fused onto them, see the guards below) and falls back to OCR:
 it renders each page and reads it with tesseract.js (bundled — fully offline,
 ~5s/page). The retail price is recovered from per-glyph geometry (the ₹ symbol
 mis-OCRs as a leading `3`/`R`/`%`), and the **dealer column is excluded by its
@@ -153,6 +156,50 @@ devDependencies (`npm install`).
 > **Confidential:** the partner list also shows a dealer (cost) price. The
 > importer never captures that column, and the schema has no field for it —
 > the Sanity dataset is publicly readable. Don't "improve" either side.
+
+**Pre-write guards (added after the 31-Jul-2026 incident).** The importer now
+refuses to write rather than publish a bad parse:
+
+1. **Fused names discard the text layer.** `parsePriceListLine` takes *the last
+   number before the depository column* as the retail price. That holds for the
+   documented column order (name · retail · depository · dealer · lot) and
+   breaks the moment the extracted text carries a second numeric column before
+   the depository — the parser then stores the **wrong column** and leaves the
+   real price welded onto the company name. When any parsed name comes back with
+   price digits on it, the whole text-layer parse is thrown away and the pages
+   are re-read with OCR, which cuts the name at the price column's x-position
+   and cannot fuse the two.
+2. **No silent downgrade.** If OCR can't run (missing dependencies, unreadable
+   pages) the import **aborts**. It never falls back to a text-layer parse it
+   just proved untrustworthy. Run `npm ci`, or get the list as CSV.
+3. **Name check on every path** — PDF text, OCR and CSV alike. A name ending in
+   a separate 3+ digit number, or carrying a `₹` amount, aborts the run. Real
+   names keep their digits: `Bira 91`, `Cars24`, `B9 Beverages` all pass.
+4. **Row-count band and creation ceiling.** The row count must sit within
+   60–150% of the previous import, and a run may not create more than 20% new
+   companies against a non-empty dataset. `--allow-drift` relaxes *these two*
+   for a genuinely reshaped list or a first import. Nothing relaxes (3).
+
+**Auditing what is already in Sanity.** `npm run audit:unlisted` lists every
+`unlistedShare` document and flags any whose `company` ends in digits, has an
+unbalanced bracket, contains the list's "Unlisted Shares" boilerplate, or is a
+near-duplicate of another document once trailing digits are stripped. For each
+one it prints the price, lot, partner, as-of date, whether it is publicly
+visible, and whether a **clean twin** survives.
+
+```
+npm run audit:unlisted                       # read-only, writes nothing
+npm run audit:unlisted -- --from=dump.json   # rehearse against a dump, offline
+npm run audit:unlisted -- --delete-flagged   # remove only the safe ones
+```
+
+`--delete-flagged` is the only destructive mode and it deletes a document only
+when the name carries a corruption signature **and** a clean document for the
+same company still exists. A corruption with no twin, an ambiguous twin, or any
+hand-curated content (summary, sector, risks, logo, IPO status) is printed for
+manual review and left in place — the audit will never leave a company with no
+document at all. Prices printed for flagged documents are **not** to be reused:
+the bug stored whichever number came last before the depository column.
 
 `--seed-editorial` copies the curated Mode-1 content from
 `lib/unlisted-companies.ts` (summary/sector/IPO status) onto matching docs,

@@ -26,6 +26,7 @@
  */
 
 import { requireSanityEnv, sanityQuery, sanityMutate } from "./import-shared.mjs";
+import { priceFusedName, hasUnbalancedBracket } from "./unlisted-matching.mjs";
 
 /**
  * Strip leading OCR logo-junk from a company name. Steps run front-to-back:
@@ -38,7 +39,16 @@ import { requireSanityEnv, sanityQuery, sanityMutate } from "./import-shared.mjs
  * and "B9 Beverages" are safe).
  */
 export function cleanUnlistedName(raw) {
-  let s = String(raw ?? "").trim();
+  const original = String(raw ?? "").trim();
+  let s = original;
+
+  // 0. A name with a price welded onto it is not OCR logo junk — it is a
+  //    broken import, and every rule below assumes an otherwise-sound name.
+  //    Running them anyway is what turned "(Manipal Cards) 385" into the
+  //    dangling "Manipal Cards) 385" on 31-Jul-2026: step 2 read the opening
+  //    bracket as a stray symbol and stripped it. Leave these alone; they
+  //    belong to scripts/audit-unlisted.mjs.
+  if (priceFusedName(s)) return s;
 
   // 1. bracketed monogram: "[J] ", "[Z] "
   s = s.replace(/^\[[A-Za-z0-9]{1,4}\]\s*/, "");
@@ -65,7 +75,14 @@ export function cleanUnlistedName(raw) {
   // 5. trailing OCR junk ("Capgemini Technology Services|")
   s = s.replace(/[|"'`\\]+$/, "");
 
-  return s.replace(/\s{2,}/g, " ").trim();
+  s = s.replace(/\s{2,}/g, " ").trim();
+
+  // 6. Never hand back a name whose brackets stopped pairing up. Step 2 strips
+  //    leading symbols, and "(" is one of them — on a name that legitimately
+  //    opens with a bracket that turns a tidy name into a broken one.
+  if (hasUnbalancedBracket(s) && !hasUnbalancedBracket(original)) return original;
+
+  return s;
 }
 
 // Allow importing the pure function (for tests) without running the script.

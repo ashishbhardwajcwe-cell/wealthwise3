@@ -355,6 +355,157 @@ export function mapCsvHeader(headerCells) {
   };
 }
 
+// ─── corruption signatures ──────────────────────────────────────────
+//
+// The 31-Jul-2026 import wrote 179 documents whose `company` carried the
+// retail price fused onto the end of the name — "(Manipal Cards) 385",
+// "(NCDEX) Limited Unlisted Shares 388". Cause: parsePriceListLine takes the
+// LAST number before the depository column as the retail price, so when the
+// extracted text puts a second numeric column (the dealer price) between the
+// retail price and the depository, the real price is left inside the name and
+// the WRONG column is stored. Nothing errored — every row looked valid.
+//
+// These helpers are shared by scripts/audit-unlisted.mjs (find the damage) and
+// the importer's pre-write guard (never write it again).
+
+/** Trailing number on a name: "(PPFAS) 19850" → { raw: "19850", digits: 5 }. */
+export function trailingNumber(name) {
+  const s = String(name ?? "").trimEnd();
+  const m = s.match(/(\d[\d,]*(?:\.\d+)?)\s*$/);
+  if (!m) return null;
+  return {
+    raw: m[1],
+    value: parseInr(m[1]),
+    index: m.index,
+    digits: m[1].replace(/\D/g, "").length,
+    separated: m.index === 0 || /[\s)\]}]/.test(s[m.index - 1]),
+  };
+}
+
+/** True when brackets don't pair up — "(Manipal Cards" or the dangling
+ *  "Manipal Cards) 385" that clean-unlisted-names.mjs leaves behind when it
+ *  strips a leading "(" it mistook for OCR logo junk. */
+export function hasUnbalancedBracket(name) {
+  const s = String(name ?? "");
+  for (const [open, close] of [["(", ")"], ["[", "]"], ["{", "}"]]) {
+    let depth = 0;
+    for (const ch of s) {
+      if (ch === open) depth++;
+      else if (ch === close && --depth < 0) return true;
+    }
+    if (depth !== 0) return true;
+  }
+  return false;
+}
+
+/** The partner list's row boilerplate, which is not part of a company's name. */
+export const LIST_BOILERPLATE_RE = /\bunlisted\s+shares?\b/i;
+
+/**
+ * Reduce a (possibly corrupted) name to the company underneath it: drop a
+ * fused trailing price, the "Unlisted Shares" row boilerplate and any stray
+ * brackets. Used to line a corrupted document up with its clean twin.
+ */
+export function stripCorruption(name) {
+  return String(name ?? "")
+    .replace(/[\s|:;,\-–]*\d[\d,]*(?:\.\d+)?\s*$/, "")
+    .replace(/\bunlisted\s+shares?\b/gi, " ")
+    .replace(/[()[\]{}]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
+ * Does this parsed name look like it has a price column welded onto it?
+ * Returns a human-readable reason, or null when the name is fine.
+ *
+ * Deliberately narrow so real names survive: "Bira 91" and "Cars24" keep their
+ * digits (a 1-2 digit tail is a brand, not a price), and "Vision2000" is safe
+ * because a fused price always arrives as its own whitespace-separated column.
+ */
+export function priceFusedName(name) {
+  const s = String(name ?? "");
+  const currency = s.match(/(?:₹|\brs\.?\s*|\binr\s+)\d[\d,]*/i);
+  if (currency) return `carries a currency amount ("${currency[0].trim()}")`;
+  const t = trailingNumber(s);
+  if (!t || !t.separated) return null;
+  if (t.digits >= 3) return `ends in the ${t.digits}-digit number "${t.raw}"`;
+  if (/[,.]/.test(t.raw)) return `ends in the formatted number "${t.raw}"`;
+  return null;
+}
+
+/**
+ * Pre-write gate for a parsed price list. Returns { errors, warnings }; a
+ * non-empty `errors` means the caller must abort without touching Sanity.
+ *
+ * Two invariants, both violated by the 31-Jul run:
+ *  - no parsed company name carries price digits (per-row, plus a systemic
+ *    check that catches a 2-digit fusion the per-row rule lets through);
+ *  - the row count sits in a sane band around the previous import — a daily
+ *    price list does not halve or double overnight.
+ */
+export function validateImportRows(rows, { previousRowCount = 0, previousAsOfDate = null } = {}) {
+  const errors = [];
+  const warnings = [];
+
+  const fused = [];
+  for (const r of rows) {
+    const why = priceFusedName(r.name);
+    if (why) fused.push({ name: r.name, why });
+  }
+  if (fused.length) {
+    errors.push({
+      code: "name-price-fusion",
+      message:
+        `${fused.length} of ${rows.length} parsed company names carry price digits — the name and price ` +
+        `columns have been read as one field. Storing these would create duplicate companies and (because ` +
+        `the price taken is whatever number came LAST) publish the wrong column's figure.`,
+      detail: fused.slice(0, 15).map((f) => `"${f.name}" — ${f.why}`),
+      more: Math.max(0, fused.length - 15),
+    });
+  }
+
+  // Systemic tail-digit check: a handful of "Bira 91"-shaped names is normal,
+  // a quarter of the list ending in digits is a column shift.
+  const trailing = rows.filter((r) => trailingNumber(r.name)?.separated);
+  if (trailing.length >= 5 && trailing.length > rows.length * 0.25) {
+    errors.push({
+      code: "name-trailing-digits",
+      message:
+        `${trailing.length} of ${rows.length} parsed names end in a separate number. Real company names ` +
+        `rarely do; at this rate the name column has absorbed the column to its right.`,
+      detail: trailing.slice(0, 10).map((r) => `"${r.name}"`),
+      more: Math.max(0, trailing.length - 10),
+    });
+  }
+
+  const boilerplate = rows.filter((r) => LIST_BOILERPLATE_RE.test(r.name));
+  if (boilerplate.length > rows.length * 0.5) {
+    warnings.push(
+      `${boilerplate.length} of ${rows.length} names contain "Unlisted Shares" — that is the list's row ` +
+      `boilerplate, not part of a company name. These will not match existing documents.`,
+    );
+  }
+
+  if (previousRowCount > 0) {
+    const lo = Math.floor(previousRowCount * 0.6);
+    const hi = Math.ceil(previousRowCount * 1.5);
+    if (rows.length < lo || rows.length > hi) {
+      errors.push({
+        code: "row-count-band",
+        message:
+          `parsed ${rows.length} rows, but the previous import` +
+          `${previousAsOfDate ? ` (${previousAsOfDate})` : ""} had ${previousRowCount} — outside the ` +
+          `sane band ${lo}–${hi}. Either the list changed shape or the parser is reading it wrong.`,
+        detail: [],
+        more: 0,
+      });
+    }
+  }
+
+  return { errors, warnings };
+}
+
 // ─── matching ───────────────────────────────────────────────────────
 
 /**
