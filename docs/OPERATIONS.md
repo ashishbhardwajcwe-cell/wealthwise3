@@ -135,6 +135,49 @@ client documents, invoices, scanned papers, anything confidential.
 On 2 August, Google Cloud credentials were nearly pushed to the public repo.
 GitHub blocked it. It won't always.
 
+**THE 1 MB RULE**
+
+Git keeps **every version of every file forever**. A file committed once stays in
+the repository's history even after you delete it — there is no clean way to
+remove it later. So the only moment that matters is before you commit.
+
+**Before adding any file over 1 MB, ask: is this part of the website?**
+
+- **Yes** (a blog image users will see) → compress it first at
+  **tinypng.com**, then commit. A 7 MB PNG becomes 300 KB with no visible
+  difference.
+- **No** (music, video, a PDF, a report, a scan) → it goes in
+  `~/Desktop/AURIS/`, never the repo.
+
+| Type | Where it goes |
+|---|---|
+| Code, markdown, small compressed web images | `~/Desktop/wealthwise3` |
+| Music, video, PDFs, documents, credentials, competitor reports, client files | `~/Desktop/AURIS/` |
+
+**Blocked automatically** by `.gitignore`: `.mp4`, `.mp3`, `.mov`, `.wav`, `.zip`.
+If you find yourself typing `git add -f` to force one of these in, stop — the
+rule is there for a reason.
+
+**How to check the repo's size** if it feels heavy:
+
+```
+du -sh ~/Desktop/wealthwise3/.git
+```
+
+Under 100 MB is fine. Above that, find what's large before committing anything
+more:
+
+```
+cd ~/Desktop/wealthwise3
+```
+```
+find . -path ./.git -prune -o -type f -size +1M -print0 | xargs -0 du -h | sort -rh | head
+```
+
+On 2 August the repo went from 5 MB to 50 MB in one evening — 28 MB of MP3s and
+13 MB of uncompressed blog PNGs. The music was moved out; the history cost
+stands. Prevention is the only cure.
+
 ## 0.9 — Getting a file's exact path (stop typing them)
 
 1. Find the file in Finder.
@@ -893,7 +936,9 @@ Use `npm ci`, never `npm install`, and it stops happening.
 5. **Archive before every PMS import.**
 6. **Dealer price never enters Sanity.**
 7. **The repo folder contains the website and nothing else.** No PDFs, videos,
-   credentials, client documents.
+   music, credentials, or client documents. **Anything over 1 MB: compress it if
+   it's website content, move it to `~/Desktop/AURIS/` if it isn't.** Git keeps
+   every file forever — there is no undo.
 8. **`ABORTED` means stop, not "try harder".**
 9. **Never download a file from a Claude Code session** — have it commit to a
    branch, then `git pull`. A script was lost this way once.
