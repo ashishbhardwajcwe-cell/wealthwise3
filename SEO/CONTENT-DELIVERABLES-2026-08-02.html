@@ -1,0 +1,183 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>PlanMyCashflows SEO Deliverables</title>
+<style>
+@page { size: A4; margin: 18mm 16mm; }
+body { font-family: Georgia, 'Times New Roman', serif; font-size: 10.5pt; line-height: 1.5; color: #1a1a2e; }
+h1 { font-size: 19pt; color: #1e3a5f; border-bottom: 2px solid #b8860b; padding-bottom: 6px; margin-top: 0; }
+h2 { font-size: 14pt; color: #1e3a5f; margin-top: 22px; border-bottom: 1px solid #d6d3cc; padding-bottom: 3px; }
+h3 { font-size: 12pt; color: #1e3a5f; margin-top: 16px; }
+p { margin: 6px 0; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; }
+th, td { border: 1px solid #d6d3cc; padding: 5px 7px; text-align: left; vertical-align: top; }
+th { background: #faf9f7; color: #1e3a5f; }
+code { background: #faf9f7; padding: 1px 4px; font-family: Menlo, Consolas, monospace; font-size: 9pt; }
+hr { border: none; border-top: 1px solid #d6d3cc; margin: 20px 0; }
+ul { margin: 6px 0; padding-left: 20px; }
+li { margin: 3px 0; }
+a { color: #b8860b; text-decoration: none; }
+strong { color: #1a1a2e; }
+</style></head><body><h1>PlanMyCashflows — SEO Deliverables</h1>
+<p><strong>Compiled:</strong> 2026-08-02</p>
+<p><strong>Contents:</strong> (1) Core Web Vitals audit for the homepage, (2) Content brief for the &quot;PMS vs mutual fund&quot; article at <code>/blog/mutual-funds-vs-pms</code>.</p>
+<hr>
+<h1>1. Core Web Vitals Audit — PageSpeed + CrUX</h1>
+<p><strong>URL:</strong> https://planmycashflows.com</p>
+<p><strong>Strategies tested:</strong> Mobile, Desktop</p>
+<p><strong>Data freshness:</strong> Lighthouse lab run 2026-08-01T19:15 UTC (this session). CrUX field data: unavailable.</p>
+<h2>CrUX Field Data (28-day rolling average)</h2>
+<p><strong>Not available.</strong> Google&#x27;s Chrome UX Report returned: <em>&quot;No CrUX data for this origin. The site likely has insufficient Chrome traffic volume for eligibility.&quot;</em> This is normal for lower-traffic origins and is not an auth/config error — CrUX requires a minimum real-user sample size. Treat everything below as <strong>lab data only</strong> (a single simulated Lighthouse run), not real-user field data. Re-check <code>/seo google crux</code> periodically as traffic grows.</p>
+<h2>Lighthouse Lab Scores</h2>
+<table>
+<thead><tr><th>Category</th><th>Mobile</th><th>Desktop</th></tr></thead>
+<tbody>
+<tr><td>Performance</td><td>86/100</td><td>98/100</td></tr>
+<tr><td>Accessibility</td><td>96/100</td><td>95/100</td></tr>
+<tr><td>Best Practices</td><td>100/100</td><td>100/100</td></tr>
+<tr><td>SEO</td><td>100/100</td><td>100/100</td></tr>
+</tbody></table>
+<h2>Core Web Vitals (lab simulation)</h2>
+<table>
+<thead><tr><th>Metric</th><th>Mobile</th><th>Rating</th><th>Desktop</th><th>Rating</th></tr></thead>
+<tbody>
+<tr><td>LCP</td><td>3.7 s</td><td>Needs Improvement (&gt;2.5s)</td><td>0.7 s</td><td>Good</td></tr>
+<tr><td>CLS</td><td>0.008</td><td>Good</td><td>0.001</td><td>Good</td></tr>
+<tr><td>TBT (proxy for INP)</td><td>100 ms</td><td>Good</td><td>80 ms</td><td>Good</td></tr>
+<tr><td>FCP</td><td>1.1 s</td><td>Good</td><td>0.3 s</td><td>Good</td></tr>
+<tr><td>Speed Index</td><td>4.6 s</td><td>Needs Improvement</td><td>1.2 s</td><td>Good</td></tr>
+<tr><td>TTI</td><td>3.7 s</td><td>—</td><td>1.0 s</td><td>—</td></tr>
+</tbody></table>
+<p>Mobile LCP is the only metric outside &quot;Good&quot; territory, and it&#x27;s the metric with the most direct ranking + conversion impact since most inbound traffic to a consumer finance site is mobile.</p>
+<h2>Top Opportunities</h2>
+<table>
+<thead><tr><th>Opportunity</th><th>Mobile Savings</th><th>Desktop Savings</th></tr></thead>
+<tbody>
+<tr><td>Reduce unused JavaScript</td><td>~71 KiB / 300 ms</td><td>~139 KiB / 10 ms</td></tr>
+<tr><td>Render-blocking CSS (<code>4f1f08c607438cf8.css</code>, 13.6 KiB)</td><td>210 ms</td><td>—</td></tr>
+<tr><td>Legacy JavaScript (unneeded ES5 transpilation)</td><td>11 KiB</td><td>11 KiB</td></tr>
+</tbody></table>
+<p>Largest unused-JS offenders (mobile): <code>chunks/8478-<em>.js</code> (40 KiB wasted), <code>chunks/445-</em>.js</code> (32 KiB wasted). Desktop additionally flags <code>chunks/9670-*.js</code> (69 KiB wasted) — likely route-level code for <code>/investment-products/pms</code> and <code>/compare</code> being pulled into the homepage bundle.</p>
+<h2>Accessibility / Other Findings (not SEO-scored but worth fixing)</h2>
+<ul>
+<li><strong>Heading order broken</strong> on both strategies: an <code>&lt;h4&gt;</code> (Products column, &quot;text-sm font-semibold&quot; style) appears out of sequence in the footer/nav area — skips heading levels, hurts screen-reader and crawler content-structure parsing.</li>
+<li><strong>Color contrast failures</strong>: gold-on-white text at 3.73:1 (needs 4.5:1), and desktop-only WhatsApp CTA button at 1.98:1 (<code>#ffffff</code> on <code>#25d366</code>) — clearly fails WCAG AA.</li>
+<li><strong>Desktop only</strong>: <code>label-content-name-mismatch</code> on 2 elements (visible button/link text doesn&#x27;t match accessible name).</li>
+<li><strong>Missing security headers</strong> (informational insights, not scored): no CSP, no COOP, no Trusted Types directive. Doesn&#x27;t affect Lighthouse Best Practices score in this run but is worth closing given the site handles indicative pricing data.</li>
+</ul>
+<h2>Recommendations</h2>
+<p><strong>1. [High] Cut mobile LCP from 3.7s toward &lt;2.5s</strong></p>
+<ul>
+<li><em>Why:</em> Mobile carries the bulk of organic traffic; LCP is a ranking factor and this is the only metric outside &quot;Good.&quot;</li>
+<li><em>How:</em> Address the render-blocking CSS (defer/inline critical styles, 210ms win) and trim the 71 KiB of unused JS shipped to the homepage — likely route code from <code>/compare</code> or <code>/investment-products/pms</code> bleeding into the shared bundle. Check code-splitting boundaries.</li>
+<li><em>Falsifiable check:</em> Re-run <code>/seo google pagespeed</code> after deploy — LCP should drop below 2.5s (lab) and eventually show &quot;Good&quot; once CrUX has enough traffic to report.</li>
+</ul>
+<p><strong>2. [Medium] Fix heading order and color contrast</strong></p>
+<ul>
+<li><em>Why:</em> Both fail on every page load (mobile + desktop), affecting accessibility and content-structure signals search engines use.</li>
+<li><em>How:</em> Change the footer <code>&lt;h4&gt;</code> to the correct sequential level; darken the gold text and the WhatsApp CTA button background/foreground pairing to meet 4.5:1 (text) / 3:1 (large text, UI components).</li>
+<li><em>Falsifiable check:</em> Lighthouse accessibility score should rise from 96/95 toward 100; <code>color-contrast</code> and <code>heading-order</code> audits should flip to pass.</li>
+</ul>
+<p><strong>3. [Low] Trim legacy JS polyfills</strong></p>
+<ul>
+<li><em>Why:</em> 11 KiB wasted on both strategies transpiling for browsers you likely don&#x27;t need to support.</li>
+<li><em>How:</em> Check the build target (browserslist/tsconfig) and drop unnecessary ES5 transforms.</li>
+<li><em>Falsifiable check:</em> <code>legacy-javascript-insight</code> savings should drop to near 0 KiB.</li>
+</ul>
+<p><strong>4. [Info] CrUX ineligible — no action, just monitor</strong></p>
+<ul>
+<li><em>Leading indicator:</em> Once organic traffic grows, <code>/seo google crux</code> will start returning p75 field data. Re-run monthly; field data (not lab data) is what actually reflects real users and what Google uses for the CWV ranking signal.</li>
+</ul>
+<hr>
+<p><em>Generated 2026-08-02 via <code>/seo google pagespeed https://planmycashflows.com</code>.</em></p>
+<p><em>CrUX data updates daily ~04:00 UTC when eligible; 28-day rolling average.</em></p>
+<p><em>INP replaced FID as the responsiveness Core Web Vital on March 12, 2024 — TBT is used above as the closest lab proxy.</em></p>
+<hr>
+<h1>2. Content Brief: PMS vs Mutual Fund</h1>
+<p><strong>Mode: Improve existing page.</strong> This topic already lives at <code>/blog/mutual-funds-vs-pms</code> (449 words, published 2026-05-18), linked from the homepage, the PMS product page, and the Mutual Funds product page. Building a new page would split link equity three ways — everything below edits that page in place.</p>
+<h3>Search Intent</h3>
+<p>Commercial-investigation intent — searchers know what both products are and are deciding which fits their money. Google rewards a scannable comparison table near the top plus a decision framework and FAQ further down. Audience: Indian investors at/near the ₹50L PMS eligibility line who already have a mutual fund portfolio.</p>
+<h3>Competitor Analysis</h3>
+<table>
+<thead><tr><th>#</th><th>URL</th><th>Key H2 Sections</th><th>Est. Words</th><th>Score</th><th>Main Gap</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>groww.in/blog/pms-vs-mutual-funds-investment</td><td>Comparison table, investor-type breakdown, risk-appetite breakdown, allocation guidance</td><td>~4,300</td><td>32/40</td><td>No worked tax-drag example; generic, not manager-evaluation focused</td></tr>
+<tr><td>2</td><td>gripinvest.in/blog/pms-vs-mutual-fund</td><td>Comparison table, worked fee example, suitability checklist, FAQs</td><td>~3,650</td><td>29/40</td><td>Grip sells bonds not PMS/MF — lower topical authority</td></tr>
+<tr><td>3</td><td>anandrathipms.com/blog/mutual-funds-vs-pms.php</td><td>Comparison table, taxation, &quot;switch to PMS&quot; section, FAQs</td><td>~2,300</td><td>25/40</td><td>Published by a PMS seller — sales framing, not neutral</td></tr>
+<tr><td>4</td><td>shriramamc.in/learn/which-is-best-pms-or-mutual-funds</td><td>Comparison table, decision framework, FAQs</td><td>~2,300</td><td>23/40</td><td>AMC-published, plugs own funds mid-article; thin tax coverage</td></tr>
+<tr><td>5</td><td>zerodhafundhouse.com/blog/pms-vs-mutual-funds</td><td>2 tables, suitability guidance</td><td>~1,800</td><td>24/40</td><td><strong>No taxation section at all</strong> on a query where tax is the #1 economic difference</td></tr>
+</tbody></table>
+<h3>Content Gaps and Opportunities</h3>
+<p><strong>Topic gaps (nobody covers this):</strong></p>
+<ul>
+<li>A live, working comparison tool. Every competitor is static text/tables. This site already has one (<code>/compare</code>) and a real APMI-sourced PMS strategy explorer (<code>/investment-products/pms</code>) — no competitor can link a reader straight into a working tool mid-article.</li>
+<li>Neutral authorship. Anand Rathi sells PMS; Shriram sells mutual funds; Groww and Zerodha sell both. Every top-5 result has a commercial incentive pointing one direction. PlanMyCashflows doesn&#x27;t sell either product — it&#x27;s genuinely positioned to say &quot;start with mutual funds first&quot; the way the current draft already does.</li>
+</ul>
+<p><strong>Depth gaps:</strong></p>
+<ul>
+<li><strong>Word count</strong>: current page is 449 words against a competitor average of ~2,980. This is the largest single reason it&#x27;s losing to longer, more structured pages.</li>
+<li><strong>No comparison table.</strong> All 5 scored competitors have at least one; ours is prose-only. This is the single highest-priority add — it&#x27;s also what AI Overviews and answer engines pull from first for &quot;X vs Y&quot; queries.</li>
+<li><strong>No taxation numbers.</strong> Current page says PMS is &quot;more tax-efficient&quot; but never states the actual mechanism (per-transaction capital gains in your own demat vs. tax-deferred-until-redemption for MF units) or current rates. 3 of 5 competitors cover this; it&#x27;s the single biggest economic difference between the two products and readers will bounce to a competitor that states the number.</li>
+<li><strong>No fee comparison with real ranges.</strong> Grip&#x27;s worked ₹58.9L-vs-₹57.3L example is a strong format to match (with our own numbers, not theirs).</li>
+</ul>
+<p><strong>Quality gaps:</strong></p>
+<ul>
+<li>No FAQ-style Q&amp;A block. 3 of 5 competitors have one; it&#x27;s useful for scanability and for AI-answer citability (not for Google&#x27;s retired FAQ rich result — see note below).</li>
+<li>No links into the site&#x27;s own live PMS data or fee calculator, despite both existing. This is a missed differentiation opportunity, not a competitor weakness — it&#x27;s our own gap.</li>
+</ul>
+<h3>Winning Outline</h3>
+<p><strong>H1:</strong> PMS vs Mutual Fund in India: Which Is Right for You?</p>
+<p><strong>URL Slug:</strong> <code>/blog/mutual-funds-vs-pms</code> — <strong>keep unchanged.</strong> It&#x27;s already linked from <code>lib/home-content.ts</code>, <code>lib/product-data.ts</code> (×2 related-post entries), and self-referenced from <code>lib/blog-data.ts</code>&#x27;s AIF post. Changing the slug breaks four internal links and discards whatever authority the URL has accumulated since 2026-05-18. Only the on-page H1/title/copy need updating, not the URL.</p>
+<p><strong>Target Word Count:</strong> ~1,650–1,800 words (currently 449). Note: this deliberately does <strong>not</strong> match the ~2,980-word competitor average. Every other post on this site runs 450–900 words (e.g. <code>complete-guide-to-pms-india-2026</code> is 866 words, <code>ltcg-125-lakh-exemption</code> is 697) — matching Groww&#x27;s 4,300-word format would break house voice for one page. ~1,700 words is enough to close every gap above (table, tax numbers, fees, FAQ) while staying recognisably in the site&#x27;s concise, opinionated style rather than becoming a generic SEO listicle.</p>
+<hr>
+<p><strong>Intro</strong> (KEEP, strengthen) — ~120 words</p>
+<p>Keep the existing &quot;Should I stop my SIPs and move to PMS?&quot; hook — it&#x27;s a strong, specific opening no competitor has. Work &quot;PMS vs mutual fund&quot; naturally into the first 100 words (it currently isn&#x27;t there verbatim). Add one sentence stating the piece is independent — PlanMyCashflows doesn&#x27;t sell either product — as an E-E-A-T/trust signal that no competitor can credibly make.</p>
+<p><em>Keyword: primary keyword once, in the first paragraph.</em></p>
+<p><strong>NEW — &quot;PMS vs mutual fund at a glance&quot; (comparison table)</strong> — ~90 words + table — <strong>FS target</strong></p>
+<p>Add immediately after the intro, before any prose. 8–9 rows: Ownership structure, Minimum investment, Regulator/registration, Typical fee structure, Tax trigger, Customisation, Diversification, Liquidity, Best suited for. This is the #1 priority add — every scored competitor has one and it&#x27;s what gets pulled into featured snippets and AI answer summaries for &quot;X vs Y&quot; queries.</p>
+<p><em>Keyword: H2 should contain &quot;PMS vs mutual fund&quot; near-verbatim.</em></p>
+<p><strong>&quot;The core difference&quot;</strong> (KEEP, trim slightly) — ~100 words</p>
+<p>Keep as-is; it&#x27;s a clean, accurate two-bullet definition. Trim any content that now duplicates the new table.</p>
+<p><strong>&quot;When mutual funds win&quot;</strong> (KEEP, strengthen) — ~180 words</p>
+<p>Keep all 5 existing points. Add a 6th: liquidity/redemption timeline (T+2/3 for MF vs. PMS&#x27;s slower, provider-dependent exits) — every competitor with a comparison table flags this and the current draft doesn&#x27;t mention it at all.</p>
+<p><strong>&quot;When PMS adds value&quot;</strong> (KEEP, strengthen) — ~180 words</p>
+<p>Keep all 4 existing points. Do not add specific alpha/return numbers here without an <code>asOfDate</code> and <code>source</code> — if any performance claim is added, it must headline alpha-over-benchmark, not raw CAGR, and 1M/3M/6M figures (if cited) must be labelled absolute and never headlined, per house data rules. Safest edit: keep this section qualitative, as it already is.</p>
+<p><strong>NEW — &quot;Taxation: the difference that compounds&quot;</strong> — ~220 words</p>
+<p>State the mechanism plainly: PMS securities sit in your own demat, so every sale is a separate capital-gains event; MF unit redemption is the only taxable event, and internal fund churn doesn&#x27;t hit your tax bill. State current rates (STCG/LTCG on listed equity, and the ₹1.25L LTCG exemption) with the effective date cited. Include one small worked illustration of the tax-drag difference over a multi-year holding period — label it explicitly as a hypothetical illustration, not a projected or actual scheme return. Close with a link to the existing deep-dive (<code>/blog/pms-aif-fees-taxation-risks</code>) rather than duplicating its full detail.</p>
+<p><em>Keyword: secondary keyword &quot;PMS taxation vs mutual fund taxation&quot; in the H2.</em></p>
+<p><strong>NEW — &quot;Fees: what you&#x27;re actually paying&quot;</strong> — ~150 words</p>
+<p>State typical ranges (MF Direct plan expense ratio vs. PMS fixed + performance fee above hurdle) and link to the existing <code>/resources/calculators/pms-fees</code> calculator so the reader can run their own numbers instead of just reading ours.</p>
+<p><em>Keyword: secondary keyword &quot;PMS fees vs mutual fund expense ratio.&quot;</em></p>
+<p><strong>&quot;The typical HNI blend that works&quot;</strong> (KEEP, strengthen) — ~160 words</p>
+<p>Keep the existing 50-60/20-30/10-20 framework. Add one sentence explicitly labelling it as an illustrative framework, not a recommendation, and one line pointing readers who aren&#x27;t at ₹50L+ yet to <code>/investment-products/mutual-funds</code>.</p>
+<p><strong>NEW — &quot;Who should choose which, at a glance&quot;</strong> — ~130 words</p>
+<p>Three short bullet groups instead of a full 5-persona breakdown (keeps this shorter than Groww/Bajaj&#x27;s version, matching house length): (1) under ₹50L or early-career → mutual funds only; (2) ₹50L–5Cr with an existing MF base → blend; (3) family office / business owner already running PMS or AIF relationships → PMS-heavy plus AIF diversification, link to <code>/blog/aif-category-1-2-3-explanation</code>.</p>
+<p><strong>&quot;The decision framework&quot;</strong> (KEEP, no change) — ~120 words</p>
+<p>Keep the 5-question framework as-is — it&#x27;s the strongest, most specific section on the page and nothing in competitor content beats it.</p>
+<p><strong>NEW — FAQ block</strong> — ~150 words, 2–3 Q&amp;As</p>
+<p>Suggested questions: &quot;PMS or mutual funds — which is better?&quot; (a version of this already exists as unused FAQ copy in <code>lib/product-data.ts:48-50</code> — reuse/adapt it), &quot;Can I hold both PMS and mutual funds in the same portfolio?&quot;, &quot;Is PMS riskier than mutual funds?&quot; Present as plain reader Q&amp;A for scanability and AI-answer citability — <strong>do not</strong> wrap this in FAQPage schema. Google retired FAQ rich results for all sites on 2026-05-07, so there&#x27;s no SERP snippet benefit to claim, and none should be implied to the reader or in any schema markup added.</p>
+<p><strong>Closing CTA</strong> (KEEP, unchanged) — ~40 words</p>
+<p>Keep the existing AI Wealth Planner link as-is.</p>
+<h3>Recommended Meta Tags</h3>
+<p><strong>Title</strong> (52 chars)</p>
+<p>PMS vs Mutual Fund in India: Which Is Right for You?</p>
+<p><strong>Meta Description</strong> (131 chars)</p>
+<p>PMS vs mutual fund, compared: minimum investment, fees, taxation, and a 5-question framework for which one — or a blend — fits you.</p>
+<p><em>Note on brand suffix:</em> every other post in <code>lib/blog-data.ts</code> omits a &quot;| PlanMyCashflows&quot; suffix on its title (e.g. &quot;The complete guide to PMS in India for 2026&quot;), and the blog <code>[slug]</code> page renders the title field directly with no override. Kept consistent with that pattern rather than the generic &quot;brand name last&quot; rule — matches actual site convention.</p>
+<h3>Unique Angle and Information Gain</h3>
+<p>Two things no competitor in the top 5 can credibly offer: (1) neutral authorship — every scored competitor sells PMS, mutual funds, or both, and it shows in their framing (Anand Rathi&#x27;s &quot;switch to PMS&quot; section, Shriram&#x27;s mid-article AMC plug); PlanMyCashflows sells neither, so &quot;start with mutual funds first&quot; is a genuinely disinterested recommendation, not a hedge. (2) A live path from the article into real tools — the comparison table links straight into the working <code>/compare</code> tool and the APMI-sourced <code>/investment-products/pms</code> strategy explorer, and the fee section links into a working fee calculator. No competitor page connects its comparison prose to an actual interactive tool; they&#x27;re all static.</p>
+<h3>E-E-A-T Requirements</h3>
+<ul>
+<li>Byline stays &quot;PlanMyCashflows Research&quot; (existing convention across the blog) — do not name any individual founder or the parent entity, per house editorial rules.</li>
+<li>Add a &quot;last updated&quot; date distinct from the original publish date once edited, so readers and crawlers can see it&#x27;s current.</li>
+<li>Cite the effective date for any tax rate mentioned (STCG/LTCG rates, the ₹1.25L LTCG exemption) — tax law changes with Finance Acts, so an undated rate claim ages badly.</li>
+<li>Any performance or return figure added must carry an <code>asOfDate</code> and a named source (APMI for PMS data) — no PMS figures sourced from PMS Bazaar, PMS AIF World, or any aggregator PDF, per house data rules. If no properly sourced figure is available for a claim, keep the claim qualitative instead.</li>
+<li>No FAQPage schema (see FAQ section above) — content-only Q&amp;A.</li>
+</ul>
+<h3>Internal Linking Opportunities</h3>
+<ul>
+<li><strong>&quot;PMS vs mutual fund at a glance&quot; table →</strong> <code>/compare</code> — anchor: &quot;compare specific strategies side-by-side&quot;</li>
+<li><strong>Taxation section →</strong> <code>/blog/pms-aif-fees-taxation-risks</code> — anchor: &quot;the full breakdown of PMS and AIF taxation&quot;</li>
+<li><strong>Fees section →</strong> <code>/resources/calculators/pms-fees</code> — anchor: &quot;run the PMS fee calculator&quot;</li>
+<li><strong>&quot;Who should choose which&quot; (family office bullet) →</strong> <code>/blog/aif-category-1-2-3-explanation</code> — anchor: &quot;AIF categories explained&quot;</li>
+<li><strong>HNI blend section (non-HNI readers) →</strong> <code>/investment-products/mutual-funds</code> — anchor: &quot;the mutual funds guide&quot;</li>
+</ul>
+<p>This page is a spoke, not a hub — it links out to the deeper PMS/AIF/fee content rather than trying to contain it, and continues receiving inbound links from the PMS and Mutual Funds product pages and the homepage as it already does today.</p></body></html>

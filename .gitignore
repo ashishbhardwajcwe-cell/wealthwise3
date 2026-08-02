@@ -48,3 +48,11 @@ pms-newsletter*.html
 
 # generated reports
 *.pdf
+
+# large media - keep outside the repo
+*.mp4
+
+# credentials - never commit
+*.json.key
+SEO Books/
+**/service-account*.json

@@ -1,0 +1,116 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#10304F"/>
+      <stop offset="1" stop-color="#0B2540"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A1F36"/>
+      <stop offset="0.5" stop-color="#07172A"/>
+      <stop offset="1" stop-color="#030C18"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#FCD34D"/>
+    </linearGradient>
+    <radialGradient id="coinGlow">
+      <stop offset="0" stop-color="#FBBF24" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#FBBF24" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="630" fill="url(#sea)"/>
+  <rect width="1200" height="204" fill="url(#sky)"/>
+
+  <!-- light rays under water -->
+  <polygon points="150,206 230,206 40,630 -80,630" fill="#7DD3FC" opacity="0.045"/>
+  <polygon points="430,206 490,206 330,630 240,630" fill="#7DD3FC" opacity="0.035"/>
+  <polygon points="700,206 760,206 640,630 560,630" fill="#7DD3FC" opacity="0.03"/>
+
+  <!-- water surface -->
+  <rect y="204" width="1200" height="26" fill="#38BDF8" opacity="0.05"/>
+  <path d="M0 204 C 40 196, 80 212, 120 204 C 160 196, 200 212, 240 204 C 280 196, 320 212, 360 204 C 400 196, 440 212, 480 204 C 520 196, 560 212, 600 204 C 640 196, 680 212, 720 204 C 760 196, 800 212, 840 204 C 880 196, 920 212, 960 204 C 1000 196, 1040 212, 1080 204 C 1120 196, 1160 212, 1200 204" fill="none" stroke="#67E8F9" stroke-width="2.5" opacity="0.55"/>
+  <path d="M0 204 C 40 196, 80 212, 120 204 C 160 196, 200 212, 240 204 C 280 196, 320 212, 360 204 C 400 196, 440 212, 480 204 C 520 196, 560 212, 600 204 C 640 196, 680 212, 720 204 C 760 196, 800 212, 840 204 C 880 196, 920 212, 960 204 C 1000 196, 1040 212, 1080 204 C 1120 196, 1160 212, 1200 204" transform="translate(0 11)" fill="none" stroke="#67E8F9" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- rising liquid-wealth chart above water -->
+  <text x="616" y="152" text-anchor="end" font-family="Inter, DejaVu Sans, sans-serif" font-size="15" font-weight="600" letter-spacing="1.5" fill="#FCD34D" opacity="0.95">LIQUID INVESTING · 12–14% CAGR</text>
+  <polyline points="640,182 730,150 805,160 885,118 960,130 1045,86 1114,60" fill="none" stroke="url(#gold)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="730" cy="150" r="4.5" fill="#FCD34D"/>
+  <circle cx="885" cy="118" r="4.5" fill="#FCD34D"/>
+  <circle cx="1045" cy="86" r="4.5" fill="#FCD34D"/>
+  <circle cx="1140" cy="50" r="34" fill="url(#coinGlow)"/>
+  <circle cx="1140" cy="50" r="17" fill="#F59E0B" stroke="#FDE68A" stroke-width="2.5"/>
+  <text x="1140" y="57" text-anchor="middle" font-family="Inter, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#422006">₹</text>
+
+  <!-- sinking indicators -->
+  <g stroke="#F87171" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M810 256 L822 268 L834 256" opacity="0.85"/>
+    <path d="M810 284 L822 296 L834 284" opacity="0.55"/>
+    <path d="M810 312 L822 324 L834 312" opacity="0.3"/>
+  </g>
+
+  <!-- house, tilted and sinking -->
+  <g transform="translate(945 300) rotate(8)">
+    <polygon points="-92,-8 0,-80 92,-8" fill="#B4551F"/>
+    <rect x="-70" y="-8" width="140" height="96" rx="3" fill="#D8E3EE"/>
+    <rect x="-70" y="-8" width="140" height="96" rx="3" fill="none" stroke="#8FA3B8" stroke-width="2" opacity="0.6"/>
+    <rect x="-18" y="34" width="36" height="54" rx="2" fill="#41546B"/>
+    <circle cx="11" cy="62" r="2.5" fill="#D8E3EE"/>
+    <rect x="-56" y="12" width="28" height="26" rx="2" fill="#67E8F9" opacity="0.9"/>
+    <rect x="28" y="12" width="28" height="26" rx="2" fill="#67E8F9" opacity="0.9"/>
+    <line x1="-42" y1="12" x2="-42" y2="38" stroke="#0B2540" stroke-width="2" opacity="0.5"/>
+    <line x1="42" y1="12" x2="42" y2="38" stroke="#0B2540" stroke-width="2" opacity="0.5"/>
+  </g>
+
+  <!-- chain -->
+  <g stroke="#9FB2C6" stroke-width="3.5" fill="none" opacity="0.95">
+    <ellipse cx="934" cy="400" rx="6.5" ry="10"/>
+    <ellipse cx="936" cy="414" rx="9" ry="6"/>
+    <ellipse cx="937" cy="428" rx="6.5" ry="10"/>
+    <ellipse cx="939" cy="442" rx="9" ry="6"/>
+  </g>
+
+  <!-- anchor -->
+  <g transform="translate(940 520)" fill="#9FB2C6">
+    <circle cx="0" cy="-58" r="11" fill="none" stroke="#9FB2C6" stroke-width="6"/>
+    <rect x="-5" y="-47" width="10" height="98" rx="4"/>
+    <rect x="-44" y="-36" width="88" height="9" rx="4.5"/>
+    <path d="M -54 6 Q -54 50 0 56 Q 54 50 54 6" fill="none" stroke="#9FB2C6" stroke-width="10" stroke-linecap="round"/>
+    <polygon points="-54,14 -54,-12 -72,8"/>
+    <polygon points="54,14 54,-12 72,8"/>
+  </g>
+  <text x="868" y="604" text-anchor="end" font-family="Inter, DejaVu Sans, sans-serif" font-size="14" font-weight="600" letter-spacing="1.5" fill="#8AA0B6" opacity="0.9">REAL ESTATE · SUB-3.5% YIELD</text>
+
+  <!-- bubbles -->
+  <g fill="#BAE6FD">
+    <circle cx="1030" cy="300" r="5" opacity="0.28"/>
+    <circle cx="1048" cy="268" r="3.5" opacity="0.22"/>
+    <circle cx="1022" cy="238" r="2.5" opacity="0.18"/>
+    <circle cx="878" cy="452" r="4" opacity="0.25"/>
+    <circle cx="866" cy="424" r="2.5" opacity="0.18"/>
+    <circle cx="996" cy="480" r="3" opacity="0.2"/>
+  </g>
+
+  <!-- brand -->
+  <circle cx="76" cy="59" r="5" fill="#F59E0B"/>
+  <text x="92" y="66" font-family="Inter, DejaVu Sans, sans-serif" font-size="16" font-weight="600" letter-spacing="2.5" fill="#B9C9D9">PLANMYCASHFLOWS · WEALTH INSIGHTS</text>
+
+  <!-- headline block -->
+  <text x="70" y="268" font-family="Inter, DejaVu Sans, sans-serif" font-size="19" font-weight="700" letter-spacing="4" fill="#FBBF24">INDIA’S HOMEOWNERSHIP MYTH</text>
+  <text x="70" y="322" font-family="Inter, DejaVu Sans, sans-serif" font-size="52" font-weight="800" fill="#F4F8FB">The “Indian Dream” of</text>
+  <text x="70" y="382" font-family="Inter, DejaVu Sans, sans-serif" font-size="52" font-weight="800" fill="#F4F8FB">Homeownership Is a</text>
+  <text x="70" y="442" font-family="Inter, DejaVu Sans, sans-serif" font-size="52" font-weight="800" fill="url(#gold)">20-Year Wealth Anchor</text>
+  <text x="70" y="484" font-family="Inter, DejaVu Sans, sans-serif" font-size="20" font-weight="400" fill="#A7BBCE">Why India’s middle class keeps buying its most</text>
+  <text x="70" y="512" font-family="Inter, DejaVu Sans, sans-serif" font-size="20" font-weight="400" fill="#A7BBCE">expensive liability — and how to break free.</text>
+
+  <!-- stat pills -->
+  <g>
+    <rect x="70" y="540" width="182" height="36" rx="18" fill="#0D2A44" stroke="#1E4E74" stroke-width="1.5"/>
+    <text x="161" y="563" text-anchor="middle" font-family="Inter, DejaVu Sans, sans-serif" font-size="15" font-weight="600" fill="#7DD3FC">EMI = 2–3.5× rent</text>
+    <rect x="264" y="540" width="172" height="36" rx="18" fill="#0D2A44" stroke="#1E4E74" stroke-width="1.5"/>
+    <text x="350" y="563" text-anchor="middle" font-family="Inter, DejaVu Sans, sans-serif" font-size="15" font-weight="600" fill="#7DD3FC">Yield under 3.5%</text>
+    <rect x="448" y="540" width="200" height="36" rx="18" fill="#0D2A44" stroke="#1E4E74" stroke-width="1.5"/>
+    <text x="548" y="563" text-anchor="middle" font-family="Inter, DejaVu Sans, sans-serif" font-size="15" font-weight="600" fill="#7DD3FC">₹6 Cr gap in 20 yrs</text>
+  </g>
+</svg>
