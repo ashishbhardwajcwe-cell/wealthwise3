@@ -62,3 +62,7 @@ SEO Books/
 *.mov
 *.wav
 *.zip
+
+# working assets - keep in ~/Desktop/AURIS
+Blog/
+Video Content/
