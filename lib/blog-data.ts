@@ -97,67 +97,6 @@ If you're considering your first PMS, start with the **PlanMyCashflows AI Wealth
     `,
   },
   {
-    slug: "mutual-funds-vs-pms",
-    title: "Mutual funds vs PMS: which is right for you?",
-    excerpt: "The decision framework: when mutual funds win, when PMS adds value, and the typical blend that works for HNI portfolios.",
-    category: "Investing",
-    tags: ["Mutual Funds", "PMS"],
-    date: "2026-05-18",
-    readTime: "10 min",
-    author: "PlanMyCashflows Research",
-    content: `
-"Should I stop my SIPs and move to PMS?" is one of the most common questions we hear from HNI investors. The honest answer is almost always: **no, you should run them in parallel — with different roles**.
-
-## The core difference
-
-- **Mutual funds** — pooled investment, AMC owns the stocks, you own units. Cheap (Direct plans 0.5-1% expense ratio), accessible (₹500 minimum), diversified, regulated tightly.
-- **PMS** — managed account, you own the stocks directly in demat. Expensive (2-3.5% total fees), high minimum (₹50L), concentrated (15-25 stocks), more customisable.
-
-## When mutual funds win
-
-For most investors and most goals, mutual funds win on simplicity, cost, and behavioural friction:
-
-1. **Investing under ₹50L** — PMS isn't an option
-2. **Index strategies** — passive index funds at 0.1-0.2% expense ratio are unbeatable for broad market exposure
-3. **Tax-efficient base allocation** — MF internal churn doesn't hit your tax bill
-4. **Diversified core holdings** — flexi-cap MFs give you 60+ stock diversification at minimal cost
-5. **Goal-based investing with SIPs** — automated, disciplined, perfectly suited to mid-career professionals
-
-## When PMS adds value
-
-PMS adds value at the edges, not as a substitute for the base:
-
-1. **Concentrated alpha bets** — well-run PMS strategies can outperform benchmarks meaningfully over 5+ years (though most don't)
-2. **Style-specific exposure** — value, quality, small-cap focused — that mutual funds in India often don't offer cleanly
-3. **Customisation needs** — sector exclusions, ESG preferences, conflict-of-interest avoidance with employer holdings
-4. **Tax efficiency on exit** — particularly important for very long-term holdings; no portfolio churn cost on exit
-
-## The typical HNI blend that works
-
-For investors with ₹5 Cr+ equity allocation, a blend like this often makes sense:
-
-- **50-60% in index + flexi-cap mutual funds** (the boring base)
-- **20-30% in 2-3 carefully selected PMSs** (style or theme bets)
-- **10-20% in AIFs / unlisted / international** (for diversification beyond listed Indian equity)
-
-This structure gives you broad market participation at low cost, concentrated alpha bets with managers you trust, and diversification beyond the Indian listed universe.
-
-## The decision framework
-
-Ask yourself, honestly:
-
-1. Do I have ₹50L+ to commit to a single PMS strategy?
-2. Have I already built a diversified MF base?
-3. Can I name a specific reason this PMS strategy will outperform Nifty 500 over 7+ years (not just last 3)?
-4. Am I comfortable with concentration risk and 30%+ drawdowns?
-5. Have I read the actual fee structure and understood my net-of-fee expected return?
-
-If you can't say yes to all five, stay with mutual funds. If you can, PMS is a legitimate tool — but pick the manager carefully.
-
-[Read the full PMS guide →](/investment-products/pms)
-    `,
-  },
-  {
     slug: "ltcg-125-lakh-exemption-most-underused-tax-tool",
     title: "The ₹1.25 lakh LTCG exemption — the most under-used tax tool in India",
     excerpt: "Every Indian equity investor can harvest ₹1.25 lakhs of long-term capital gains tax-free every year. Most don't. Here's how to set up the workflow.",
