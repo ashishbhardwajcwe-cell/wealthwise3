@@ -188,18 +188,48 @@ one it prints the price, lot, partner, as-of date, whether it is publicly
 visible, and whether a **clean twin** survives.
 
 ```
-npm run audit:unlisted                       # read-only, writes nothing
-npm run audit:unlisted -- --from=dump.json   # rehearse against a dump, offline
-npm run audit:unlisted -- --delete-flagged   # remove only the safe ones
+npm run audit:unlisted                                # read-only, writes nothing
+npm run audit:unlisted -- --as-of=2026-08-01          # scope everything to one import
+npm run audit:unlisted -- --from=dump.json            # rehearse against a dump, offline
+npm run audit:unlisted -- --delete-flagged            # remove corruptions that have a clean twin
+npm run audit:unlisted -- --purge-import=2026-08-01   # remove one bad import
 ```
 
-`--delete-flagged` is the only destructive mode and it deletes a document only
-when the name carries a corruption signature **and** a clean document for the
-same company still exists. A corruption with no twin, an ambiguous twin, or any
-hand-curated content (summary, sector, risks, logo, IPO status) is printed for
-manual review and left in place — the audit will never leave a company with no
-document at all. Prices printed for flagged documents are **not** to be reused:
-the bug stored whichever number came last before the depository column.
+Every run opens with a **documents-by-asOfDate breakdown**, which is how you
+pick the date to purge and confirm the discriminator before acting on it.
+
+`--delete-flagged` deletes a document only when the name carries a corruption
+signature **and** a clean document for the same company still exists. A
+corruption with no twin, an ambiguous twin, or any hand-curated content
+(summary, sector, risks, logo, IPO status) is printed for manual review and
+left in place — it will never leave a company with no document at all.
+
+`--purge-import=YYYY-MM-DD` is for a whole bad import, where nothing has a twin
+because every document is new. It deletes documents carrying that `asOfDate`
+**and** a corruption signature. It refuses to run without an explicit
+zero-padded date, prints the complete list first, requires the exact phrase
+`PURGE <date>` typed on stdin (closed stdin is not consent), refuses a purge
+that would empty the dataset, and re-reads the dataset afterwards so the
+resulting count is observed rather than predicted.
+
+> **The date is the discriminator, not the name.** `Sterlite Grid 5`,
+> `Zepto Unlisted Shares (Equity)`, `Signify Innovations (Previously Ph`,
+> `Sterlite Electric Limited (Formerly` and `Fusion Techstack Limited (Forme`
+> are genuine 22-Jul documents — live, correctly priced, two with
+> hand-extracted logos — and every one of them trips a name signature. Purging
+> on signatures alone destroys them. `--purge-import` intersects signature with
+> `asOfDate` and never uses either alone.
+
+A document carrying the purge date but a **clean name** is never deleted: it is
+a real company whose price the bad run overwrote, so the document must stay and
+only the price is wrong. Those are listed separately before the confirmation
+prompt — a clean name means `needsReview` is not hiding it from the site, so
+they are the more urgent case. Fix them by re-importing the correct list for
+that date, or by clearing `indicativePriceINR`/`asOfDate` in Studio.
+
+Prices printed for flagged documents are **not** to be reused: the bug stored
+whichever number came last before the depository column, which on the partner's
+list is the dealer price.
 
 `--seed-editorial` copies the curated Mode-1 content from
 `lib/unlisted-companies.ts` (summary/sector/IPO status) onto matching docs,

@@ -24,13 +24,23 @@ import {
   parsePriceListText, priceFusedName, validateImportRows,
   hasUnbalancedBracket, stripCorruption, trailingNumber,
 } from "./unlisted-matching.mjs";
-import { auditUnlistedDocs, structuralSignatures } from "./audit-unlisted.mjs";
+import {
+  auditUnlistedDocs, structuralSignatures, selectPurgeTargets,
+  asOfDateHistogram, confirmExactly,
+} from "./audit-unlisted.mjs";
+import { Readable } from "node:stream";
 import { cleanUnlistedName } from "./clean-unlisted-names.mjs";
 
 let passed = 0;
 const failures = [];
+const pending = [];
 const test = (name, fn) => {
-  try { fn(); passed++; } catch (err) { failures.push({ name, err }); }
+  try {
+    const r = fn();
+    if (r && typeof r.then === "function") {
+      pending.push(r.then(() => { passed++; }, (err) => failures.push({ name, err })));
+    } else passed++;
+  } catch (err) { failures.push({ name, err }); }
 };
 
 const row = (name, price = 100) => ({ name, price });
@@ -282,7 +292,105 @@ test("a clean dataset produces no flags at all", () => {
   assert.equal(flagged[0].deletable, false, "…but has no twin, so it is only ever reported");
 });
 
+/* ---------- the date-scoped purge ---------- */
+
+/**
+ * The five names below are REAL 22-Jul documents, live on the site with correct
+ * retail prices and two of them carrying hand-extracted logos. Every one of
+ * them trips a name signature, which is precisely why the purge intersects the
+ * signature with asOfDate instead of trusting either alone.
+ */
+const GENUINE_22_JUL = [
+  "Sterlite Grid 5",
+  "Zepto Unlisted Shares (Equity)",
+  "Signify Innovations (Previously Ph",
+  "Sterlite Electric Limited (Formerly",
+  "Fusion Techstack Limited (Forme",
+];
+
+test("every genuine 22-Jul name really does trip a signature (the trap)", () => {
+  for (const n of GENUINE_22_JUL) {
+    assert.ok(structuralSignatures(n).length > 0,
+      `"${n}" must trip a signature — that is what makes name-only purging unsafe`);
+  }
+});
+
+test("purging a date leaves the genuine documents at other dates untouched", () => {
+  const docs = [
+    ...GENUINE_22_JUL.map((c, i) => doc(`legit-${i}`, c, { asOfDate: "2026-07-22", logo: i < 2 })),
+    doc("bad-1", "Shares 555", { asOfDate: "2026-08-01", indicativePriceINR: 545, needsReview: true }),
+    doc("bad-2", "Manipal Cards) 385", { asOfDate: "2026-08-01", needsReview: true }),
+    doc("bad-3", "PPFAS) 19850", { asOfDate: "2026-07-31", needsReview: true }),
+  ];
+  const { rows } = auditUnlistedDocs(docs);
+
+  const aug = selectPurgeTargets(rows, "2026-08-01");
+  assert.deepEqual(aug.targets.map((r) => r.doc._id), ["bad-1", "bad-2"]);
+  assert.equal(aug.otherDates.length, 6, "the 5 genuine + the 31-Jul row are out of scope");
+  for (const n of GENUINE_22_JUL) {
+    assert.ok(!aug.targets.some((r) => r.doc.company === n), `"${n}" must never be a purge target`);
+  }
+
+  const jul31 = selectPurgeTargets(rows, "2026-07-31");
+  assert.deepEqual(jul31.targets.map((r) => r.doc._id), ["bad-3"]);
+
+  // …and purging the legitimate import's own date would take the five with it,
+  // which is why the date has to be typed explicitly and the list read first.
+  assert.equal(selectPurgeTargets(rows, "2026-07-22").targets.length, 5);
+});
+
+test("a clean name carrying the purge date is reported, never deleted", () => {
+  // A pre-existing company the bad run merely re-priced: real document,
+  // poisoned price, and a clean name means needsReview is not hiding it.
+  const docs = [
+    doc("bad-1", "Shares 555", { asOfDate: "2026-08-01", indicativePriceINR: 545, needsReview: true }),
+    doc("tata", "Tata Capital", { asOfDate: "2026-08-01", indicativePriceINR: 930 }),
+  ];
+  const { rows } = auditUnlistedDocs(docs);
+  const { targets, cleanSameDate } = selectPurgeTargets(rows, "2026-08-01");
+  assert.deepEqual(targets.map((r) => r.doc._id), ["bad-1"]);
+  assert.deepEqual(cleanSameDate.map((r) => r.doc._id), ["tata"], "reported for a price repair");
+});
+
+test("selectPurgeTargets ignores documents with no asOfDate", () => {
+  const docs = [doc("a", "Shares 555", { asOfDate: undefined }), doc("b", "Shares 666", { asOfDate: "2026-08-01" })];
+  const { rows } = auditUnlistedDocs(docs);
+  assert.deepEqual(selectPurgeTargets(rows, "2026-08-01").targets.map((r) => r.doc._id), ["b"]);
+});
+
+test("asOfDateHistogram surfaces the discriminator, newest first", () => {
+  const docs = [
+    doc("a", "Alpha", { asOfDate: "2026-07-22" }), doc("b", "Beta", { asOfDate: "2026-07-22" }),
+    doc("c", "Shares 555", { asOfDate: "2026-08-01" }), doc("d", "Gamma", { asOfDate: undefined }),
+  ];
+  const { rows } = auditUnlistedDocs(docs);
+  assert.deepEqual(asOfDateHistogram(rows), [
+    ["2026-08-01", 1], ["2026-07-22", 2], ["(no asOfDate)", 1],
+  ]);
+});
+
+/* ---------- the confirmation gate ---------- */
+
+const silent = { write: () => {} };
+const typed = (text) => Readable.from([text]);
+
+test("the purge confirmation accepts only the exact phrase", async () => {
+  assert.equal(await confirmExactly("PURGE 2026-08-01", { input: typed("PURGE 2026-08-01\n"), out: silent }), true);
+  assert.equal(await confirmExactly("PURGE 2026-08-01", { input: typed("  PURGE 2026-08-01  \n"), out: silent }), true,
+    "surrounding whitespace is forgiven");
+  for (const wrong of ["y\n", "yes\n", "PURGE\n", "purge 2026-08-01\n", "PURGE 2026-07-22\n", "\n"]) {
+    assert.equal(await confirmExactly("PURGE 2026-08-01", { input: typed(wrong), out: silent }), false,
+      `"${wrong.trim()}" must not confirm`);
+  }
+});
+
+test("closed stdin is not consent", async () => {
+  assert.equal(await confirmExactly("PURGE 2026-08-01", { input: Readable.from([]), out: silent }), false);
+});
+
 /* ---------- report ---------- */
+
+await Promise.all(pending);
 
 for (const { name, err } of failures) {
   console.error(`✗ ${name}\n  ${err.message.split("\n")[0]}`);
