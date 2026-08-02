@@ -4,20 +4,19 @@ import { useState, useMemo, useDeferredValue, useEffect, type CSSProperties } fr
 import Link from "next/link";
 import {
   Search, X, Check, SlidersHorizontal,
-  ArrowUpRight,
 } from "lucide-react";
 import type { LivePmsStrategy, PmsManagerLogos } from "@/lib/investment-data";
 import { hasImplausibleReturn } from "@/lib/pms";
 import { fmtAsOf, latestAmfiDate } from "@/lib/format";
-import { formatAumCr } from "@/lib/utils";
 import {
   type Period, type Strategy, type Benchmark,
-  FALLBACK_BENCHMARK, PERIODS,
-  toStrategy, fmtPct, toneOf, toneColor,
-  alphaFor,
-  FactsGrid, ReturnsVsBenchmarkTable, HowToReadThis, ComplianceFootnote,
+  FALLBACK_BENCHMARK,
+  toStrategy, alphaFor,
+  ComplianceFootnote,
 } from "@/components/pms/strategy-shared";
 import { StrategyCard, STRATEGY_GRID_COLUMNS } from "@/components/pms/StrategyCard";
+import { BriefSheet } from "@/components/pms/BriefSheet";
+import { CompareTable } from "@/components/pms/CompareTable";
 import { EnquireModal } from "@/components/pms/EnquireModal";
 import { NewsletterBand } from "@/components/pms/NewsletterBand";
 import { Modal } from "@/components/ui/Modal";
@@ -59,122 +58,26 @@ type SortKey = "aum" | "alpha" | "return" | "name";
  */
 const PAGE_SIZE = 24;
 
-/* ---------- brief sheet ---------- */
-function BriefSheet({ s, asOn, benchmark, onClose, onEnquire }: {
-  s: Strategy | null;
-  asOn: string;
-  benchmark: Benchmark;
-  onClose: () => void;
-  onEnquire: (s: Strategy) => void;
-}) {
-  if (!s) return null;
-  return (
-    <Modal
-      onClose={onClose}
-      label={`${s.strategy} — brief`}
-      align="end"
-      overlayClassName="fixed inset-0 flex justify-end"
-      overlayStyle={{ background: "rgba(15,26,20,0.45)" }}
-      panelClassName="h-full w-full max-w-md bg-white overflow-y-auto"
-      panelStyle={{ boxShadow: "-8px 0 40px rgba(0,0,0,0.15)" }}
-    >
-      <>
-        <div className="sticky top-0 bg-white px-5 py-4 flex items-start justify-between" style={{ borderBottom: "1px solid var(--line)" }}>
-          <div>
-            <div className="font-ui" style={{ fontSize: 12, color: "var(--muted)" }}>{s.manager}</div>
-            <h2 className="font-display" style={{ fontSize: 22, fontWeight: 600, color: "var(--ink)", lineHeight: 1.1 }}>{s.strategy}</h2>
-          </div>
-          <button onClick={onClose} aria-label="Close brief" className="rounded-lg p-1.5" style={{ background: "var(--flat-bg)" }}><X size={18} color="var(--ink)" /></button>
-        </div>
-
-        <div className="p-5">
-          {/* facts */}
-          <FactsGrid s={s} />
-
-          {/* full analysis lives on the strategy's own SEO page */}
-          <Link href={`/pms/${s.slug}`}
-            className="font-ui mt-3 flex items-center justify-between rounded-xl px-4 py-3"
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--green-deep)", background: "var(--green-tint)", border: "1px solid var(--green)" }}>
-            View full analysis <ArrowUpRight size={15} />
-          </Link>
-
-          {/* full grid vs benchmark */}
-          <h3 className="font-ui mt-5 mb-2" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Returns vs {benchmark.name}</h3>
-          <ReturnsVsBenchmarkTable returns={s.returns} bench={benchmark.returns} />
-
-          {/* honest read */}
-          <div className="mt-4">
-            <HowToReadThis returns={s.returns} asOn={asOn} bench={benchmark.returns} />
-          </div>
-
-          <button onClick={() => onEnquire(s)}
-            className="font-ui w-full mt-4 rounded-xl py-3" style={{ fontSize: 14, fontWeight: 600, color: "#fff", background: "var(--green)" }}>
-            Enquire about {s.strategy}
-          </button>
-        </div>
-      </>
-    </Modal>
-  );
-}
-
 /* ---------- compare modal ---------- */
-function CompareModal({ items, benchmark, onClose, onRemove }: {
+/** The shell only — the table itself is CompareTable, shared with /compare. */
+function CompareModal({ items, benchmark, asOn, managerLogos, onClose, onRemove }: {
   items: Strategy[];
   benchmark: Benchmark;
+  asOn: string;
+  managerLogos: PmsManagerLogos;
   onClose: () => void;
   onRemove: (s: Strategy) => void;
 }) {
   if (!items.length) return null;
-  // Facts rows — the category row is dropped entirely while the category
-  // enrichment pass hasn't run, instead of rendering a row of dashes.
-  const factRows: [string, (s: Strategy) => string][] = [
-    ...(items.some((s) => s.category) ? ([["Category", (s: Strategy) => s.category ?? "—"]] as [string, (s: Strategy) => string][]) : []),
-    ["AUM", (s: Strategy) => formatAumCr(s.aum)],
-  ];
   return (
     <Modal onClose={onClose} label={`Compare ${items.length} strategies`} panelClassName="w-full max-w-4xl max-h-[85vh] overflow-auto rounded-2xl bg-white">
       <>
-        <div className="sticky top-0 bg-white px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--line)" }}>
+        <div className="sticky top-0 bg-white px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--line)", zIndex: 4 }}>
           <h2 className="font-display" style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>Compare · {items.length} strategies</h2>
           <button onClick={onClose} aria-label="Close comparison" className="rounded-lg p-1.5" style={{ background: "var(--flat-bg)" }}><X size={18} color="var(--ink)" /></button>
         </div>
-        <div className="p-5 overflow-x-auto">
-          <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 560 }}>
-            <thead>
-              <tr>
-                <th></th>
-                {items.map((s) => (
-                  <th key={s.id} className="px-3 pb-3 text-left align-bottom">
-                    <div className="font-ui" style={{ fontSize: 11, color: "var(--muted)" }}>{s.manager}</div>
-                    <div className="font-display" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", lineHeight: 1.1 }}>{s.strategy}</div>
-                    <button onClick={() => onRemove(s)} className="font-ui mt-1" style={{ fontSize: 11, color: "var(--neg)" }}>remove</button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {factRows.map(([label, fn]) => (
-                <tr key={label} style={{ borderTop: "1px solid var(--line)" }}>
-                  <td className="font-ui px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{label}</td>
-                  {items.map((s) => <td key={s.id} className="font-num px-3 py-2" style={{ fontSize: 13, color: "var(--ink)" }}>{fn(s)}</td>)}
-                </tr>
-              ))}
-              {PERIODS.map((p) => (
-                <tr key={p} style={{ borderTop: "1px solid var(--line)" }}>
-                  <td className="font-ui px-3 py-2" style={{ fontSize: 12, color: "var(--muted)" }}>{p} <span style={{ fontSize: 10 }}>(α)</span></td>
-                  {items.map((s) => {
-                    const a = alphaFor(s.returns, p, benchmark.returns);
-                    return (
-                      <td key={s.id} className="px-3 py-2">
-                        <span className="font-num" style={{ fontSize: 13, fontWeight: 600, color: s.returns[p] === null ? "var(--muted)" : toneColor[toneOf(s.returns[p])] }}>{fmtPct(s.returns[p])}</span>
-                        {a !== null && <span className="font-num" style={{ fontSize: 11, color: toneColor[toneOf(a)], marginLeft: 6 }}>{a > 0 ? "+" : ""}{a.toFixed(1)}</span>}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="p-5">
+          <CompareTable items={items} benchmark={benchmark} asOn={asOn} managerLogos={managerLogos} onRemove={onRemove} />
         </div>
       </>
     </Modal>
@@ -408,7 +311,7 @@ export default function PMSExplorer({
       )}
 
       <BriefSheet s={brief} asOn={asOf} benchmark={benchmark} onClose={() => setBrief(null)} onEnquire={setEnquire} />
-      {showCompare && <CompareModal items={compare} benchmark={benchmark} onClose={() => setShowCompare(false)} onRemove={toggleCompare} />}
+      {showCompare && <CompareModal items={compare} benchmark={benchmark} asOn={asOf} managerLogos={managerLogos} onClose={() => setShowCompare(false)} onRemove={toggleCompare} />}
       {/* z-[60] — sits above the brief sheet when opened from inside it */}
       {enquire && <EnquireModal strategy={enquire.strategy} source="pms-explorer" onClose={() => setEnquire(null)} />}
     </div>

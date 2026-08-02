@@ -1,40 +1,47 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CompareTool } from "@/components/compare/CompareTool";
+import { CompareExplorer } from "@/components/compare/CompareExplorer";
+import { toBenchmark } from "@/components/pms/strategy-shared";
 import { siteConfig } from "@/lib/site-config";
-import { getLivePmsStrategies } from "@/lib/investment-data";
+import { getLivePmsStrategies, getBenchmark, getPmsManagerLogos } from "@/lib/investment-data";
 
 export const metadata: Metadata = {
-  title: { absolute: "Compare PMS & AIF Strategies | PlanMyCashflows" },
+  // AIF is deliberately absent: there is no AIF performance data behind this
+  // page, and the old title promised a comparison it could not deliver.
+  title: { absolute: "Compare PMS Strategies Side by Side | PlanMyCashflows" },
   description:
-    "Compare PMS and AIF strategies side-by-side — category, returns, AUM and minimum investment — before you commit. Live performance data is being integrated.",
+    "Put up to three PMS strategies side by side — returns across every published window, and the alpha each one earned over the S&P BSE 500 TRI.",
 };
 
 export const revalidate = 300;
 
 export default async function ComparePage() {
-  const strategies = await getLivePmsStrategies();
+  const [strategies, benchmark, managerLogos] = await Promise.all([
+    getLivePmsStrategies(),
+    getBenchmark(86400),
+    getPmsManagerLogos(),
+  ]);
+
   return (
     <>
       <section className="gradient-hero aurora">
         <div className="container-wide py-16 md:py-20 text-center">
           <span className="eyebrow">Compare</span>
-          <h1 className="mt-4 text-balance max-w-3xl mx-auto">Compare PMS &amp; AIF Strategies</h1>
+          <h1 className="mt-4 text-balance max-w-3xl mx-auto">Compare PMS strategies on what they beat</h1>
           <p className="mt-5 text-lg text-[var(--color-slate)] leading-relaxed max-w-2xl mx-auto text-balance">
-            Put up to three strategies side-by-side — category, returns, AUM and minimum investment.{" "}
-            {strategies.length === 0 && (
-              <em className="text-sm">
-                (Live performance data is being integrated — the values below are illustrative placeholders of what
-                you&apos;ll be able to compare.)
-              </em>
-            )}
+            Put up to three side by side — returns across every published window, and the alpha each one earned over
+            the S&amp;P BSE 500 TRI. Pick from the cards below.
           </p>
         </div>
       </section>
 
       <section className="py-16 md:py-20">
         <div className="container-wide">
-          <CompareTool strategies={strategies} />
+          <CompareExplorer
+            strategies={strategies}
+            benchmark={toBenchmark(benchmark)}
+            managerLogos={managerLogos}
+          />
 
           <p className="text-xs text-[var(--color-slate)] italic text-center mt-8 max-w-3xl mx-auto">
             Strategy details shown are for information and education only and do not constitute a recommendation or
