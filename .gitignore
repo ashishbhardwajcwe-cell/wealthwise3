@@ -56,3 +56,9 @@ pms-newsletter*.html
 *.json.key
 SEO Books/
 **/service-account*.json
+
+# media - keep in ~/Desktop/AURIS/media
+*.mp3
+*.mov
+*.wav
+*.zip
