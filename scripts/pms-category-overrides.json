@@ -1,0 +1,31 @@
+{
+  "README": [
+    "Hand-mapped PMS categories for scripts/enrich-pms-categories.mjs. COMMITTED — these must survive",
+    "the monthly APMI fetch, which is why they live here and not in the CSV.",
+    "",
+    "Applied AHEAD of the keyword table, so an entry here always wins. Use it for:",
+    "  - the residue the keyword table cannot match (no category token in the name at all)",
+    "  - 'Mid & Small Cap' strategies, which the table reports as ambiguous on purpose",
+    "  - anything the table got wrong",
+    "",
+    "Keyed by the normalised (manager, strategyName) pair — the same key scripts/pms-pins.json uses —",
+    "so punctuation and abbreviation drift between months does not break an entry.",
+    "",
+    "To fill this in, run the dry run and read the CSV it prints:",
+    "    npm run enrich:categories > categories.csv",
+    "Rows with an empty proposedCategory are the residue. Decide each one, add it below, commit.",
+    "",
+    "An entry with an empty category is reported as UNRESOLVED and never applied — it only records",
+    "that someone has looked at this strategy and not decided yet.",
+    "",
+    "Allowed values: see CANONICAL_CATEGORIES in scripts/enrich-pms-categories.mjs."
+  ],
+  "overrides": [
+    {
+      "manager": "Example Portfolio Managers Limited",
+      "strategyName": "Example Mid & Small Cap Approach",
+      "category": "",
+      "note": "Template row — delete it. 'Mid & Small' spans two bands, so the keyword table refuses to pick one."
+    }
+  ]
+}

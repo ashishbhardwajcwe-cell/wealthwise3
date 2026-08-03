@@ -500,6 +500,47 @@ git push
 npm run import:pms -- scripts/pms-data.csv
 ```
 
+### Step 8a — Categories (only when new strategies appeared)
+
+APMI sends no category, so new strategies arrive uncategorised — which is what
+empties the Category row on the compare page and thins the category pages.
+
+Dry run first. It writes nothing and leaves you a spreadsheet:
+
+```
+npm run enrich:categories > categories.csv
+```
+
+Read the summary on screen. It tells you coverage before → after, how many it
+would set, and how many it refuses to guess at. Then:
+
+```
+npm run enrich:categories -- --apply
+```
+
+It only fills in blanks. It never changes a category that is already there.
+
+**The ones it won't guess.** Anything with no category word in its name, plus
+every "Mid & Small Cap" (that spans two bands, so it refuses to pick one).
+Open `categories.csv` — the rows with an empty `proposedCategory` are those.
+Decide them yourself in `scripts/pms-category-overrides.json`, then commit so
+next month's import can't undo the work:
+
+```
+git add scripts/pms-category-overrides.json
+```
+```
+git commit -m "Hand-map PMS categories"
+```
+```
+git push
+```
+
+**If it says "blocked by schema"**: it wants to use a category the site
+doesn't offer yet (Flexicap, Sectoral, Multi-Asset, ESG, Value, Growth). That
+is a code change, not a data one — leave it and ask Claude. See
+`docs/pms-data-import.md` → "Adding a category value".
+
 ### Step 9 — Update the benchmark — DO NOT SKIP
 
 Alpha is your headline number. Strategies on July data against a June benchmark
