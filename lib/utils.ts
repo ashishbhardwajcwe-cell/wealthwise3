@@ -22,10 +22,17 @@ export const fmtINR = (n: number): string => {
  *   21708.57 → "₹21,709 Cr"   (Indian digit grouping, no decimals)
  *   1000     → "₹1,000 Cr"
  *   574.44   → "₹574 Cr"
- *   0 / null / undefined → "—"
+ *   0        → "₹0 Cr"        (a real, reported figure — see below)
+ *   null / undefined → "—"
+ *
+ * Only null and undefined are "no figure". A falsy test used to fold 0 in with
+ * them, so a strategy that genuinely reported zero AUM — a freshly launched
+ * approach, or one that has run its book down — rendered as though the manager
+ * had disclosed nothing. Those are different facts and the reader has to be
+ * able to tell them apart.
  */
 export const formatAumCr = (aumInCr: number | null | undefined): string => {
-  if (!aumInCr) return "—";
+  if (aumInCr === null || aumInCr === undefined) return "—";
   if (aumInCr >= 100000) return `₹${(aumInCr / 100000).toFixed(2)} L Cr`;
   return `₹${Math.round(aumInCr).toLocaleString("en-IN")} Cr`;
 };

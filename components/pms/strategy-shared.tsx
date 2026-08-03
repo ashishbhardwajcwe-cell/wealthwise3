@@ -11,7 +11,7 @@
 
 import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import type { LivePmsStrategy, LiveBenchmark } from "@/lib/investment-data";
-import { pmsStrategySlug, pmsManagerSlug, pmsCategorySlug } from "@/lib/pms";
+import { pmsStrategySlug, pmsManagerSlug, pmsCategorySlug, isInstitutionalMandate } from "@/lib/pms";
 import { fmtAsOf } from "@/lib/format";
 import { formatAumCr } from "@/lib/utils";
 
@@ -36,6 +36,13 @@ export type Strategy = {
   aum: number | null; // ₹ crore
   since: string | null;
   returns: PeriodReturns;
+  /**
+   * True for institutional / catch-all mandates reported under a PMS licence
+   * that no retail investor can subscribe to (see isInstitutionalMandate).
+   * Resolved once here so every surface reads the same answer: the explorer
+   * tags them, the compare page hides them by default.
+   */
+  institutional: boolean;
 };
 
 /* ---- benchmark: S&P BSE 500 TRI ----
@@ -76,6 +83,7 @@ export function toStrategy(s: LivePmsStrategy, all: LivePmsStrategy[]): Strategy
     category: s.category ?? null,
     categorySlug: s.category ? pmsCategorySlug(s.category) : null,
     aum: orNull(s.aumCr),
+    institutional: isInstitutionalMandate(s),
     // APMI publishes each approach's inception date; it lands on the document
     // as `inceptionDate` (asOfDate is the data refresh date, not the launch).
     // Still null for any strategy whose row doesn't carry one — the card,

@@ -7,11 +7,11 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, Copy, Search, SlidersHorizontal, X } from "lucide-react";
 import type { LivePmsStrategy, PmsManagerLogos } from "@/lib/investment-data";
-import { hasImplausibleReturn } from "@/lib/pms";
+import { hasImplausibleReturn, isInstitutionalMandate } from "@/lib/pms";
 import { fmtAsOf, latestAmfiDate } from "@/lib/format";
 import {
   type Period, type Strategy, type Benchmark,
-  toStrategy, alphaFor, toneOf, toneColor, AlphaChip,
+  toStrategy, alphaFor, beats, toneOf, toneColor, AlphaChip,
 } from "@/components/pms/strategy-shared";
 import { StrategyCard, STRATEGY_GRID_COLUMNS } from "@/components/pms/StrategyCard";
 import { BriefSheet } from "@/components/pms/BriefSheet";
@@ -36,7 +36,10 @@ import { CompanyLogo } from "@/components/CompanyLogo";
    - Nothing is auto-selected. The page used to open on the first three
      strategies alphabetically — 1729 / 1729-NDPMS / 2Point2 — which is
      not a comparison, it is an accident of sort order. The rail opens
-     empty with three quick-add chips ranked on 3Y alpha instead.
+     empty with three quick-add chips instead.
+   - Institutional mandates are excluded by default (see below), so an
+     AUM sort cannot open the page on a ₹6.38 lakh crore provident-fund
+     mandate that nobody can subscribe to.
    - Selections live in the URL (?s=slug1,slug2,slug3), so any three-way
      comparison can be sent to someone or linked from the newsletter.
 */
@@ -46,10 +49,24 @@ import { CompanyLogo } from "@/components/CompanyLogo";
 const PAGE_SIZE = 12;
 const MAX_SLOTS = 3;
 
-/** Quick-add ranking — the same rule the homepage Featured grid opens with:
- *  ranked on 3Y alpha, floor of ₹100 Cr AUM. */
+/**
+ * The quick-add rule.
+ *
+ * The first version ranked on 3Y alpha behind a ₹100 Cr floor alone, and the
+ * chips came back reading "Diversified", "SAHASRAR CONCENTRATED GROWTH
+ * PORTFOLIO", "White Pine India Emerging Stars Approach" — small, obscure,
+ * high-beta names whose 3Y alpha is the recency trap this brand exists to
+ * argue against. The homepage Featured rule's consistency condition had not
+ * been carried across; it is the part that does the work.
+ *
+ * Now: no institutional mandates, ₹1,000 Cr floor, beat the benchmark in at
+ * least 2 of the 1Y / 2Y / 3Y windows, carry a category (so the chip means
+ * something beyond its name), ranked on 3Y alpha, one per manager.
+ */
 const QUICK_ADD_PERIOD: Period = "3Y";
-const QUICK_ADD_AUM_FLOOR = 100;
+const QUICK_ADD_AUM_FLOOR = 1000;
+const QUICK_ADD_BEAT_PERIODS: Period[] = ["1Y", "2Y", "3Y"];
+const QUICK_ADD_MIN_BEATS = 2;
 
 type SortKey = "aum" | "alpha" | "return" | "name";
 
@@ -148,6 +165,10 @@ export function CompareExplorer({ strategies, benchmark, managerLogos }: {
   const [query, setQuery] = useState<string>("");
   const [category, setCategory] = useState<string | null>(null);
   const [beatOnly, setBeatOnly] = useState<boolean>(false);
+  // Off by default: the mandates stay reachable, but the page does not open on
+  // them. Sorted by AUM (the default) the largest is a ₹6.38 lakh crore
+  // provident-fund mandate with no 3Y return — real, and unbuyable.
+  const [includeMandates, setIncludeMandates] = useState<boolean>(false);
   const [selected, setSelected] = useState<Strategy[]>([]);
   const [brief, setBrief] = useState<Strategy | null>(null);
   const [enquire, setEnquire] = useState<Strategy | null>(null);
@@ -165,11 +186,18 @@ export function CompareExplorer({ strategies, benchmark, managerLogos }: {
   const data = useMemo<Strategy[]>(() => clean.map((s) => toStrategy(s, clean)), [clean]);
   const asOf = useMemo(() => fmtAsOf(latestAmfiDate(clean.map((s) => s.asOfDate))), [clean]);
 
+  /** Everything a visitor could actually subscribe to. */
+  const investable = useMemo(() => data.filter((s) => !s.institutional), [data]);
+  const mandateCount = data.length - investable.length;
+  const pool = includeMandates ? data : investable;
+
   /* --- URL <-> selection --- */
   const hydrated = useRef(false);
 
   const hydrate = useCallback((slugs: string[]) => {
     if (slugs.length) {
+      // Resolved against the FULL set, not the filtered pool: a shared link
+      // naming a mandate must still restore it, whatever the chip is set to.
       const bySlug = new Map(data.map((s) => [s.slug, s]));
       const picked = slugs.map((sl) => bySlug.get(sl)).filter((s): s is Strategy => !!s);
       // Never overwrite a selection the visitor already made in the moment
@@ -219,33 +247,61 @@ export function CompareExplorer({ strategies, benchmark, managerLogos }: {
     }
   }, []);
 
-  /* --- quick adds: top 3 by 3Y alpha, AUM floor ₹100 Cr --- */
-  const quickAdds = useMemo<Strategy[]>(() => {
+  /* --- quick adds --- */
+  const quickAdds = useMemo<{ items: Strategy[]; fallback: boolean }>(() => {
     const rank = (s: Strategy) => alphaFor(s.returns, QUICK_ADD_PERIOD, benchmark.returns);
-    return data
-      .filter((s) => (s.aum ?? 0) >= QUICK_ADD_AUM_FLOOR && s.returns[QUICK_ADD_PERIOD] !== null)
-      .sort((a, b) => {
-        const aa = rank(a);
-        const ba = rank(b);
-        if (aa !== null && ba !== null && aa !== ba) return ba - aa;
-        if (aa !== null && ba === null) return -1;
-        if (aa === null && ba !== null) return 1;
-        // No benchmark for this window — fall back to the raw 3Y return so the
-        // order stays deterministic rather than feed order.
-        return (b.returns[QUICK_ADD_PERIOD] ?? 0) - (a.returns[QUICK_ADD_PERIOD] ?? 0);
-      })
-      .slice(0, MAX_SLOTS);
-  }, [data, benchmark]);
+    const byAlpha = (a: Strategy, b: Strategy) => {
+      const aa = rank(a);
+      const ba = rank(b);
+      if (aa !== null && ba !== null && aa !== ba) return ba - aa;
+      if (aa !== null && ba === null) return -1;
+      if (aa === null && ba !== null) return 1;
+      // No benchmark for this window — fall back to the raw return so the order
+      // stays deterministic rather than feed order.
+      return (b.returns[QUICK_ADD_PERIOD] ?? 0) - (a.returns[QUICK_ADD_PERIOD] ?? 0);
+    };
+
+    // One per manager: three chips from one AMC is a shelf, not a comparison.
+    const capOnePerManager = (list: Strategy[]) => {
+      const seen = new Set<string>();
+      const out: Strategy[] = [];
+      for (const s of list) {
+        if (seen.has(s.manager)) continue;
+        seen.add(s.manager);
+        out.push(s);
+        if (out.length === MAX_SLOTS) break;
+      }
+      return out;
+    };
+
+    const qualified = capOnePerManager(
+      investable
+        .filter((s) =>
+          (s.aum ?? 0) >= QUICK_ADD_AUM_FLOOR &&
+          s.returns[QUICK_ADD_PERIOD] !== null &&
+          s.category !== null &&
+          beats(s.returns, QUICK_ADD_BEAT_PERIODS, benchmark.returns) >= QUICK_ADD_MIN_BEATS)
+        .sort(byAlpha),
+    );
+    if (qualified.length > 0) return { items: qualified, fallback: false };
+
+    // Nothing clears the bar (a thin month, or a benchmark with no annual
+    // windows yet). Fall back to size, and say so — never to "the first three".
+    return {
+      items: capOnePerManager([...investable].sort((a, b) => (b.aum ?? -1) - (a.aum ?? -1))),
+      fallback: true,
+    };
+  }, [investable, benchmark]);
 
   /* --- categories: filter buttons here, not links --- */
   const categories = useMemo(() => {
     const set = new Set<string>();
-    data.forEach((s) => { if (s.category) set.add(s.category); });
+    pool.forEach((s) => { if (s.category) set.add(s.category); });
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [data]);
+  }, [pool]);
 
   const filtered = useMemo<Strategy[]>(() => {
-    let list = data;
+    let list = pool;
     if (category) list = list.filter((s) => s.category === category);
     if (deferredQuery.trim()) {
       const q = deferredQuery.toLowerCase();
@@ -262,12 +318,12 @@ export function CompareExplorer({ strategies, benchmark, managerLogos }: {
       if (sort === "name") return (a.manager + a.strategy).localeCompare(b.manager + b.strategy);
       return 0;
     });
-  }, [data, category, period, sort, deferredQuery, beatOnly, benchmark]);
+  }, [pool, category, period, sort, deferredQuery, beatOnly, benchmark]);
 
   // Any change to the filter/sort inputs starts the window over.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [period, sort, deferredQuery, beatOnly, category]);
+  }, [period, sort, deferredQuery, beatOnly, category, includeMandates]);
 
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
   const remaining = filtered.length - visible.length;
@@ -320,14 +376,25 @@ export function CompareExplorer({ strategies, benchmark, managerLogos }: {
         </div>
 
         {/* No auto-selection: an empty rail offers a ranked starting point
-            instead of opening on whatever sorts first alphabetically. */}
-        {selected.length === 0 && quickAdds.length > 0 && (
+            instead of opening on whatever sorts first alphabetically.
+
+            The label states the RULE, not a verdict. "Start with three the
+            data likes" read as an endorsement, which is not something this
+            brand can offer before the RIA licence — and the sentence has to
+            keep working when the rule below falls back to size. */}
+        {selected.length === 0 && quickAdds.items.length > 0 && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="font-ui" style={{ fontSize: 12.5, color: "var(--muted)" }}>Start with three the data likes</span>
+            <span className="font-ui" style={{ fontSize: 12.5, color: "var(--muted)" }}>
+              {quickAdds.fallback
+                ? quickAdds.items.length === MAX_SLOTS ? "Three of the largest by AUM" : "The largest by AUM"
+                : quickAdds.items.length === MAX_SLOTS
+                  ? "Three of the larger strategies that have beaten the index in at least two of the last three years — a starting point, not a recommendation."
+                  : "Strategies above ₹1,000 Cr that have beaten the index in at least two of the last three years — a starting point, not a recommendation."}
+            </span>
             {/* Clamped: a chip carrying "360 ONE Open - Enhancer Series -
                 Blended Equity Enhancer Portfolio" at full width pushes the
                 whole page sideways on a phone. */}
-            {quickAdds.map((s) => (
+            {quickAdds.items.map((s) => (
               <button key={s.id} onClick={() => toggle(s)}
                 className="font-ui truncate rounded-full px-3 py-1.5 hover:underline"
                 title={`${s.manager} — ${s.strategy}`}
@@ -411,11 +478,26 @@ export function CompareExplorer({ strategies, benchmark, managerLogos }: {
               color: beatOnly ? "#fff" : "var(--green-deep)", background: beatOnly ? "var(--green)" : "var(--green-tint)", border: "1px solid transparent" }}>
             <Check size={13} /> Beat benchmark only
           </button>
+          {/* The mandates stay one tap away — hidden is not deleted, and a
+              visitor who wants to see what their EPFO money sits in can. */}
+          {mandateCount > 0 && (
+            <button onClick={() => setIncludeMandates((v) => !v)}
+              title="Provident-fund, advisory and customised-portfolio rows: real AUM, but not products anyone can subscribe to"
+              className="font-ui whitespace-nowrap inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
+              style={{ fontSize: 13, fontWeight: 500,
+                color: includeMandates ? "#fff" : "var(--green-deep)",
+                background: includeMandates ? "var(--green)" : "var(--green-tint)", border: "1px solid transparent" }}>
+              <Check size={13} /> Include institutional mandates
+            </button>
+          )}
         </div>
 
         <div className="font-ui flex flex-wrap items-baseline justify-between gap-2 mt-3">
           <p className="font-num" style={{ fontSize: 12.5, color: "var(--muted)", margin: 0 }}>
             {filtered.length.toLocaleString("en-IN")} of {data.length.toLocaleString("en-IN")} strategies
+            {!includeMandates && mandateCount > 0 && (
+              <> · {mandateCount.toLocaleString("en-IN")} institutional mandate{mandateCount === 1 ? "" : "s"} hidden</>
+            )}
           </p>
           <p className="font-ui" style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>as on {asOf}</p>
         </div>
@@ -425,7 +507,10 @@ export function CompareExplorer({ strategies, benchmark, managerLogos }: {
       {filtered.length === 0 ? (
         <div className="text-center py-16">
           <p className="font-display" style={{ fontSize: 20, color: "var(--ink)" }}>No strategies match those filters.</p>
-          <p className="font-ui" style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>Try clearing “beat benchmark only,” a category, or a broader search term.</p>
+          <p className="font-ui" style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>
+            Try clearing “beat benchmark only,” a category, or a broader search term
+            {!includeMandates && mandateCount > 0 ? " — or include institutional mandates" : ""}.
+          </p>
         </div>
       ) : (
         <>

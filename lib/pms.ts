@@ -38,6 +38,55 @@ export function cleanPmsStrategies(strategies: LivePmsStrategy[]): LivePmsStrate
   return strategies.filter((s) => !hasImplausibleReturn(s));
 }
 
+/* ---------------------------------------------------------------------------
+   Institutional and catch-all mandates
+---------------------------------------------------------------------------- */
+
+/**
+ * Tokens that mark a reported row as an institutional or catch-all mandate.
+ *
+ * Matched against the strategy name normalised to spaces (so "Co-Investment"
+ * and "Co Investment" are the same token) and tested with a space on each
+ * side, which gives word-boundary semantics for free: " pf " matches
+ * "PMS for PFs & Special Mandates" but not "Alpha PFC Portfolio", and
+ * " esop " does not fire inside a longer word.
+ *
+ * Multi-word tokens are listed in their normalised form.
+ */
+const INSTITUTIONAL_TOKENS = [
+  "provident fund", "provident funds", "pf", "pfs", "epfo", "epf",
+  "special mandate", "special mandates",
+  "customised", "customized", "custom portfolio", "customised portfolio", "customized portfolio",
+  "discretionary customised", "non discretionary",
+  "advisory",
+  "co investment", "coinvestment",
+  "esop",
+  "treasury",
+];
+
+/**
+ * Institutional and catch-all mandates reported under a PMS licence that no
+ * retail investor can subscribe to. Their AUM dominates every sort and their
+ * returns aggregate hundreds of unrelated client portfolios.
+ *
+ * The row that forced this: "PMS for PFs & Special Mandates" at ₹6.38 lakh
+ * crore with no 3Y return — a real EPFO/provident-fund mandate run under a PMS
+ * licence, and by a wide margin the largest AUM in the feed, so an AUM sort
+ * opened the compare page on something nobody can buy. Each AMC's catch-all
+ * buckets ("Customised Discretionary Portfolio", "Non Discretionary
+ * Portfolio", "Advisory") have the same problem from the other direction: they
+ * aggregate hundreds of client-specific portfolios into one reported row, so
+ * the returns describe no strategy in particular.
+ *
+ * This is a DISPLAY concern. Nothing is deleted or unpublished — the explorer
+ * still lists these rows (tagged), and the compare page can show them on
+ * request. Surfaces decide for themselves what to do with the answer.
+ */
+export function isInstitutionalMandate(s: { strategyName: string }): boolean {
+  const name = ` ${String(s.strategyName ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim()} `;
+  return INSTITUTIONAL_TOKENS.some((t) => name.includes(` ${t} `));
+}
+
 /** Minimum shape a feed row needs for slug computation. `manager` is only
  *  required when a name collision forces the disambiguating suffix. */
 type SlugSource = Pick<LivePmsStrategy, "strategyName"> & { manager?: string };
