@@ -60,13 +60,14 @@ const PAGE_SIZE = 24;
 
 /* ---------- compare modal ---------- */
 /** The shell only — the table itself is CompareTable, shared with /compare. */
-function CompareModal({ items, benchmark, asOn, managerLogos, onClose, onRemove }: {
+function CompareModal({ items, benchmark, asOn, managerLogos, onClose, onRemove, onEnquire }: {
   items: Strategy[];
   benchmark: Benchmark;
   asOn: string;
   managerLogos: PmsManagerLogos;
   onClose: () => void;
   onRemove: (s: Strategy) => void;
+  onEnquire: (s: Strategy) => void;
 }) {
   if (!items.length) return null;
   return (
@@ -77,7 +78,7 @@ function CompareModal({ items, benchmark, asOn, managerLogos, onClose, onRemove 
           <button onClick={onClose} aria-label="Close comparison" className="rounded-lg p-1.5" style={{ background: "var(--flat-bg)" }}><X size={18} color="var(--ink)" /></button>
         </div>
         <div className="p-5">
-          <CompareTable items={items} benchmark={benchmark} asOn={asOn} managerLogos={managerLogos} onRemove={onRemove} />
+          <CompareTable items={items} benchmark={benchmark} asOn={asOn} managerLogos={managerLogos} onRemove={onRemove} onEnquire={onEnquire} />
         </div>
       </>
     </Modal>
@@ -311,7 +312,7 @@ export default function PMSExplorer({
       )}
 
       <BriefSheet s={brief} asOn={asOf} benchmark={benchmark} onClose={() => setBrief(null)} onEnquire={setEnquire} />
-      {showCompare && <CompareModal items={compare} benchmark={benchmark} asOn={asOf} managerLogos={managerLogos} onClose={() => setShowCompare(false)} onRemove={toggleCompare} />}
+      {showCompare && <CompareModal items={compare} benchmark={benchmark} asOn={asOf} managerLogos={managerLogos} onClose={() => setShowCompare(false)} onRemove={toggleCompare} onEnquire={setEnquire} />}
       {/* z-[60] — sits above the brief sheet when opened from inside it */}
       {enquire && <EnquireModal strategy={enquire.strategy} source="pms-explorer" onClose={() => setEnquire(null)} />}
     </div>

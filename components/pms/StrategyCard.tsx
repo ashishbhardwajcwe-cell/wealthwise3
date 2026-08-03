@@ -107,6 +107,19 @@ export function StrategyCard({ s, period, benchmark, logoUrl, selected = false, 
           <Link href={`/pms/${s.slug}`} className="hover:underline" style={{ color: "inherit" }}>{s.strategy}</Link>
         </h3>
 
+        {/* An institutional or catch-all mandate — a provident-fund book, an
+            advisory bucket, a "customised portfolios" aggregate. The figures
+            are real but they describe no single strategy, and none of it is
+            subscribable. Named on the card rather than filtered out here: this
+            grid is the full-feed browse surface. */}
+        {s.institutional && (
+          <div className="font-ui mt-1.5 inline-flex items-center rounded-full px-2 py-0.5"
+            title="Reported under a PMS licence but not a product an individual can subscribe to — returns aggregate many client portfolios"
+            style={{ fontSize: 11, fontWeight: 500, color: "var(--muted)", background: "var(--flat-bg)", border: "1px solid var(--line)" }}>
+            Institutional mandate
+          </div>
+        )}
+
         {/* signature: selected-period return + alpha */}
         <div className="mt-3 flex items-end justify-between">
           <div>

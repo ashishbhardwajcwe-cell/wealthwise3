@@ -10,6 +10,7 @@
     "fetch:pms": "node scripts/fetch-pms.mjs",
     "import:pms": "node scripts/import-pms.mjs",
     "enrich:categories": "node scripts/enrich-pms-categories.mjs",
+    "list:mandates": "node scripts/list-institutional-mandates.mjs",
     "import:aif": "node scripts/import-aif.mjs",
     "fetch:benchmark": "node scripts/fetch-benchmark.mjs",
     "fetch:sebi-aif": "node scripts/fetch-sebi-aif.mjs",

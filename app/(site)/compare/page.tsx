@@ -5,12 +5,53 @@ import { toBenchmark } from "@/components/pms/strategy-shared";
 import { siteConfig } from "@/lib/site-config";
 import { getLivePmsStrategies, getBenchmark, getPmsManagerLogos } from "@/lib/investment-data";
 
+const TITLE = "Compare PMS Strategies Side by Side | PlanMyCashflows";
+const DESCRIPTION =
+  "Put up to three PMS strategies side by side — returns across every published window, and the alpha each one earned over the S&P BSE 500 TRI.";
+
+/**
+ * The page's own card, not the sitewide one.
+ *
+ * /compare produces shareable ?s=… URLs and the channel they travel on is
+ * WhatsApp, which renders og:title/og:description and nothing else. Inheriting
+ * the site defaults meant every forwarded comparison previewed as the generic
+ * homepage card — the one thing guaranteed not to explain why the link was
+ * sent.
+ *
+ * NOT done here: a per-comparison preview. A `generateMetadata({ searchParams })`
+ * could read `s`, resolve the three slugs and name the strategies in the card
+ * ("Marcellus vs ASK vs Motilal Oswal — compared"). It would mean dropping
+ * `export const revalidate` for per-request rendering, so every visit costs a
+ * Sanity fetch instead of hitting a 5-minute-cached static page — a trade worth
+ * deciding on its own, not as a side effect of fixing the card.
+ */
 export const metadata: Metadata = {
   // AIF is deliberately absent: there is no AIF performance data behind this
   // page, and the old title promised a comparison it could not deliver.
-  title: { absolute: "Compare PMS Strategies Side by Side | PlanMyCashflows" },
-  description:
-    "Put up to three PMS strategies side by side — returns across every published window, and the alpha each one earned over the S&P BSE 500 TRI.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
+  alternates: { canonical: "/compare" },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "https://planmycashflows.com/compare",
+    type: "website",
+    // Carried over from the root metadata: an openGraph block replaces the
+    // inherited one wholesale rather than merging field by field. That
+    // includes the file-based app/opengraph-image.tsx card, which silently
+    // disappeared from this page's tags the first time this block existed —
+    // a preview with no image at all is a worse WhatsApp card than the
+    // generic one this was written to replace, so it is named explicitly.
+    siteName: "PlanMyCashflows",
+    locale: "en_IN",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: TITLE }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: TITLE }],
+  },
 };
 
 export const revalidate = 300;

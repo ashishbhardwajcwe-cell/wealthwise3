@@ -182,9 +182,11 @@ export function CompareTable({
               <th scope="row" className="font-ui text-left" style={fieldCell}>AUM</th>
               {items.map((s) => (
                 <td key={s.id} style={strategyCell}>
-                  {s.aum
-                    ? <span className="font-num" style={{ fontSize: 13, color: "var(--ink)" }}>{formatAumCr(s.aum)}</span>
-                    : <Missing label="Not disclosed" />}
+                  {/* null/undefined only — a reported AUM of exactly 0 is a
+                      figure, not a gap, and must not read as "Not disclosed". */}
+                  {s.aum === null || s.aum === undefined
+                    ? <Missing label="Not disclosed" />
+                    : <span className="font-num" style={{ fontSize: 13, color: "var(--ink)" }}>{formatAumCr(s.aum)}</span>}
                 </td>
               ))}
               <td style={{ ...strategyCell, ...benchCell }}><Missing label="Not applicable" /></td>
