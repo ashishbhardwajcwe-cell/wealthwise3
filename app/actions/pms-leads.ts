@@ -16,9 +16,12 @@ import { formRateLimit } from "@/lib/redis";
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SOURCES = ["pms-explorer", "pms-strategy-page", "aif-directory", "unlisted-page"];
+/** Runtime allow-list. MUST list every LeadSource — a source present in the
+ *  type but missing here is rejected as a generic error at submit time, which
+ *  is how the homepage's Featured grid enquiries were silently failing. */
+const SOURCES = ["pms-explorer", "pms-strategy-page", "aif-directory", "unlisted-page", "homepage-featured", "compare"];
 
-export type LeadSource = "pms-explorer" | "pms-strategy-page" | "aif-directory" | "unlisted-page" | "homepage-featured";
+export type LeadSource = "pms-explorer" | "pms-strategy-page" | "aif-directory" | "unlisted-page" | "homepage-featured" | "compare";
 
 export interface LeadInput {
   name: string;
