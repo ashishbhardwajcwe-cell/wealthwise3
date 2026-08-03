@@ -21,9 +21,9 @@ copyrighted reproduction).
 
 ## The monthly sequence
 
-Four steps, in this order. Step 1 is not optional — once step 4 runs, the
-previous month's figures are gone from Sanity and the archive is the only
-record that they were ever displayed.
+Four steps, in this order, plus an optional fifth. Step 1 is not optional —
+once step 4 runs, the previous month's figures are gone from Sanity and the
+archive is the only record that they were ever displayed.
 
 ```bash
 # 1. ARCHIVE what the site is showing right now, before anything overwrites it.
@@ -42,6 +42,10 @@ npm run import:pms -- scripts/pms-data.csv --dry-run
 
 # 4. IMPORT.
 npm run import:pms -- scripts/pms-data.csv
+
+# 5. CATEGORIES — only worth running when new strategies appeared.
+npm run enrich:categories > categories.csv     # dry run, writes nothing
+npm run enrich:categories -- --apply
 ```
 
 Between steps 3 and 4, deal with anything the dry run flags: ambiguous rows
@@ -284,10 +288,79 @@ matches them. Keep `scripts/pms-data.csv` out of git if you prefer (it
 contains only public data, so committing it is also fine and gives you a
 history of what was published when).
 
+## Categories (`npm run enrich:categories`)
+
+APMI publishes no category per strategy, so most of the feed arrives without
+one. That single gap is why the compare table's Category row was blank, the
+explorer's chip row nearly empty and the `/pms/category/[slug]` pages thin.
+
+`scripts/enrich-pms-categories.mjs` fills it in from the only category signal
+the feed actually carries — the manager's own name for the product.
+
+```bash
+npm run enrich:categories > categories.csv     # dry run; CSV to the file, summary on screen
+npm run enrich:categories -- --apply           # patches Sanity
+```
+
+**It does not guess.** A category is proposed only when the strategy name
+literally contains a category token (`Small Cap`, `Flexi`, `Multi Asset`,
+`Debt`, `Quant`, …). Anything else stays uncategorised, because a wrong
+category on a public comparison page is worse than a blank one. Three
+consequences worth knowing:
+
+- `Mid & Small Cap` is reported as **ambiguous on purpose**. It spans two
+  bands and has no canonical value; the rule exists so those names don't fall
+  through to `Smallcap`, which they are not. Hand-map them.
+- Cap bands outrank style words, so `Small Cap Value` is `Smallcap`. `Value`
+  and `Growth` are matched last — they are marketing adjectives far more often
+  than they are categories.
+- `Quantum` (a real manager) never matches `Quant`.
+
+**It never overwrites.** `--apply` patches only documents whose `category` is
+absent, each with its own `_rev` as `ifRevisionID`, so a value typed in the
+Studio between the read and the write aborts the mutation instead of being
+clobbered. The dry run also lists documents whose *stored* category disagrees
+with their name — it changes nothing there, but those are usually data errors.
+
+### The residue
+
+Strategies with no category token in the name are the residue, and they are
+hand-mapped in `scripts/pms-category-overrides.json` — **committed**, read on
+every run, and applied ahead of the keyword table, so a manual decision
+survives every future APMI import. The dry run's CSV is the worksheet: rows
+with an empty `proposedCategory` are the ones still to decide.
+
+### Adding a category value
+
+The script can propose fourteen values, but the `category` field only accepts
+the eight in its Sanity option list. A proposal outside that list is reported
+as **blocked** and not written — a value outside the list reads as an invalid
+selection in the Studio, where the next editor to open the document can clear
+it in one click. To unlock one, add it in all three places and re-run:
+
+| file | what to add |
+|---|---|
+| `sanity/schemas/pmsStrategy.ts` | the value in `options.list` |
+| `scripts/import-pms.mjs` | the value in `VALID_CATEGORIES` |
+| `lib/pms.ts` | a `PMS_CATEGORIES` entry, or the landing page gets a generic intro |
+
+`--allow-new-categories` writes them anyway. Use it knowing the Studio will
+flag every one of those documents.
+
+### Why this survives the monthly import
+
+`import-pms.mjs` carries `category` forward from the existing document when
+the CSV doesn't supply one (`if (!doc.category && prev.category)`), and it
+validates `VALID_CATEGORIES` against the **CSV** value only — never against
+the carried-forward one. So an enriched category is neither wiped nor able to
+abort next month's import.
+
 ## Compliance notes
 
 - Every row must carry `asOfDate` and `source` — the importer refuses rows
   without them. The page should always display both.
+- Categories are never read out of APMI's own data. The enrichment pass above
+  works on the strategy name and on hand decisions, and declines to guess.
 - Returns are historical disclosures, never projections. Keep `notes`
   educational ("focused on smallcap value since 2014"), never
   recommendation-shaped ("best PMS", "will outperform").

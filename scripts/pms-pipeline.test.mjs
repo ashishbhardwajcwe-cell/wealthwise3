@@ -4,7 +4,7 @@
  *
  *   node scripts/pms-pipeline.test.mjs      (or: npm run test:pms)
  *
- * No dependencies, no network, no Sanity. Three things are covered, all of
+ * No dependencies, no network, no Sanity. Four things are covered, all of
  * them invisible in a normal run and expensive to get wrong:
  *
  *  - Document identity (./pms-matching.mjs). Re-running the import must not
@@ -14,6 +14,9 @@
  *    perfectly happily and puts the wrong date on the whole site.
  *  - The pins file (./pms-pins.mjs). A pin that silently fails to load takes
  *    the import down with an ambiguity abort a month later.
+ *  - The category keyword table (./enrich-pms-categories.mjs). A rule in the
+ *    wrong order publishes a WRONG category on the comparison page, which is
+ *    worse than the blank it replaced — and nothing about it looks broken.
  *
  * The manager names below are the shape APMI actually publishes: full legal
  * names carrying a "(formerly known as …)" suffix, long enough on their own
@@ -33,6 +36,15 @@ import {
 } from "./pms-matching.mjs";
 import { lastDayOfMonth, monthEndIso } from "./import-shared.mjs";
 import { loadPins } from "./pms-pins.mjs";
+import {
+  AMBIGUOUS,
+  CANONICAL_CATEGORIES,
+  RULES,
+  SCHEMA_CATEGORIES,
+  loadOverrides,
+  planEnrichment,
+  proposeCategory,
+} from "./enrich-pms-categories.mjs";
 
 let passed = 0;
 const failures = [];
@@ -300,6 +312,101 @@ test("the committed pins file parses and every entry is well-formed", () => {
   assert.deepEqual(pins.errors, [], "scripts/pms-pins.json is broken");
   for (const p of [...pins.resolved, ...pins.unresolved]) {
     assert.ok(p.manager && p.strategyName, "every entry needs both names");
+  }
+});
+
+/* ---------- category enrichment ---------- */
+
+const cat = (name) => proposeCategory(name).category;
+
+test("cap bands are read off the name in every spelling APMI uses", () => {
+  for (const n of ["Small Cap Portfolio", "Smallcap Opportunities", "Small-Cap Fund"]) {
+    assert.equal(cat(n), "Smallcap", n);
+  }
+  assert.equal(cat("Mid Cap Strategy"), "Midcap");
+  assert.equal(cat("Large Cap Fund"), "Largecap");
+  assert.equal(cat("Flexi Cap Approach"), "Flexicap");
+  assert.equal(cat("Multi Cap Advantage"), "Multicap");
+  assert.equal(cat("Multi Asset Allocation Fund"), "Multi-Asset");
+});
+
+test("'Mid & Small' is ambiguous, never Smallcap", () => {
+  // The whole reason this rule is first: without it these match " small cap "
+  // and get published as smallcap strategies, which they are not.
+  for (const n of ["Mid & Small Cap Approach", "Mid and Small Cap Portfolio", "SMID Fund"]) {
+    assert.equal(cat(n), AMBIGUOUS, n);
+  }
+});
+
+test("word boundaries hold — Quantum is not Quant, Values is not Value", () => {
+  assert.equal(cat("Quantum Long Term Equity"), null);
+  assert.equal(cat("Quant Fund"), "Quant");
+  assert.equal(cat("Our Values Portfolio"), null);
+  assert.equal(cat("Deep Value Portfolio"), "Value");
+});
+
+test("cap bands outrank the style labels that sit last", () => {
+  // "Small Cap Value" is a smallcap strategy. Ordering these the other way
+  // round is the single easiest way to mislabel a large slice of the feed.
+  assert.equal(cat("Small Cap Value Fund"), "Smallcap");
+  assert.equal(cat("Quant Growth Fund"), "Quant");
+  assert.equal(cat("Multi Asset Growth Strategy"), "Multi-Asset");
+  assert.equal(cat("Equity & Debt Portfolio"), "Hybrid", "hybrid must outrank debt");
+});
+
+test("an unmatched name proposes nothing at all", () => {
+  for (const n of ["India Opportunities", "Core Fund", "Bluechip Portfolio", "Banking Leaders"]) {
+    assert.equal(cat(n), null, n);
+  }
+});
+
+test("every rule proposes a canonical value", () => {
+  for (const rule of RULES) {
+    assert.ok(
+      rule.category === AMBIGUOUS || CANONICAL_CATEGORIES.includes(rule.category),
+      `${rule.category} is not canonical`,
+    );
+  }
+  for (const value of SCHEMA_CATEGORIES) {
+    assert.ok(CANONICAL_CATEGORIES.includes(value), `${value} is in the schema but not canonical`);
+  }
+});
+
+test("planEnrichment never proposes over an existing category", () => {
+  const overrides = { byKey: new Map() };
+  const docs = [
+    { _id: "a", _rev: "1", manager: "M", strategyName: "Small Cap Fund", category: "Largecap" },
+    { _id: "b", _rev: "1", manager: "M", strategyName: "Small Cap Fund II" },
+  ];
+  const rows = planEnrichment(docs, overrides);
+  assert.equal(rows[0].outcome, "already-categorised");
+  assert.equal(rows[1].outcome, "would-set");
+  assert.equal(rows[1].proposed, "Smallcap");
+});
+
+test("a value outside the Sanity option list is blocked, not written", () => {
+  const overrides = { byKey: new Map() };
+  const docs = [{ _id: "a", _rev: "1", manager: "M", strategyName: "Flexi Cap Fund" }];
+  assert.equal(planEnrichment(docs, overrides)[0].outcome, "blocked-by-schema");
+  assert.equal(
+    planEnrichment(docs, overrides, { allowNewCategories: true })[0].outcome,
+    "would-set",
+  );
+});
+
+test("an override beats the keyword table", () => {
+  const overrides = { byKey: new Map([[pairKey("M", "Small Cap Fund"), { category: "Thematic" }]]) };
+  const docs = [{ _id: "a", _rev: "1", manager: "M", strategyName: "Small Cap Fund" }];
+  const [row] = planEnrichment(docs, overrides);
+  assert.equal(row.proposed, "Thematic");
+  assert.equal(row.token, "override");
+});
+
+test("the committed overrides file parses and every entry is well-formed", () => {
+  const o = loadOverrides();
+  assert.deepEqual(o.errors, [], "scripts/pms-category-overrides.json is broken");
+  for (const e of [...o.resolved, ...o.unresolved]) {
+    assert.ok(e.manager && e.strategyName, "every entry needs both names");
   }
 });
 
