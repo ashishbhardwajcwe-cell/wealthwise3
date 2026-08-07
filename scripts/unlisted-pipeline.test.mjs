@@ -39,7 +39,7 @@ import {
 import { Readable } from "node:stream";
 import { crc32 } from "node:zlib";
 import { cleanUnlistedName } from "./clean-unlisted-names.mjs";
-import { readUnlistedXlsxBytes } from "./unlisted-xlsx.mjs";
+import { readUnlistedXlsxBytes, joinLogosToRows } from "./unlisted-xlsx.mjs";
 import { slugify, normalizeIsoDate } from "./import-shared.mjs";
 
 let passed = 0;
@@ -904,6 +904,81 @@ test("a workbook whose price column is not the retail one is refused, not read",
 
 test("a file that is not a workbook fails loudly rather than reading as empty", () => {
   assert.throws(() => readUnlistedXlsxBytes(Buffer.from("Share Name,Retail Price\nTata,950\n")), /not a zip archive/);
+});
+
+/* ---------- joining logos to companies ---------- */
+
+/**
+ * The logo extractor's whole premise: the workbook SAYS which row an image is
+ * anchored to, so the logo and the company are joined on (sheet, row) and no
+ * pixel geometry is consulted. Getting this wrong puts one company's brand
+ * mark on another company's card — visible to every visitor, and invisible to
+ * every check that only looks at prices.
+ */
+test("a logo is joined to the company standing on its anchored row", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  const { paired, orphans, missing } = joinLogosToRows(book);
+
+  assert.equal(orphans.length, 0);
+  assert.deepEqual(paired.map((p) => [p.name, p.sheet, p.row]),
+    [["APL Metals Unlisted Shares", "A-M", 3]]);
+  assert.equal(paired[0].mediaPath, "xl/media/image1.jpeg");
+  assert.deepEqual([...paired[0].bytes.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+
+  // Every other priced company keeps the site's monogram fallback.
+  assert.deepEqual(missing, [
+    "Elofic Industries Limited", "Inox Clean Energy Limited",
+    "SK Finance Limited", "E Trav Tech Limited",
+  ]);
+});
+
+test("a paired logo carries a name and bytes — and no price of any kind", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  const { paired } = joinLogosToRows(book);
+  assert.deepEqual(Object.keys(paired[0]).sort(), ["bytes", "mediaPath", "name", "row", "sheet"]);
+  const { bytes, ...rest } = paired[0];
+  // 385 is the row's retail price. The logo pipeline must never see it.
+  assert.ok(!/\b385\b/.test(JSON.stringify(rest)), "no price may cross into the logo path");
+});
+
+test("an image anchored to a row with no company is an orphan, not a mis-pairing", () => {
+  // A banner on the title row, and a logo on a row that was skipped for a bad
+  // price. Neither may be silently attached to whichever company is nearest.
+  const rows = [
+    { name: "Tata Capital", price: 950, sheet: "A-M", row: 3 },
+    { name: "Hero FinCorp", price: 1725, sheet: "A-M", row: 4 },
+    { name: "Zepto", price: 55, sheet: "N-Z", row: 3 },
+  ];
+  const logos = [
+    { sheet: "A-M", row: 1, mediaPath: "xl/media/banner.jpeg", bytes: Buffer.of(1) },
+    { sheet: "A-M", row: 4, mediaPath: "xl/media/image2.jpeg", bytes: Buffer.of(2) },
+    { sheet: "N-Z", row: 9, mediaPath: "xl/media/image3.jpeg", bytes: Buffer.of(3) },
+  ];
+  const { paired, orphans, missing } = joinLogosToRows({ rows, logos });
+  assert.deepEqual(paired.map((p) => p.name), ["Hero FinCorp"]);
+  assert.deepEqual(orphans.map((o) => `${o.sheet} ${o.row}`), ["A-M 1", "N-Z 9"]);
+  assert.deepEqual(missing, ["Tata Capital", "Zepto"]);
+});
+
+test("the same row number on two sheets is two different companies", () => {
+  // Row 3 exists on all seven data sheets. Joining on the row alone would put
+  // sheet A-C's logo on sheet U-Z's company.
+  const rows = [
+    { name: "Alpha", price: 1, sheet: "A-C", row: 3 },
+    { name: "Omega", price: 2, sheet: "U-Z", row: 3 },
+  ];
+  const logos = [
+    { sheet: "U-Z", row: 3, mediaPath: "m/omega.jpeg", bytes: Buffer.of(9) },
+  ];
+  const { paired, missing } = joinLogosToRows({ rows, logos });
+  assert.deepEqual(paired.map((p) => p.name), ["Omega"]);
+  assert.deepEqual(missing, ["Alpha"]);
+});
+
+test("joinLogosToRows copes with a workbook that has no images at all", () => {
+  const rows = [{ name: "Tata Capital", price: 950, sheet: "A-M", row: 3 }];
+  assert.deepEqual(joinLogosToRows({ rows, logos: [] }), { paired: [], orphans: [], missing: ["Tata Capital"] });
+  assert.deepEqual(joinLogosToRows(), { paired: [], orphans: [], missing: [] });
 });
 
 /* ---------- report ---------- */

@@ -7,7 +7,9 @@
 > **What changed in V3:** UnlistedZone now send the daily list as `.xlsx`
 > instead of PDF (1.3), so Part 2 no longer depends on OCR. Part 2 gains the
 > per-sheet row counts, the relaxed-match list to read before importing, and
-> the three Excel-specific aborts (2.8).
+> the three Excel-specific aborts (2.8). Logos now come out of the workbook as
+> the partner's own embedded images, with a dry run you can flip through in
+> Finder before anything is attached (Part 2 step 9, and 5.3).
 >
 > **What changed in V2:** the dealer-price leak is resolved and that section now
 > records how it was done. New: a repair procedure for wrong numbers (Part 9), a
@@ -422,9 +424,26 @@ and when they do the error is small.
 
 ### Step 9 — Only when new companies appeared
 
+Always dry-run first — it writes the logos to a folder so you can look at them
+before any of them reaches the site:
+
+```
+npm run logos:unlisted -- "PASTE_PATH_HERE" --dry-run
+```
+
+Open `~/Desktop/wealthwise3/unlisted-logos/` in Finder, switch to icon view and
+flip through. Each file is named after the company it will be attached to, so a
+wrong pairing is visible at a glance. Then:
+
 ```
 npm run logos:unlisted -- "PASTE_PATH_HERE"
 ```
+
+From the `.xlsx` the logos are the partner's own embedded images, read straight
+out of the file — no rendering, no OCR, and the workbook itself says which row
+each image belongs to. Expect ~161 attached and ~22 companies listed as having
+no logo in the file; those keep our monogram, which is the designed behaviour
+and not a failure. Logos never create companies and never change a name.
 
 ### 2.8 — When the file can't be read
 
@@ -697,8 +716,16 @@ One hour, permanently solved.
 ## 5.3 — Unlisted company logos
 
 ```
-npm run logos:unlisted -- "PASTE_PDF_PATH_HERE"
+npm run logos:unlisted -- "PASTE_PATH_HERE" --dry-run
 ```
+```
+npm run logos:unlisted -- "PASTE_PATH_HERE"
+```
+
+Takes the same file as the price import. An `.xlsx` gives the partner's own
+embedded images (fast, exact); a `.pdf` falls back to rendering and OCR
+(slow, approximate). Add `--force` only when you want to replace logos that are
+already set. See Part 2 step 9.
 
 ---
 
