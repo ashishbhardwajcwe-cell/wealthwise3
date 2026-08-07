@@ -497,3 +497,47 @@ export function readUnlistedXlsxBytes(bytes, label = "workbook") {
     sheetCount: sheetDefs.length,
   };
 }
+
+/** Identity of one worksheet cell position, for joining logos to rows. */
+const cellKey = (sheet, row) => `${sheet} ${row}`;
+
+/**
+ * Pair each embedded logo with the company standing on its row.
+ *
+ * The ANCHOR is authoritative. An image belongs to the row the workbook says
+ * it is anchored to — joined on (sheet, row) — and nothing is inferred from
+ * the image's pixel offsets, its size, or its order within the drawing part.
+ * That is the whole reason the Excel path exists: the PDF path had to guess a
+ * row from pixel geometry, and this one is simply told.
+ *
+ * CONFIDENTIALITY: only the company NAME crosses over from the price row.
+ * `paired` entries carry a name, a position and image bytes — there is no
+ * price of any kind in the returned structures, and nowhere to put one.
+ *
+ * Returns:
+ *   paired   [{ name, sheet, row, mediaPath, bytes }] — a logo and its company
+ *   orphans  [{ sheet, row, mediaPath }] — anchored to a row with no company
+ *   missing  [name] — priced companies the file carries no logo for; these
+ *            keep the site's monogram fallback
+ */
+export function joinLogosToRows({ rows = [], logos = [] } = {}) {
+  const nameAt = new Map();
+  for (const r of rows) nameAt.set(cellKey(r.sheet, r.row), r.name);
+
+  const paired = [];
+  const orphans = [];
+  const claimed = new Set();
+  for (const logo of logos) {
+    const key = cellKey(logo.sheet, logo.row);
+    const name = nameAt.get(key);
+    if (!name) {
+      orphans.push({ sheet: logo.sheet, row: logo.row, mediaPath: logo.mediaPath });
+      continue;
+    }
+    claimed.add(key);
+    paired.push({ name, sheet: logo.sheet, row: logo.row, mediaPath: logo.mediaPath, bytes: logo.bytes });
+  }
+
+  const missing = rows.filter((r) => !claimed.has(cellKey(r.sheet, r.row))).map((r) => r.name);
+  return { paired, orphans, missing };
+}
