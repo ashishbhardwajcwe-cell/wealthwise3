@@ -1,9 +1,14 @@
 # PlanMyCashflows — Master Operations Manual
 
-## Version 2 · 2 August 2026
+## Version 3 · 7 August 2026
 
 **Assume nothing. Follow exactly. Every command is written out in full.**
 
+> **What changed in V3:** UnlistedZone now send the daily list as `.xlsx`
+> instead of PDF (1.3), so Part 2 no longer depends on OCR. Part 2 gains the
+> per-sheet row counts, the relaxed-match list to read before importing, and
+> the three Excel-specific aborts (2.8).
+>
 > **What changed in V2:** the dealer-price leak is resolved and that section now
 > records how it was done. New: a repair procedure for wrong numbers (Part 9), a
 > full recovery procedure for a bad import (Part 10), a Git problems section
@@ -117,7 +122,7 @@ them there too.
 | What | Where |
 |---|---|
 | The project (code only) | `~/Desktop/wealthwise3` |
-| Unlisted price PDFs | `~/Desktop/wealthwise3/UNLISTED/` |
+| Unlisted price files (.xlsx/.pdf) | `~/Desktop/wealthwise3/UNLISTED/` |
 | PMS archives | `~/Desktop/wealthwise3/scripts/archive/` |
 | Newsletter templates | `~/Desktop/wealthwise3/newsletters/templates/` |
 | **Everything else** | `~/Desktop/AURIS/` |
@@ -233,13 +238,27 @@ corrected by hand in Studio.
 
 **This is why Part 2 now has a mandatory spot-check step.**
 
-## 1.3 — Open: waiting on UnlistedZone CSV
+## 1.3 — Resolved: UnlistedZone now send Excel ✅
 
-Email sent 2 August requesting CSV or Excel instead of PDF. **If no reply by
-Tuesday, telephone them.** This single change removes the entire OCR failure
-mode.
+Asked on 2 August; first `.xlsx` arrived **6 August 2026**. This removes the
+entire OCR failure mode: every column is its own cell with its own header, so
+no column can be misread as another, and the import verifies that the price
+column it selected really is the retail one before reading a single figure.
 
-The email, if it needs resending:
+Two consequences worth knowing about, both handled:
+
+- **Their names are now full and untruncated**, which is exactly why matching
+  had to change. Most incoming names carry a trailing "Unlisted Shares" that
+  our stored names never had, and some stored names are OCR stumps of the new
+  full ones. Both are matched onto the existing company instead of creating a
+  duplicate, and both are listed in the import summary for checking. See Part 2.
+- **The file is a conversion of their PDF** and carries a handful of font
+  ligature codepoints inside company names — one glyph where two letters belong,
+  in Elofic, Indofil, Market Simplified, SMILE Microfinance, Calcutta Stock
+  Exchange and a few others. These are repaired on read, and every repair is
+  printed so you can see what changed.
+
+The original request email, kept in case the format ever regresses:
 
 > Subject: Daily price list — CSV or Excel format request
 >
@@ -259,17 +278,22 @@ The email, if it needs resending:
 > Thanks,
 > PlanMyCashflows
 
-## 1.4 — Open: known cosmetic issues (wait for the CSV)
+## 1.4 — Open: known cosmetic issues (the Excel import fixes most of these)
 
-These all share one cause — OCR guessing at a rendered PDF — and one clean import
-fixes them together. **Do not fix by hand; you'd repeat the work.**
+These all share one cause — OCR guessing at a rendered PDF — and the switch to
+Excel fixes them as the new list lands. **Do not fix by hand; you'd repeat the
+work.** Re-check this list after two or three Excel imports and delete what has
+gone.
 
 - Price and date run together: "₹5222 Jul 2026" should be "₹52 · 22 Jul 2026"
 - Nine duplicate pairs: your editorial entry plus an imported one (PharmEasy /
   Pharm Easy, NSE / NSE India Limited, Chennai Super Kings / I csk, boAt, OYO,
   Bira, CIAL, Care Health, Motilal Oswal Home Finance)
 - Truncated names: "Signify Innovations (Previously Ph", "Sterlite Electric
-  Limited (Formerly"
+  Limited (Formerly" — the Excel list carries the full name and the import now
+  matches it onto these documents rather than creating a second copy. The stored
+  `company` is deliberately left alone; rename them in Studio when you want the
+  full name on the site
 - ~170 of 188 show sector "Other" — only hand-curated entries have real sectors
 
 ## 1.5 — Open: PMS pins not yet filled
@@ -283,10 +307,29 @@ with "ambiguous rows". Part 3 step 7a fixes it — one time, ten minutes.
 
 **Time: 10 minutes. Tool: Terminal, then browser.**
 
-### Step 1 — Save the PDF
+### Step 1 — Save the file
 
 Save the emailed attachment into `~/Desktop/wealthwise3/UNLISTED/`, keeping their
-filename. Example: `Dealer Price List 01-08-2026.pdf`
+filename. Example: `Dealer Price List 06-08-2026.xlsx`
+
+**Since 6 August 2026 the partner sends `.xlsx`, not PDF.** That is the good
+case — the import reads the spreadsheet directly, with no OCR and no guessing
+which column is which, because every column has its own header. `.pdf` still
+works exactly as before if they ever send one again; so does `.csv`. The
+command is the same either way — the importer looks at the file extension.
+
+Two things the Excel path prints that the PDF one didn't, both worth reading:
+
+- **A per-sheet breakdown.** The workbook has ~21 tabs and only ~7 hold prices.
+  You should see all 7 listed with a row count each, ~183 rows in total. If one
+  tab shows rows and the rest show `0`, the import stops by itself.
+- **"Matched by a RELAXED pass".** The Excel list writes names in full —
+  `APL Metals Unlisted Shares` where we store `APL Metals`, and the whole of a
+  name our old OCR had cut short. Those are matched onto the existing company
+  rather than creating a second copy of it, and every one is listed so you can
+  check it. **Read that list.** A wrong line there means a price landing on the
+  wrong company. Each match also records the list's spelling as an alias, so
+  the same name matches exactly from the next day on and the list shrinks.
 
 ### Step 2 — Open Terminal, go to the folder
 
@@ -312,8 +355,16 @@ npm run import:unlisted -- "PASTE_PATH_HERE" --dry-run
 
 **This writes nothing.** Read the output:
 
-- **`ABORTED`** → the PDF can't be read. **Stop. Do not do Step 5.** See 2.8.
+- **`ABORTED`** → the file can't be read safely. **Stop. Do not do Step 5.** See 2.8.
 - **Names containing numbers** (`"Shares 555"`) → same. Stop.
+- **Fewer than 7 sheets listed, or only one with rows** (Excel only) → stop; the
+  import will have aborted by itself.
+- **`⚠ CONFIRM THESE AGAINST THE PARTNER'S PDF`** (Excel only) → a company name
+  contained a font ligature that appears exactly once in the whole list, so the
+  letters it stands for are a judgement call. Check that one name against their
+  PDF. It is not a reason to stop.
+- **`unreadable depository cells`** → those rows import with no depository
+  rather than a guessed one. Tell the partner; don't hand-edit.
 - **Sensible names and prices** → continue.
 
 ### Step 5 — Import
@@ -323,6 +374,12 @@ npm run import:unlisted -- "PASTE_PATH_HERE"
 ```
 
 Expect ~180 updated, few or no creations. Hundreds of creations means stop.
+
+The first Excel run will show a long "Matched by a RELAXED pass" list — that is
+the switch from PDF names to full Excel names being absorbed once. It should be
+much shorter on day two and near-empty after that, because each match is
+remembered as an alias. If it stays long, something is not being remembered:
+say so rather than living with it.
 
 ### Step 6 — Tidy names
 
@@ -352,7 +409,10 @@ Check **at least eight** companies, chosen deliberately:
 - Any price where the **lot size is 1** (should usually be 100+)
 - Two at random from the middle
 
-Compare each against the PDF's **RETAIL** column — never the dealer column.
+Compare each against the file's **RETAIL** column — never the dealer column.
+(The importer cannot read the dealer column: it refuses to run unless the price
+column it selected has "retail" in its header. Your eyes are the one place that
+rule isn't enforced, so keep them on the right column.)
 
 **Why these:** OCR errors hide in extremes. A dropped digit turns ₹118 into ₹18;
 an inserted one turns ₹10,400 into ₹1,10,400. Mid-range numbers rarely go wrong,
@@ -366,16 +426,23 @@ and when they do the error is small.
 npm run logos:unlisted -- "PASTE_PATH_HERE"
 ```
 
-### 2.8 — When the PDF can't be read
+### 2.8 — When the file can't be read
 
 `ABORTED` means the guard worked. **Do not force it.** `--allow-drift` only
-relaxes row counts, never the name checks.
+relaxes row counts, never the name checks and never the column checks.
 
 In order of preference:
 
-1. Ask UnlistedZone for CSV (1.3). Permanent fix.
-2. Ask them to resend — that day's file may be malformed.
-3. **Skip the day.** The site keeps showing the last good prices, clearly dated.
+1. Ask UnlistedZone to resend — that day's file may be malformed.
+2. **Skip the day.** The site keeps showing the last good prices, clearly dated.
+
+Three aborts are specific to the Excel file and mean specific things:
+
+| Message | What happened | What to do |
+|---|---|---|
+| `is not a RETAIL price column` | They renamed or moved the price column, so the importer can no longer prove which one is the retail price. It will not guess. | Tell them. Never rename the header yourself to get past this — that is the one check standing between the dealer column and a public page. |
+| `Multi-sheet reading failed silently` | Sheets carry price data that wasn't read. | Send them the file name; do not import a partial list. |
+| `no "Share Name" header` | Wrong file, or they restructured it. | Check you sent the right attachment. |
 
 **Stale but correct beats fresh but wrong. Always.**
 
@@ -952,11 +1019,11 @@ Use `npm ci`, never `npm install`, and it stops happening.
 |---|---|---|
 | `Could not read package.json` | Wrong folder | `cd ~/Desktop/wealthwise3` |
 | `No such file` | Wrong path | Redo 0.9, use quotes |
-| `ABORTED` on unlisted import | PDF unreadable — guard worked | 2.8. Don't force it |
+| `ABORTED` on unlisted import | File unreadable — guard worked | 2.8. Don't force it |
 | `ambiguous rows` on PMS | Pins need filling | Part 3, step 7a |
 | Import rejects dates | Unpadded date | Part 3, step 5 |
 | Site unchanged after import | Cache | Wait 1 hour, `Cmd`+`Shift`+`R` |
-| Wrong price on the site | OCR digit error | Part 9 |
+| Wrong price on the site | OCR digit error (PDF), or a wrong relaxed match | Part 9 |
 | Document count jumped | Bad import | Part 10 |
 | Netlify build failed | Code error | `npm run build` locally, fix, push |
 | Local build fails, GitHub fine | Stale local copy | `git pull --no-edit` |

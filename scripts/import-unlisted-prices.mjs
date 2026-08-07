@@ -2,23 +2,31 @@
 /**
  * Unlisted-shares price importer — Mode 2 of the unlisted section.
  *
- * Reads the distribution partner's daily "Unlisted Shares Price List" (PDF or
- * CSV) and upserts indicative prices into the `unlistedShare` documents in
- * Sanity, matching by slug → aliases → normalised company name.
+ * Reads the distribution partner's daily "Unlisted Shares Price List" (Excel,
+ * PDF or CSV) and upserts indicative prices into the `unlistedShare` documents
+ * in Sanity, matching by slug → aliases → normalised company name.
  *
- *   node scripts/import-unlisted-prices.mjs <file.pdf|file.csv> \
+ *   node scripts/import-unlisted-prices.mjs <file.xlsx|file.pdf|file.csv> \
  *        [--partner=uz] [--date=YYYY-MM-DD] [--dry-run]
  *   node scripts/import-unlisted-prices.mjs --seed-editorial [--dry-run]
  *
- *   npm run import:unlisted -- pricelist.pdf --dry-run
+ *   npm run import:unlisted -- pricelist.xlsx --dry-run
+ *
+ * The partner moved from PDF to .xlsx on 06-Aug-2026. That path (scripts/
+ * unlisted-xlsx.mjs) needs no OCR: every column is its own cell with its own
+ * header. .pdf still OCRs; anything else is read as CSV.
  *
  * ── CONFIDENTIALITY ────────────────────────────────────────────────────────
- * The partner's list carries a DEALER (cost) price next to the retail price.
- * The Sanity dataset is publicly readable, so that column must never be
- * stored, logged, or printed. The parsers in unlisted-matching.mjs extract
- * ONLY name / retail price / depository / lot size — the dealer column is
- * structurally discarded and there is nowhere in the doc shape to put it.
- * Keep it that way when editing this pipeline.
+ * The partner's list carries a DEALER (cost) price next to the retail price
+ * (column E of the workbook). The Sanity dataset is publicly readable, so that
+ * column must never be stored, logged, or printed. The parsers in
+ * unlisted-matching.mjs extract ONLY name / retail price / depository / lot
+ * size — the dealer column is structurally discarded and there is nowhere in
+ * the doc shape to put it. On the Excel path a second, explicit lock
+ * (assertRetailPriceColumn) requires the selected price column's header to say
+ * "retail", so a renamed or reordered sheet aborts the read instead of
+ * silently promoting the column next door. Keep both when editing this
+ * pipeline.
  * ───────────────────────────────────────────────────────────────────────────
  *
  * Behaviour:
@@ -64,17 +72,18 @@
  */
 
 import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, extname } from "node:path";
 import {
   loadDotEnvLocal, requireSanityEnv, parseCsv, slugify,
   sanityQuery, sanityMutate, normalizeIsoDate,
 } from "./import-shared.mjs";
 import {
   parsePriceListText, findHeaderDate, mapCsvHeader, parseInr,
-  canonicalDepository, normalizeCompanyName, splitEllipsis,
+  classifyDepository, normalizeCompanyName, splitEllipsis,
   resolveUnlistedTarget, priceFusedName, validateImportRows,
   PRICE_MIN_EXCL, PRICE_MAX_EXCL,
 } from "./unlisted-matching.mjs";
+import { readUnlistedXlsx } from "./unlisted-xlsx.mjs";
 
 // ---------- args ----------
 const args = { partner: "uz", dryRun: false, seedEditorial: false, publish: false, allowDrift: false };
@@ -98,7 +107,7 @@ function cleanCompanyName(raw) {
 }
 
 if (!args.seedEditorial && !args.file) {
-  console.error("Usage: node scripts/import-unlisted-prices.mjs <file.pdf|file.csv> [--publish] [--partner=uz] [--date=YYYY-MM-DD] [--dry-run]\n" +
+  console.error("Usage: node scripts/import-unlisted-prices.mjs <file.xlsx|file.pdf|file.csv> [--publish] [--partner=uz] [--date=YYYY-MM-DD] [--dry-run]\n" +
     "       node scripts/import-unlisted-prices.mjs --seed-editorial [--dry-run]\n\n" +
     "  --publish      make every imported company live immediately (skip the manual review gate).\n" +
     "  --allow-drift  accept a row count / new-company count far off the previous import.\n" +
@@ -183,11 +192,16 @@ if (args.seedEditorial) {
 // ---------- read + parse the file ----------
 const filePath = resolve(args.file);
 if (!existsSync(filePath)) { console.error(`No such file: ${args.file}`); process.exit(1); }
-const isPdf = /\.pdf$/i.test(filePath);
+// Dispatch on extension: .pdf keeps the text-layer + OCR path, .xlsx/.xlsm go
+// to the native reader, everything else is read as CSV (unchanged).
+const ext = extname(filePath).toLowerCase();
+const isPdf = ext === ".pdf";
+const isXlsx = ext === ".xlsx" || ext === ".xlsm";
 
 /** Rows: { name, price, depository?, lotSize? }. Dealer prices never leave the parser. */
 let rows = [];
 const skipped = []; // { line, reason }
+const depositoryNotes = []; // { kind, sheet?, row?, name, raw, value? }
 let headerDateRaw = null;
 
 if (isPdf) {
@@ -272,6 +286,81 @@ if (isPdf) {
     skipped.push(...ocr.skipped);
     if (!headerDateRaw) headerDateRaw = ocr.headerDateRaw;
   }
+} else if (isXlsx) {
+  // ── native Excel (the partner's format since 06-Aug-2026) ──
+  // No OCR, no column-order guesswork: the retail price and the dealer price
+  // are different cells under different headers, and only the retail one is
+  // ever addressed (see scripts/unlisted-xlsx.mjs).
+  let book;
+  try {
+    book = readUnlistedXlsx(filePath);
+  } catch (err) {
+    console.error(
+      `\nABORTED — ${args.file} could not be read as an Excel price list. Nothing was written to Sanity.\n\n` +
+      `  ${err.message}\n\n` +
+      "  If the partner changed the sheet layout, check the header row and column titles before forcing\n" +
+      "  anything through: the price column has to be the RETAIL one, and that is what the reader verifies.",
+    );
+    process.exit(1);
+  }
+
+  rows = book.rows;
+  skipped.push(...book.skipped);
+  depositoryNotes.push(...book.depositoryNotes);
+  headerDateRaw = book.asOnRaw;
+
+  console.log(
+    `Excel workbook: ${book.sheetCount} sheets, ${book.sheetsRead.length} carrying a "Share Name" header · ` +
+    `${rows.length} rows read · ${book.logos.length} row logos found (not imported here — see npm run logos:unlisted).`,
+  );
+  for (const s of book.sheetsRead) {
+    console.log(`  • ${s.name}: header row ${s.headerRow}, ${s.rowCount} rows  [${s.part}]`);
+  }
+  for (const w of book.warnings) console.log(`Warning: ${w}`);
+
+  // Multi-sheet reading either works or it does not. One sheet producing rows
+  // while the others advertise a "Share Name" header means the walk broke
+  // silently — and a fraction of the list is indistinguishable from a partner
+  // who shrank their list, right up until the wrong prices are published.
+  const producing = book.sheetsRead.filter((s) => s.rowCount > 0);
+  if (book.sheetsRead.length > 1 && producing.length === 1) {
+    console.error(
+      `\nABORTED — only "${producing[0].name}" produced rows, but ${book.sheetsRead.length} sheets carry a ` +
+      `"Share Name" header.\nMulti-sheet reading failed silently. Nothing was written to Sanity.\n\n` +
+      "  This is not a drift problem and --allow-drift will not help: the other sheets are price data that\n" +
+      "  was not read. Fix the reader, not the guard.",
+    );
+    process.exit(1);
+  }
+
+  // The workbook is a conversion of the partner's PDF and carries the PDF
+  // font's ligature codepoints in company names. Every repair is printed.
+  if (book.sanitised.length) {
+    const byCodepoint = new Map();
+    for (const s of book.sanitised) {
+      const agg = byCodepoint.get(s.codepoint) ?? { to: s.to, count: 0, names: [] };
+      agg.count += s.count;
+      agg.names.push(s.name);
+      byCodepoint.set(s.codepoint, agg);
+    }
+    console.log("\nLigature codepoints repaired in company names:");
+    for (const [codepoint, agg] of byCodepoint) {
+      console.log(`  • ${codepoint} → "${agg.to}" · ${agg.count} in ${agg.names.length} name(s): ${agg.names.join(", ")}`);
+    }
+    const confirm = book.sanitised.filter((s) => s.confirm);
+    if (confirm.length) {
+      console.log("\n  ⚠ CONFIRM THESE AGAINST THE PARTNER'S PDF — only one instance of the codepoint exists,");
+      console.log("    so the letters it stands for are inferred from a single name:");
+      for (const s of confirm) console.log(`      ${s.codepoint} → "${s.to}"   ${s.sheet} row ${s.row}: ${s.name}`);
+    }
+  }
+  if (book.unmapped.length) {
+    console.log(
+      "\nWarning: private-use codepoints with NO mapping are still in these names. They are left in place\n" +
+      "rather than deleted — add them to LIGATURE_SUBSTITUTIONS in scripts/unlisted-matching.mjs:",
+    );
+    for (const u of book.unmapped) console.log(`  • ${u.codepoint}   ${u.sheet} row ${u.row}: ${u.name}`);
+  }
 } else {
   const csvRows = parseCsv(readFileSync(filePath, "utf8"));
   if (csvRows.length < 2) { console.error("CSV has no data rows."); process.exit(1); }
@@ -289,13 +378,38 @@ if (isPdf) {
     if (lot !== undefined && (lot === null || !Number.isInteger(lot) || lot < 1)) {
       return skipped.push({ line, reason: `lot size "${lotRaw}" isn't a whole number ≥ 1` });
     }
+    let depository;
+    if (map.depository !== undefined) {
+      const rawDepo = String(r[map.depository] ?? "").trim();
+      const verdict = classifyDepository(rawDepo);
+      depository = verdict.value;
+      if (verdict.unrecognised) depositoryNotes.push({ kind: "unrecognised", row: i + 2, name, raw: rawDepo });
+      else if (verdict.typo) depositoryNotes.push({ kind: "typo", row: i + 2, name, raw: rawDepo, value: verdict.value });
+    }
     rows.push({
       name,
       price,
-      ...(map.depository !== undefined && canonicalDepository(r[map.depository]) ? { depository: canonicalDepository(r[map.depository]) } : {}),
+      ...(depository ? { depository } : {}),
       ...(lot !== undefined ? { lotSize: lot } : {}),
     });
   });
+}
+
+// A depository we can't read is reported, never guessed at and never quietly
+// downgraded — "SDL & CDSL" used to store as "CDSL only", which is a wrong
+// fact on a public page that nothing downstream could have caught.
+if (depositoryNotes.length) {
+  const where = (n) => (n.sheet ? `${n.sheet} row ${n.row}` : `row ${n.row}`);
+  const typos = depositoryNotes.filter((n) => n.kind === "typo");
+  const unknown = depositoryNotes.filter((n) => n.kind === "unrecognised");
+  if (typos.length) {
+    console.log(`\nDepository spellings repaired (${typos.length}):`);
+    for (const n of typos) console.log(`  • ${where(n)} ${n.name}: "${n.raw}" → ${n.value}`);
+  }
+  if (unknown.length) {
+    console.log(`\nWarning: unreadable depository cells (${unknown.length}) — stored with NO depository rather than a guess:`);
+    for (const n of unknown) console.log(`  • ${where(n)} ${n.name}: "${n.raw}"`);
+  }
 }
 
 // ---------- as-of date (always zero-padded ISO) ----------
@@ -308,6 +422,7 @@ if (args.date) {
 }
 if (!asOfDate) {
   if (isPdf && !args.date) console.log("Note: no DATE header found in the PDF — using today. Pass --date to override.");
+  if (isXlsx && !args.date) console.log('Note: no "As on …" date found in the workbook — using today. Pass --date to override.');
   asOfDate = new Date().toISOString().slice(0, 10);
 }
 
@@ -346,7 +461,14 @@ if (check.errors.length) {
 const mutations = [];
 const updated = [];   // { name, company, price }
 const created = [];   // { name, price }
+const relaxed = { boilerplate: [], "reverse-prefix": [] }; // { name, company }
 const claimed = new Map(); // doc._id or new _id → first row name, to catch dupes in one list
+
+/** How a relaxed pass read a name — for the ambiguity report below. */
+const HOW_MATCHED = {
+  boilerplate: 'with the list\'s "Unlisted Shares" boilerplate stripped',
+  "reverse-prefix": "as the full form of a truncated stored name",
+};
 
 for (const row of rows) {
   const target = resolveUnlistedTarget(row.name, existing, slugify);
@@ -354,7 +476,8 @@ for (const row of rows) {
   if (target.ambiguous) {
     skipped.push({
       line: row.name,
-      reason: `truncated name matches ${target.ambiguous.length} companies (${target.ambiguous.map((d) => d.company).slice(0, 3).join(" / ")}) — add the raw name to the right doc's aliases`,
+      reason: `matches ${target.ambiguous.length} companies ${HOW_MATCHED[target.via] ?? "as a truncated name"} ` +
+        `(${target.ambiguous.map((d) => d.company).slice(0, 3).join(" / ")}) — add the raw name to the right doc's aliases`,
     });
     continue;
   }
@@ -379,11 +502,16 @@ for (const row of rows) {
     claimed.set(target.doc._id, row.name);
     // Partner data may update prices — never an existing doc's company/slug.
     mutations.push({ patch: { id: target.doc._id, set: { ...priceFields, ...publishSet } } });
+    // Record the raw list name as an alias whenever the document doesn't
+    // already know it. Every match from a relaxed pass lands here by
+    // construction — that is precisely why the pass was needed — so the same
+    // name resolves EXACTLY on the next run instead of being relaxed again.
     const knownNames = [target.doc.company, ...(target.doc.aliases ?? [])].map(normalizeCompanyName);
     if (!knownNames.includes(normalizeCompanyName(row.name))) {
       mutations.push({ patch: { id: target.doc._id, setIfMissing: { aliases: [] } } });
       mutations.push({ patch: { id: target.doc._id, insert: { after: "aliases[-1]", items: [row.name] } } });
     }
+    if (relaxed[target.via]) relaxed[target.via].push({ name: row.name, company: target.doc.company });
     updated.push({ name: row.name, company: target.doc.company, price: row.price });
   } else {
     const company = cleanCompanyName(target.clean ?? splitEllipsis(row.name).clean);
@@ -418,6 +546,26 @@ if (updated.length) {
   console.log("\nUpdated:");
   for (const u of updated) console.log(`  • ${u.company}  ₹${u.price.toLocaleString("en-IN")}${u.name !== u.company ? `  (list name: "${u.name}")` : ""}`);
 }
+
+// The two relaxed matching passes are the ones worth a human's eyes: they are
+// the difference between updating an existing company and forking a duplicate
+// of it, and neither is an exact name match. Printed on every run, dry or not.
+if (relaxed.boilerplate.length || relaxed["reverse-prefix"].length) {
+  console.log("\n─── Matched by a RELAXED pass — read these before writing ───");
+  if (relaxed.boilerplate.length) {
+    console.log(`\n  (a) list name carries the "Unlisted Shares" row boilerplate — ${relaxed.boilerplate.length}:`);
+    for (const m of relaxed.boilerplate) console.log(`      "${m.name}"\n          → ${m.company}`);
+  }
+  if (relaxed["reverse-prefix"].length) {
+    console.log(`\n  (b) full list name matched onto a TRUNCATED stored name — ${relaxed["reverse-prefix"].length}:`);
+    for (const m of relaxed["reverse-prefix"]) console.log(`      "${m.name}"\n          → ${m.company}`);
+  }
+  console.log(
+    "\n  Each of these appends the list name to that document's aliases, so it matches exactly from the\n" +
+    "  next run on. A wrong one here means a price on the wrong company — check them against the file.",
+  );
+}
+
 if (created.length) {
   console.log(args.publish
     ? "\nCreated (live on the site after the next revalidation):"
