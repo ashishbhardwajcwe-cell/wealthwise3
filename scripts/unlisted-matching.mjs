@@ -14,6 +14,73 @@
 export const PRICE_MIN_EXCL = 0;
 export const PRICE_MAX_EXCL = 5_000_000;
 
+// ─── text sanitising ────────────────────────────────────────────────
+//
+// The partner's Excel workbook is a conversion of their PDF, and the converter
+// carried the PDF font's LIGATURE GLYPHS across as codepoints instead of the
+// letters they stand for. Two of the three land in the Unicode private-use
+// area, where they mean whatever the original font said they meant and nothing
+// at all anywhere else — so they have to be mapped explicitly, from the names
+// they were observed in, rather than guessed at.
+
+/**
+ * Ligature codepoint → the letters it stands for on the partner's list.
+ * `confirm` marks a mapping with only ONE observed instance: it is reported
+ * separately on every run so it can be checked against the partner's PDF
+ * before the repaired name is trusted.
+ */
+export const LIGATURE_SUBSTITUTIONS = [
+  // U+FB01 is the real Unicode "ﬁ" ligature (Elofic, Indofil, Market
+  // Simplified, SMILE Microfinance). NFKC would expand it on its own; it is
+  // listed here so the substitution is counted and logged like the others.
+  { char: "\uFB01", to: "fi", confirm: false },
+  // Private use. Bolzen and Mutter, Calcutta Stock Exchange, Ramaraju
+  // Surgical Cotton Mills — all three read as "tt".
+  { char: "\uE009", to: "tt", confirm: false },
+  // Private use, ONE instance: "Ei<U+E007>il Water Infra" → "Eiffil".
+  { char: "\uE007", to: "ff", confirm: true },
+];
+
+/** Unicode private-use areas — codepoints with no meaning outside their font. */
+const PRIVATE_USE_RE = /[\uE000-\uF8FF]|[\u{F0000}-\u{FFFFD}]|[\u{100000}-\u{10FFFD}]/gu;
+
+/** "U+E007" for a character, for logs and flags. */
+const codepointLabel = (ch) => `U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}`;
+
+/**
+ * Clean one string read off the partner's list: expand the known ligature
+ * codepoints, NFKC-normalise, collapse whitespace.
+ *
+ * Returns { text, substitutions, unmapped }:
+ *  - `substitutions` is one entry per codepoint actually replaced, so the
+ *    caller can log every repair it made to a company name;
+ *  - `unmapped` lists private-use codepoints still present afterwards. Those
+ *    are NOT stripped — a name is a public-facing fact, and silently deleting
+ *    a letter from it is worse than showing a glyph that is obviously wrong.
+ *    They are reported instead, so a new ligature gets added to the table
+ *    above rather than quietly corrupting a company name.
+ */
+export function sanitizeListText(raw) {
+  let text = String(raw ?? "");
+  const substitutions = [];
+
+  for (const s of LIGATURE_SUBSTITUTIONS) {
+    const parts = text.split(s.char);
+    if (parts.length === 1) continue;
+    substitutions.push({
+      codepoint: codepointLabel(s.char),
+      to: s.to,
+      count: parts.length - 1,
+      confirm: !!s.confirm,
+    });
+    text = parts.join(s.to);
+  }
+
+  const unmapped = [...new Set(text.match(PRIVATE_USE_RE) ?? [])].map(codepointLabel);
+  text = text.normalize("NFKC").replace(/\s+/g, " ").trim();
+  return { text, substitutions, unmapped };
+}
+
 // ─── name normalisation ─────────────────────────────────────────────
 
 /**
@@ -41,19 +108,53 @@ export function splitEllipsis(raw) {
 
 // ─── depository ─────────────────────────────────────────────────────
 
+// "SDL & CDSL" is the partner's typo for "NSDL & CDSL" (SK Finance Limited on
+// the 06-Aug-2026 list). It is matched here as its own alternative so the text
+// row grammar doesn't fall through to the bare "CDSL" alternative and leave
+// "SDL & " glued onto the end of the company name.
 const DEPOSITORY_RE =
-  /(NSDL\s*&(?:AMP;)?\s*CDSL|CDSL\s*&(?:AMP;)?\s*NSDL|ONLY\s+NSDL|NSDL\s+ONLY|ONLY\s+CDSL|CDSL\s+ONLY|NSDL|CDSL)/i;
+  /(NSDL\s*&(?:AMP;)?\s*CDSL|CDSL\s*&(?:AMP;)?\s*NSDL|SDL\s*&(?:AMP;)?\s*CDSL|ONLY\s+NSDL|NSDL\s+ONLY|ONLY\s+CDSL|CDSL\s+ONLY|NSDL|CDSL)/i;
 
-/** Canonical depository label from any of the partner's spellings. Tolerant
- *  of OCR noise ("&CDsSL" → cdssl), hence the s{1,2} in the CDSL test. */
+/** A cell that says "there is no depository here": blank, an em/en dash
+ *  ("—", E Trav Tech Limited), "N/A", "nil". Never guessed at. */
+const NO_DEPOSITORY_RE = /^(?:n[.\/\s]*a\.?|nil|none|[\s\-–—._]*)$/i;
+
+/**
+ * Classify a depository cell. Returns
+ *   { value }                       — recognised; `value` is the canonical label
+ *   { value: undefined, blank }     — the cell says "none" ("—", "N/A", empty)
+ *   { value: undefined, unrecognised } — text we can't read; the caller must
+ *                                        report it rather than store a guess
+ * and sets `typo` when a spelling had to be repaired to get there.
+ *
+ * Tolerant of OCR noise ("&CDsSL" → cdssl), hence the s{1,2} in the CDSL test.
+ */
+export function classifyDepository(raw) {
+  const text = String(raw ?? "").trim();
+  if (NO_DEPOSITORY_RE.test(text)) return { value: undefined, blank: true };
+
+  const letters = text.toLowerCase().replace(/[^a-z]/g, "");
+  // A bare "sdl" is "nsdl" with the N dropped. Without this repair the letters
+  // of "SDL & CDSL" ("sdlcdsl") fail /nsdl/ while /cdsl/ still matches, and the
+  // row is silently DOWNGRADED to "CDSL only" — a wrong fact on a public page,
+  // and one nothing downstream could ever notice. "cdsl" and the OCR-noisy
+  // "cdssl" contain no "sdl" of their own, so this can only fix the typo.
+  const repaired = letters.replace(/(?<!n)sdl/g, "nsdl");
+  const typo = repaired !== letters ? { typo: text } : {};
+
+  const nsdl = /nsdl/.test(repaired);
+  const cdsl = /cds{1,2}l/.test(repaired);
+  if (nsdl && cdsl) return { value: "NSDL & CDSL", ...typo };
+  if (nsdl) return { value: "NSDL only", ...typo };
+  if (cdsl) return { value: "CDSL only", ...typo };
+  return { value: undefined, unrecognised: text };
+}
+
+/** Canonical depository label from any of the partner's spellings, or
+ *  undefined when the cell names none / can't be read. See classifyDepository
+ *  when you need to tell those two apart. */
 export function canonicalDepository(raw) {
-  const letters = String(raw ?? "").toLowerCase().replace(/[^a-z]/g, "");
-  const nsdl = /nsdl/.test(letters);
-  const cdsl = /cds{1,2}l/.test(letters);
-  if (nsdl && cdsl) return "NSDL & CDSL";
-  if (nsdl) return "NSDL only";
-  if (cdsl) return "CDSL only";
-  return undefined;
+  return classifyDepository(raw).value;
 }
 
 // ─── number tokens ──────────────────────────────────────────────────
@@ -355,6 +456,35 @@ export function mapCsvHeader(headerCells) {
   };
 }
 
+/**
+ * CONFIDENTIALITY LOCK for the partner's spreadsheet, where the dealer price
+ * sits in column E immediately beside the retail price in column D.
+ *
+ * mapCsvHeader already refuses to select any dealer/cost/buy column — this is
+ * the second, explicit check: the column it *did* select must SAY retail. A
+ * renamed header, a reordered sheet, or a header row detected one row off
+ * would all leave mapCsvHeader with a single plausible "price" column and no
+ * way to know it picked the wrong one. Anything but a retail header stops the
+ * read rather than risk the dealer figure reaching a publicly readable dataset.
+ *
+ * Deliberately NOT applied to the generic CSV path, where a partner sheet with
+ * one plain "Price" column is a legitimate (and unambiguous) shape.
+ *
+ * Throws on failure; returns the header text on success. Only header LABELS
+ * are ever quoted here — never a cell value from the dealer column.
+ */
+export function assertRetailPriceColumn(headerCells, priceIdx, where = "the price list") {
+  const header = String(headerCells[priceIdx] ?? "").trim();
+  if (!/retail/i.test(header)) {
+    throw new Error(
+      `${where}: the price column resolved to "${header || "(blank)"}", which is not a RETAIL price column. ` +
+      `Refusing to read it — the dealer/cost price must never be imported. ` +
+      `Headers seen: ${headerCells.map((h) => `"${String(h ?? "").trim()}"`).join(", ")}`,
+    );
+  }
+  return header;
+}
+
 // ─── corruption signatures ──────────────────────────────────────────
 //
 // The 31-Jul-2026 import wrote 179 documents whose `company` carried the
@@ -483,7 +613,9 @@ export function validateImportRows(rows, { previousRowCount = 0, previousAsOfDat
   if (boilerplate.length > rows.length * 0.5) {
     warnings.push(
       `${boilerplate.length} of ${rows.length} names contain "Unlisted Shares" — that is the list's row ` +
-      `boilerplate, not part of a company name. These will not match existing documents.`,
+      `boilerplate, not part of a company name. Matching strips it, so these still resolve onto their ` +
+      `existing documents; but any row that does NOT match is CREATED with the boilerplate baked into ` +
+      `its company name. Read the "Created" list before writing.`,
     );
   }
 
@@ -508,13 +640,45 @@ export function validateImportRows(rows, { previousRowCount = 0, previousAsOfDat
 
 // ─── matching ───────────────────────────────────────────────────────
 
+/** Global twin of LIST_BOILERPLATE_RE, for stripping every occurrence. */
+const LIST_BOILERPLATE_RE_G = /\bunlisted\s+shares?\b/gi;
+
+/**
+ * Normalise a name with the partner list's row boilerplate removed, so
+ * "APL Metals Unlisted Shares" and "APL Metals" both reduce to "apl metals".
+ * A trailing "price" goes too ("… Unlisted Shares Price").
+ *
+ * Local on purpose: normalizeCompanyName is shared with the audit, the logo
+ * extractor and clean-unlisted-names, where "Zepto Unlisted Shares (Equity)"
+ * has to keep reading as its own distinct stored name.
+ */
+function normalizeWithoutBoilerplate(raw) {
+  return normalizeCompanyName(String(raw ?? "").replace(LIST_BOILERPLATE_RE_G, " "))
+    .replace(/\s*\bprice\b$/, "")
+    .trim();
+}
+
+/**
+ * How short a stored name may be and still swallow a longer incoming one in
+ * the reverse-prefix pass. "Inox" (4) must never claim "Inox Clean Energy" or
+ * "Inox Leasing and Finance" — they are three different companies — while
+ * "Signify Innovations (Previously Ph" (33 normalised) is unmistakably the
+ * truncated form of exactly one.
+ */
+const REVERSE_PREFIX_MIN = 12;
+
 /**
  * Resolve a raw partner-list name against the existing Sanity docs.
- * Order: slug → aliases → normalised company name → (truncated names only)
- * unique prefix of company/alias. Docs: { _id, company, slug?, aliases? }.
+ * Order: slug → aliases → normalised company name → space-insensitive
+ * company/alias → id collision → (a) boilerplate-insensitive → (b) reverse
+ * prefix → (truncated names only) unique prefix of company/alias.
+ * Docs: { _id, company, slug?, aliases? }.
  *
  * Returns { doc } on a match, { create: true } for a confident new company,
- * or { ambiguous: [...] } when a truncated name matches several docs.
+ * or { ambiguous: [...] } when a name matches several docs. Matches from the
+ * two relaxed passes also carry { via, alias }: `alias` is the raw incoming
+ * name, which the importer appends to the document's aliases so the next run
+ * matches it exactly rather than relaxing again.
  */
 export function resolveUnlistedTarget(rawName, docs, slugify) {
   const { clean, truncated } = splitEllipsis(rawName);
@@ -542,9 +706,48 @@ export function resolveUnlistedTarget(rawName, docs, slugify) {
   if (compactHit) return { doc: compactHit };
 
   // The importer's doc ids are unlistedShare-<slug>; treat an id collision as
-  // the same company so a create can never clobber an existing document.
+  // the same company so a create can never clobber an existing document. This
+  // stays AHEAD of the two relaxed passes below: an exact id match is a
+  // stronger statement about identity than any name-shape heuristic, and
+  // routing the row elsewhere would leave a create colliding with this id.
   const byId = docs.find((d) => d._id === `unlistedShare-${slug}`);
   if (byId) return { doc: byId };
+
+  // ── (a) boilerplate-insensitive ────────────────────────────────────
+  // The 06-Aug-2026 Excel list spells 97 of its 183 names "<Company> Unlisted
+  // Shares"; that is the list's ROW BOILERPLATE, not part of any company's
+  // name, and the stored documents never carried it. Compare with it stripped
+  // from BOTH sides — one candidate matches, two or more is ambiguous and is
+  // reported rather than guessed.
+  const bare = normalizeWithoutBoilerplate(clean);
+  if (bare) {
+    const candidates = docs.filter(
+      (d) =>
+        normalizeWithoutBoilerplate(d.company) === bare ||
+        (d.aliases ?? []).some((a) => normalizeWithoutBoilerplate(a) === bare),
+    );
+    if (candidates.length === 1) return { doc: candidates[0], via: "boilerplate", alias: clean };
+    if (candidates.length > 1) return { ambiguous: candidates, via: "boilerplate" };
+  }
+
+  // ── (b) reverse prefix ─────────────────────────────────────────────
+  // The mirror image of the truncated-name branch below. The old OCR cut long
+  // names off mid-word ("Signify Innovations (Previously Ph"), and those
+  // stumps are what is STORED; the Excel list now supplies the full name. So
+  // the stored name is the prefix and the incoming one is the long form —
+  // exactly the opposite of the case handled further down.
+  //
+  // The prefix is deliberately not word-aligned: truncation happens mid-word,
+  // which is the whole point. REVERSE_PREFIX_MIN is what keeps that safe.
+  const isReversePrefix = (storedRaw) => {
+    const stored = normalizeCompanyName(storedRaw);
+    return stored.length >= REVERSE_PREFIX_MIN && (norm.startsWith(stored) || bare.startsWith(stored));
+  };
+  const longer = docs.filter(
+    (d) => isReversePrefix(d.company) || (d.aliases ?? []).some((a) => isReversePrefix(a)),
+  );
+  if (longer.length === 1) return { doc: longer[0], via: "reverse-prefix", alias: clean };
+  if (longer.length > 1) return { ambiguous: longer, via: "reverse-prefix" };
 
   if (truncated) {
     const candidates = docs.filter(

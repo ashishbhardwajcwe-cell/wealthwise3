@@ -4,7 +4,7 @@
  *
  *   node scripts/unlisted-pipeline.test.mjs      (or: npm run test:unlisted)
  *
- * No dependencies, no network, no Sanity. Three things are covered, all of
+ * No dependencies, no network, no Sanity. Six things are covered, all of
  * them invisible in a normal run and expensive to get wrong:
  *
  *  - The 31-Jul-2026 corruption itself, reproduced from the text-layer row
@@ -17,19 +17,30 @@
  *  - The audit's delete decision (auditUnlistedDocs). It deletes against a
  *    live, publicly readable dataset, so "has a clean twin" and "carries
  *    hand-curated content" have to be exactly right.
+ *  - The DEALER column never being selected as the price. Confidential, and a
+ *    mis-selection reads as a perfectly ordinary import.
+ *  - The two relaxed matching passes, which decide whether the 06-Aug Excel
+ *    list updates the existing companies or forks a duplicate of the dataset.
+ *  - The .xlsx reader's multi-sheet walk. Reading one sheet of seven looks
+ *    exactly like a partner who shrank their list.
  */
 
 import { strict as assert } from "node:assert";
 import {
   parsePriceListText, priceFusedName, validateImportRows,
   hasUnbalancedBracket, stripCorruption, trailingNumber,
+  mapCsvHeader, assertRetailPriceColumn, resolveUnlistedTarget,
+  canonicalDepository, classifyDepository, sanitizeListText,
 } from "./unlisted-matching.mjs";
 import {
   auditUnlistedDocs, structuralSignatures, selectPurgeTargets,
   asOfDateHistogram, confirmExactly,
 } from "./audit-unlisted.mjs";
 import { Readable } from "node:stream";
+import { crc32 } from "node:zlib";
 import { cleanUnlistedName } from "./clean-unlisted-names.mjs";
+import { readUnlistedXlsxBytes } from "./unlisted-xlsx.mjs";
+import { slugify, normalizeIsoDate } from "./import-shared.mjs";
 
 let passed = 0;
 const failures = [];
@@ -386,6 +397,513 @@ test("the purge confirmation accepts only the exact phrase", async () => {
 
 test("closed stdin is not consent", async () => {
   assert.equal(await confirmExactly("PURGE 2026-08-01", { input: Readable.from([]), out: silent }), false);
+});
+
+/* ---------- the dealer column ---------- */
+
+/**
+ * The single most expensive thing this pipeline could get wrong. The dealer
+ * (cost) price is confidential and sits next to the retail price on the
+ * partner's sheet; publishing it would look like an ordinary successful
+ * import. mapCsvHeader identifies dealer columns only to exclude them, and
+ * assertRetailPriceColumn then checks what was actually selected.
+ */
+const XL_HEADER = ["S.No", "", "Share Name", "Retail Price", "Dealer Price", "Depository", "Min. Lot Size"];
+const XL_HEADER_DEALER_FIRST = ["S.No", "", "Share Name", "Dealer Price", "Retail Price", "Depository", "Min. Lot Size"];
+
+test("a Dealer Price column is never selected, in either column order", () => {
+  const asWritten = mapCsvHeader(XL_HEADER);
+  assert.equal(asWritten.price, 3, "retail, not the dealer column beside it");
+  assert.equal(asWritten.name, 2);
+  assert.equal(asWritten.depository, 5);
+  assert.equal(asWritten.lot, 6);
+
+  // …and the same when the partner puts the dealer column FIRST, where "the
+  // first price-ish column" would pick exactly the wrong one.
+  const swapped = mapCsvHeader(XL_HEADER_DEALER_FIRST);
+  assert.equal(swapped.price, 4, "still retail — position must not decide this");
+  assert.equal(swapped.name, 2);
+
+  // No mapped column of either layout may land on the dealer header.
+  for (const [headers, map] of [[XL_HEADER, asWritten], [XL_HEADER_DEALER_FIRST, swapped]]) {
+    for (const [field, idx] of Object.entries(map)) {
+      assert.ok(!/dealer/i.test(headers[idx]), `${field} resolved to "${headers[idx]}"`);
+    }
+  }
+});
+
+test("a sheet whose only price column is the dealer one is refused outright", () => {
+  const map = mapCsvHeader(["S.No", "", "Share Name", "Dealer Price", "Depository"]);
+  assert.ok(map.error, "no retail column means no import, never a fallback to dealer");
+  assert.match(map.error, /no retail price column/);
+});
+
+test("mapCsvHeader tolerates the blank header on the logo column", () => {
+  // Column B holds the row logos and has no title at all. A blank header must
+  // simply match nothing — not throw, and not be mistaken for a name column.
+  const map = mapCsvHeader(XL_HEADER);
+  assert.ok(!map.error);
+  assert.notEqual(map.name, 1);
+  assert.notEqual(map.price, 1);
+  assert.deepEqual(mapCsvHeader(["", "Share Name", "Retail Price"]), { name: 1, price: 2 });
+});
+
+test("assertRetailPriceColumn is the second lock, and it says retail or nothing", () => {
+  assert.equal(assertRetailPriceColumn(XL_HEADER, 3), "Retail Price");
+  // A single plainly-named "Price" column is unambiguous to mapCsvHeader but
+  // not provably the retail one, so the Excel path refuses it.
+  const plain = ["Share Name", "Price", "Dealer Price"];
+  assert.equal(mapCsvHeader(plain).price, 1, "mapCsvHeader alone would accept it");
+  assert.throws(() => assertRetailPriceColumn(plain, 1), /not a RETAIL price column/);
+  assert.throws(() => assertRetailPriceColumn(XL_HEADER, 4), /not a RETAIL price column/,
+    "and it refuses the dealer column even when handed it directly");
+});
+
+/* ---------- depository ---------- */
+
+test('"SDL & CDSL" is a typo for NSDL, not a reason to drop NSDL', () => {
+  // SK Finance Limited on the 06-Aug list. The letters "sdlcdsl" fail /nsdl/
+  // while /cdsl/ still matches, so this used to store as "CDSL only" — a wrong
+  // fact on a public page, and one nothing downstream could have caught.
+  assert.equal(canonicalDepository("SDL & CDSL"), "NSDL & CDSL");
+  assert.equal(classifyDepository("SDL & CDSL").typo, "SDL & CDSL", "and it is reported, not silent");
+
+  // The repair must not touch anything that was already right.
+  assert.equal(canonicalDepository("NSDL & CDSL"), "NSDL & CDSL");
+  assert.equal(canonicalDepository("CDSL & NSDL"), "NSDL & CDSL");
+  assert.equal(canonicalDepository("Only CDSL"), "CDSL only");
+  assert.equal(canonicalDepository("CDSL"), "CDSL only");
+  assert.equal(canonicalDepository("NSDL"), "NSDL only");
+  assert.equal(canonicalDepository("NSDL &CDsSL"), "NSDL & CDSL", "OCR noise still tolerated");
+  for (const clean of ["NSDL & CDSL", "Only CDSL", "CDSL", "NSDL"]) {
+    assert.equal(classifyDepository(clean).typo, undefined, `"${clean}" needs no repair`);
+  }
+});
+
+test('an absent depository stays absent — "—" is not a guess', () => {
+  // E Trav Tech Limited. Blank, dash and N/A all mean "none on this row".
+  for (const none of ["—", "-", "–", "", "   ", "N/A", "n.a.", "nil"]) {
+    const v = classifyDepository(none);
+    assert.equal(v.value, undefined, `"${none}" must not resolve to a depository`);
+    assert.equal(v.blank, true, `"${none}" is blank, not unreadable`);
+    assert.equal(v.unrecognised, undefined);
+  }
+  assert.equal(canonicalDepository("—"), undefined);
+});
+
+test("an unreadable depository is flagged, never downgraded", () => {
+  const v = classifyDepository("Held with XYZ");
+  assert.equal(v.value, undefined);
+  assert.equal(v.unrecognised, "Held with XYZ", "the caller has to be able to report this");
+});
+
+/* ---------- matching the 06-Aug Excel names ---------- */
+
+const share = (id, company, aliases = []) => ({ _id: id, company, slug: slugify(company), aliases });
+
+test('(a) the list\'s "Unlisted Shares" boilerplate does not fork a duplicate', () => {
+  // 97 of the 183 incoming names carry it; not one stored name does.
+  const docs = [share("apl", "APL Metals"), share("hero", "Hero FinCorp")];
+  const t = resolveUnlistedTarget("APL Metals Unlisted Shares", docs, slugify);
+  assert.equal(t.doc?._id, "apl");
+  assert.equal(t.via, "boilerplate");
+  assert.equal(t.alias, "APL Metals Unlisted Shares", "the raw name is recorded so the next run matches exactly");
+
+  // It works through aliases and through a trailing "Price" too…
+  const viaAlias = resolveUnlistedTarget("Hero FinCorp Limited Unlisted Shares Price", [share("hero", "Hero Fincorp Ltd", ["Hero FinCorp Limited"])], slugify);
+  assert.equal(viaAlias.doc?._id, "hero");
+  // …and in the other direction, when the STORED name is the one carrying it.
+  const stored = resolveUnlistedTarget("NCDEX Limited", [share("ncdex", "NCDEX Limited Unlisted Shares")], slugify);
+  assert.equal(stored.doc?._id, "ncdex");
+});
+
+test("(a) two stored companies that collapse to the same name are ambiguous, not guessed", () => {
+  const docs = [share("a", "Sterlite Power"), share("b", "Sterlite Power Unlisted Shares")];
+  const t = resolveUnlistedTarget("Sterlite Power Unlisted Shares Price", docs, slugify);
+  assert.ok(t.ambiguous, "two candidates must never resolve to one");
+  assert.equal(t.doc, undefined);
+});
+
+test("(b) a stored name truncated by the old OCR is matched by the new full name", () => {
+  // A real 22-Jul document. The stump is what is STORED; the Excel list now
+  // supplies the whole thing — the reverse of the truncated-name case.
+  const docs = [share("signify", "Signify Innovations (Previously Ph"), share("tata", "Tata Capital")];
+  const t = resolveUnlistedTarget(
+    "Signify Innovations India Limited (Previously Philips Lighting India Limited) Unlisted Shares",
+    docs, slugify,
+  );
+  assert.equal(t.doc?._id, "signify");
+  assert.equal(t.via, "reverse-prefix");
+  assert.ok(t.alias, "the full name is recorded as an alias");
+
+  for (const stump of ["Sterlite Electric Limited (Formerly", "Fusion Techstack Limited (Forme"]) {
+    const hit = resolveUnlistedTarget(`${stump}ly Something) Unlisted Shares`, [share("x", stump)], slugify);
+    assert.equal(hit.doc?._id, "x", `"${stump}" must match its own full name`);
+  }
+});
+
+test("(b) Inox Clean Energy and Inox Leasing stay different companies", () => {
+  // The length floor exists for exactly this: three companies share a first
+  // word, and a short stored name must not swallow any longer one.
+  const docs = [
+    share("clean", "Inox Clean Energy Limited"),
+    share("leasing", "Inox Leasing and Finance Limited"),
+  ];
+  const clean = resolveUnlistedTarget("Inox Clean Energy Limited", docs, slugify);
+  const leasing = resolveUnlistedTarget("Inox Leasing and Finance Limited Unlisted Shares", docs, slugify);
+  assert.equal(clean.doc?._id, "clean");
+  assert.equal(leasing.doc?._id, "leasing");
+  assert.notEqual(clean.doc._id, leasing.doc._id, "these are different companies");
+});
+
+test("(b) a short stored name never swallows a longer incoming one", () => {
+  const docs = [share("inox", "Inox")]; // 4 characters normalised
+  for (const incoming of ["Inox Clean Energy Limited", "Inox Leasing and Finance Limited Unlisted Shares"]) {
+    const t = resolveUnlistedTarget(incoming, docs, slugify);
+    assert.equal(t.doc, undefined, `"${incoming}" must not resolve onto "Inox"`);
+    assert.equal(t.create, true, "it is a new company, and gets reviewed as one");
+  }
+  // The floor is on the STORED name, so a 12-character stump still works.
+  const t = resolveUnlistedTarget("Studds Accessories Limited Unlisted Shares", [share("s", "Studds Access")], slugify);
+  assert.equal(t.doc?._id, "s");
+});
+
+test("(b) two stored stumps of the same name are ambiguous, not guessed", () => {
+  const docs = [share("a", "Sterlite Power Transmis"), share("b", "Sterlite Power Transmission Ser")];
+  const t = resolveUnlistedTarget("Sterlite Power Transmission Services Limited", docs, slugify);
+  assert.ok(t.ambiguous);
+  assert.equal(t.ambiguous.length, 2);
+  assert.equal(t.via, "reverse-prefix");
+});
+
+test("the relaxed passes never displace an exact match", () => {
+  // "Bira" is 4 characters so (b) can't fire, but "Bira 91 Unlisted Shares"
+  // must land on "Bira 91" rather than anywhere else regardless.
+  const docs = [share("bira91", "Bira 91"), share("bira", "Bira")];
+  assert.equal(resolveUnlistedTarget("Bira 91", docs, slugify).doc._id, "bira91");
+  assert.equal(resolveUnlistedTarget("Bira 91 Unlisted Shares", docs, slugify).doc._id, "bira91");
+  assert.equal(resolveUnlistedTarget("Bira", docs, slugify).doc._id, "bira");
+});
+
+/* ---------- the ligature sanitiser ---------- */
+
+test("the ligature sanitiser repairs the codepoints the PDF→Excel conversion left behind", () => {
+  const fix = (s) => sanitizeListText(s).text;
+  // U+FB01 → "fi"
+  assert.equal(fix("Elo\uFB01c Industries Limited"), "Elofic Industries Limited");
+  assert.equal(fix("Indo\uFB01l Industries Limited"), "Indofil Industries Limited");
+  assert.equal(fix("Market Simpli\uFB01ed Technologies"), "Market Simplified Technologies");
+  assert.equal(fix("SMILE Micro\uFB01nance Limited"), "SMILE Microfinance Limited");
+  // U+E009 → "tt"
+  assert.equal(fix("Bolzen and Mu\uE009er"), "Bolzen and Mutter");
+  assert.equal(fix("Calcu\uE009a Stock Exchange"), "Calcutta Stock Exchange");
+  assert.equal(fix("Ramaraju Surgical Co\uE009on Mills"), "Ramaraju Surgical Cotton Mills");
+  // U+E007 → "ff"
+  assert.equal(fix("Ei\uE007il Water Infra"), "Eiffil Water Infra");
+});
+
+test("the one-instance codepoint is flagged for confirmation against the PDF", () => {
+  const eiffil = sanitizeListText("Ei\uE007il Water Infra");
+  const sub = eiffil.substitutions.find((s) => s.codepoint === "U+E007");
+  assert.deepEqual(sub, { codepoint: "U+E007", to: "ff", count: 1, confirm: true });
+  // The well-attested ones are logged but need no confirmation.
+  assert.equal(sanitizeListText("Calcu\uE009a").substitutions[0].confirm, false);
+  assert.equal(sanitizeListText("Elo\uFB01c").substitutions[0].confirm, false);
+  assert.deepEqual(sanitizeListText("Tata Capital").substitutions, [], "a clean name substitutes nothing");
+});
+
+test("every substitution is counted, so the run can log what it changed", () => {
+  const r = sanitizeListText("Co\uE009on and Mu\uE009er and Elo\uFB01c");
+  assert.equal(r.text, "Cotton and Mutter and Elofic");
+  assert.equal(r.substitutions.find((s) => s.codepoint === "U+E009").count, 2);
+  assert.equal(r.substitutions.find((s) => s.codepoint === "U+FB01").count, 1);
+});
+
+test("an UNKNOWN private-use codepoint is reported, never silently deleted", () => {
+  // Deleting it would hand back a plausible-looking but wrong company name.
+  const r = sanitizeListText("Acme \uE042 Steel");
+  assert.deepEqual(r.unmapped, ["U+E042"]);
+  assert.ok(r.text.includes("\uE042"), "left in place so the damage is visible");
+  assert.deepEqual(sanitizeListText("Elo\uFB01c").unmapped, [], "a mapped codepoint is not left over");
+});
+
+test("names are NFKC-normalised and their whitespace collapsed", () => {
+  assert.equal(sanitizeListText("  Tata   Capital \n Limited ").text, "Tata Capital Limited");
+  assert.equal(sanitizeListText("Ｔata Ｃapital").text, "Tata Capital", "full-width letters fold to ASCII");
+  assert.equal(sanitizeListText(undefined).text, "");
+});
+
+/* ---------- the .xlsx reader ---------- */
+
+/**
+ * A workbook is a zip of XML parts, so the fixture is built as one — stored
+ * (uncompressed) entries, which the reader handles alongside Excel's deflate.
+ * Everything the real file does that could break the reader is reproduced:
+ * the r:id → sheetN.xml mapping deliberately does NOT follow tab order, the
+ * header sits on row 2 under a title row, column B has a blank header, and
+ * two of the three sheets are not price lists at all.
+ */
+function storedZip(files) {
+  const locals = [];
+  const central = [];
+  let offset = 0;
+  for (const { name, data } of files) {
+    const nameBuf = Buffer.from(name, "utf8");
+    const body = Buffer.isBuffer(data) ? data : Buffer.from(data, "utf8");
+    const sum = crc32(body);
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt32LE(sum, 14);
+    local.writeUInt32LE(body.length, 18);
+    local.writeUInt32LE(body.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    locals.push(local, nameBuf, body);
+
+    const entry = Buffer.alloc(46);
+    entry.writeUInt32LE(0x02014b50, 0);
+    entry.writeUInt16LE(20, 4);
+    entry.writeUInt16LE(20, 6);
+    entry.writeUInt32LE(sum, 16);
+    entry.writeUInt32LE(body.length, 20);
+    entry.writeUInt32LE(body.length, 24);
+    entry.writeUInt16LE(nameBuf.length, 28);
+    entry.writeUInt32LE(offset, 42);
+    central.push(entry, nameBuf);
+
+    offset += local.length + nameBuf.length + body.length;
+  }
+  const dir = Buffer.concat(central);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(files.length, 8);
+  eocd.writeUInt16LE(files.length, 10);
+  eocd.writeUInt32LE(dir.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, dir, eocd]);
+}
+
+const xmlEscape = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const colName = (i) => {
+  let s = "", n = i + 1;
+  while (n > 0) { s = String.fromCharCode(65 + ((n - 1) % 26)) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+};
+
+/** Build a worksheet part from [rowNumber, cells[]]; strings go through the
+ *  shared string table, exactly as Excel writes them. */
+function sheetPart(rows, sst, extra = "") {
+  const body = rows.map(([n, cells]) => {
+    const xml = cells.map((v, i) => {
+      if (v === null || v === undefined || v === "") return "";
+      const ref = `${colName(i)}${n}`;
+      if (typeof v === "number") return `<c r="${ref}"><v>${v}</v></c>`;
+      let idx = sst.indexOf(v);
+      if (idx === -1) idx = sst.push(v) - 1;
+      return `<c r="${ref}" t="s"><v>${idx}</v></c>`;
+    }).join("");
+    return `<row r="${n}">${xml}</row>`;
+  }).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData>${extra}</worksheet>`;
+}
+
+const REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+
+function buildWorkbook() {
+  const sst = [];
+  const header = ["S.No", "", "Share Name", "Retail Price", "Dealer Price", "Depository", "Min. Lot Size"];
+
+  // Sheet "A-M". Row 1 is the title, row 2 the header, data from row 3 —
+  // derived by the reader, never assumed.
+  //
+  // Every DEALER figure below is unique across the whole fixture — no S.No,
+  // retail price or lot size shares a value with one — so the confidentiality
+  // test can search the reader's entire output for them and mean it.
+  const am = sheetPart([
+    [1, ["Unlisted Shares Price List — As on 06 Aug 2026"]],
+    [2, header],
+    [3, [1, "", "APL Metals Unlisted Shares", 385, 371, "NSDL & CDSL", 100]],
+    [4, [2, "", "Elo\uFB01c Industries Limited", 1200, 1151, "Only CDSL", 50]],
+    [6, [3, "", "Inox Clean Energy Limited", 940, 901, "NSDL", 25]],
+  ], sst, '<drawing r:id="rId1"/>');
+
+  const nz = sheetPart([
+    [1, ["Unlisted Shares Price List — As on 06 Aug 2026"]],
+    [2, header],
+    [3, [1, "", "SK Finance Limited", 940, 902, "SDL & CDSL", 25]],
+    [4, [2, "", "E Trav Tech Limited", 55, 51, "—", 1000]],
+    [5, [3, "", "", 999, 991, "NSDL", 10]],
+    [6, [4, "", "Zzz Holdings Limited", "on request", 992, "NSDL", 10]],
+  ], sst, "");
+
+  const cover = sheetPart([
+    [1, ["Unlisted Shares Price List"]],
+    [2, ["Prices are indicative and subject to availability."]],
+  ], sst, "");
+
+  const sharedStrings =
+    `<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sst.length}" uniqueCount="${sst.length}">` +
+    sst.map((s) => `<si><t>${xmlEscape(s)}</t></si>`).join("") + "</sst>";
+
+  return storedZip([
+    { name: "[Content_Types].xml", data: '<?xml version="1.0"?><Types/>' },
+    {
+      name: "_rels/.rels",
+      data: `<?xml version="1.0"?><Relationships xmlns="${REL}"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    },
+    {
+      // Tab order is Cover, A-M, N-Z — but the r:ids point at sheet1/sheet7/
+      // sheet2. Anything that assumes file numbering follows tab order reads
+      // the cover page as a price list and loses two thirds of the rows.
+      name: "xl/workbook.xml",
+      data: `<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${REL}"><sheets>` +
+        '<sheet name="Cover" sheetId="1" r:id="rId4"/>' +
+        '<sheet name="A-M" sheetId="2" r:id="rId2"/>' +
+        '<sheet name="N-Z" sheetId="3" r:id="rId9"/>' +
+        "</sheets></workbook>",
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      data: `<?xml version="1.0"?><Relationships xmlns="${REL}">` +
+        `<Relationship Id="rId4" Type="${REL}/worksheet" Target="worksheets/sheet1.xml"/>` +
+        `<Relationship Id="rId2" Type="${REL}/worksheet" Target="worksheets/sheet7.xml"/>` +
+        `<Relationship Id="rId9" Type="${REL}/worksheet" Target="worksheets/sheet2.xml"/>` +
+        `<Relationship Id="rId11" Type="${REL}/sharedStrings" Target="sharedStrings.xml"/>` +
+        "</Relationships>",
+    },
+    { name: "xl/worksheets/sheet1.xml", data: cover },
+    { name: "xl/worksheets/sheet7.xml", data: am },
+    { name: "xl/worksheets/sheet2.xml", data: nz },
+    {
+      name: "xl/worksheets/_rels/sheet7.xml.rels",
+      data: `<?xml version="1.0"?><Relationships xmlns="${REL}"><Relationship Id="rId1" Type="${REL}/drawing" Target="../drawings/drawing1.xml"/></Relationships>`,
+    },
+    {
+      name: "xl/drawings/drawing1.xml",
+      data: `<?xml version="1.0"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${REL}">` +
+        // A logo on Excel row 3 — <xdr:row> is ZERO-BASED, so it says 2.
+        "<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>" +
+        '<xdr:ext cx="400" cy="400"/><xdr:pic><xdr:blipFill><a:blip r:embed="rId1"/></xdr:blipFill></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>' +
+        // A background shape: same anchor shape, no r:embed. Not an image.
+        "<xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>" +
+        '<xdr:ext cx="9999" cy="9999"/><xdr:sp><xdr:spPr/></xdr:sp><xdr:clientData/></xdr:oneCellAnchor>' +
+        "</xdr:wsDr>",
+    },
+    {
+      name: "xl/drawings/_rels/drawing1.xml.rels",
+      data: `<?xml version="1.0"?><Relationships xmlns="${REL}"><Relationship Id="rId1" Type="${REL}/image" Target="../media/image1.jpeg"/></Relationships>`,
+    },
+    { name: "xl/media/image1.jpeg", data: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]) },
+    { name: "xl/sharedStrings.xml", data: sharedStrings },
+  ]);
+}
+
+const WORKBOOK = buildWorkbook();
+
+test("a multi-sheet workbook yields rows from EVERY data sheet", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  assert.deepEqual(book.sheetsRead.map((s) => s.name), ["A-M", "N-Z"], "the cover page is not a price list");
+  assert.equal(book.sheetCount, 3);
+  // Reading one sheet of several is the failure this has to make impossible.
+  assert.deepEqual([...new Set(book.rows.map((r) => r.sheet))], ["A-M", "N-Z"]);
+  assert.deepEqual(book.sheetsRead.map((s) => s.rowCount), [3, 2]);
+});
+
+test("sheets are resolved through r:id, not by file numbering", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  assert.deepEqual(
+    book.sheetsRead.map((s) => [s.name, s.part]),
+    [["A-M", "xl/worksheets/sheet7.xml"], ["N-Z", "xl/worksheets/sheet2.xml"]],
+    "tab order says nothing about which file holds which tab",
+  );
+});
+
+test("the header row and data start are derived, not hardcoded", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  for (const s of book.sheetsRead) assert.equal(s.headerRow, 2);
+  assert.deepEqual(book.rows.filter((r) => r.sheet === "A-M").map((r) => r.row), [3, 4, 6],
+    "row numbers are the real 1-based Excel rows, gaps and all");
+});
+
+test("rows carry exactly the four publishable fields, and the ligatures are already fixed", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  assert.deepEqual(book.rows[0], {
+    sno: 1, name: "APL Metals Unlisted Shares", price: 385,
+    depository: "NSDL & CDSL", lotSize: 100, sheet: "A-M", row: 3,
+  });
+  assert.equal(book.rows[1].name, "Elofic Industries Limited", "sanitised on read");
+  assert.equal(book.rows[1].price, 1200, "the RETAIL price, never the 1150 beside it");
+  for (const r of book.rows) {
+    assert.deepEqual(
+      Object.keys(r).filter((k) => !["sno", "name", "price", "depository", "lotSize", "sheet", "row"].includes(k)),
+      [], `row "${r.name}" carries a field it should not`,
+    );
+  }
+});
+
+test("the workbook's dealer prices appear nowhere in what the reader returns", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  const { logos, ...rest } = book; // logo bytes are image data, not text
+  const dump = JSON.stringify(rest);
+  for (const dealerOnly of [371, 1151, 901, 902, 51, 991, 992]) {
+    assert.ok(!new RegExp(`\\b${dealerOnly}\\b`).test(dump),
+      `the dealer figure ${dealerOnly} must not survive anywhere in the reader's output`);
+  }
+});
+
+test("per-row validation matches the CSV path", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  assert.deepEqual(book.skipped, [
+    { line: "N-Z row 5: (blank)", reason: "blank company name" },
+    { line: "N-Z row 6: Zzz Holdings Limited", reason: 'unreadable retail price "on request"' },
+  ]);
+});
+
+test("the depository typo and the absent depository both come through correctly", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  const sk = book.rows.find((r) => r.name === "SK Finance Limited");
+  const etrav = book.rows.find((r) => r.name === "E Trav Tech Limited");
+  assert.equal(sk.depository, "NSDL & CDSL", '"SDL & CDSL" is a typo, not "CDSL only"');
+  assert.equal("depository" in etrav, false, '"—" means none, not a guess');
+  assert.deepEqual(book.depositoryNotes.map((n) => [n.kind, n.name]), [["typo", "SK Finance Limited"]]);
+});
+
+test('the "As on" date is read from the shared strings and normalises to ISO', () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  assert.equal(book.asOnRaw, "06 Aug 2026");
+  assert.equal(normalizeIsoDate(book.asOnRaw), "2026-08-06", "zero-padded, always");
+});
+
+test("logo anchors resolve to media, on the right (1-based) Excel row", () => {
+  const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
+  assert.equal(book.logos.length, 1, "the background shape has no r:embed and is not a logo");
+  const [logo] = book.logos;
+  assert.equal(logo.sheet, "A-M");
+  assert.equal(logo.row, 3, "<xdr:row>2</xdr:row> is zero-based — that is Excel row 3");
+  assert.equal(logo.mediaPath, "xl/media/image1.jpeg");
+  assert.deepEqual([...logo.bytes.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+  assert.equal(book.rows.find((r) => r.sheet === logo.sheet && r.row === logo.row).name, "APL Metals Unlisted Shares");
+});
+
+test("a workbook whose price column is not the retail one is refused, not read", () => {
+  const sst = [];
+  const bad = sheetPart([
+    [2, ["S.No", "", "Share Name", "Dealer Price", "Depository"]],
+    [3, [1, "", "Tata Capital", 950, "NSDL"]],
+  ], sst, "");
+  const zip = storedZip([
+    { name: "_rels/.rels", data: `<?xml version="1.0"?><Relationships xmlns="${REL}"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: "xl/workbook.xml", data: `<?xml version="1.0"?><workbook xmlns:r="${REL}"><sheets><sheet name="Prices" sheetId="1" r:id="rId1"/></sheets></workbook>` },
+    { name: "xl/_rels/workbook.xml.rels", data: `<?xml version="1.0"?><Relationships xmlns="${REL}"><Relationship Id="rId1" Type="${REL}/worksheet" Target="worksheets/sheet1.xml"/></Relationships>` },
+    { name: "xl/worksheets/sheet1.xml", data: bad },
+    { name: "xl/sharedStrings.xml", data: `<?xml version="1.0"?><sst>${sst.map((s) => `<si><t>${xmlEscape(s)}</t></si>`).join("")}</sst>` },
+  ]);
+  assert.throws(() => readUnlistedXlsxBytes(zip, "bad.xlsx"), /no retail price column/);
+});
+
+test("a file that is not a workbook fails loudly rather than reading as empty", () => {
+  assert.throws(() => readUnlistedXlsxBytes(Buffer.from("Share Name,Retail Price\nTata,950\n")), /not a zip archive/);
 });
 
 /* ---------- report ---------- */
