@@ -32,7 +32,19 @@
  * Behaviour:
  *  - Matched docs get indicativePriceINR, lotSize, depository, asOfDate and
  *    partner patched; the raw list name is appended to `aliases` when new.
- *    company/slug of an existing doc are NEVER touched by partner data.
+ *    An existing doc's `slug` is NEVER touched — a URL is a promise to
+ *    everyone who has linked to it. Its `company` is only touched with
+ *    --adopt-names; see below.
+ *  - --adopt-names (opt-in) lets the partner's name replace OURS. The rule
+ *    that partner data never edits a company name was written when partner
+ *    data came from OCR and was the untrusted side. Since the 06-Aug-2026
+ *    switch to Excel that is inverted: their names are complete and correct,
+ *    and ~34 of ours are OCR wreckage ("Hindustan Power Exchange Limit",
+ *    "EB Graand Prix Luxury Elevators Limi", "Bvglndia Limited"). So when a
+ *    document is matched by a pass that implies our name is the damaged one,
+ *    AND the stored name carries a corruption signature, the list's name is
+ *    adopted. Hand-curated fields survive, the old name becomes an alias, and
+ *    every rename is printed as "old -> new" whether or not the flag is set.
  *  - Unmatched rows create a new doc (company = raw name minus any trailing
  *    "…", generated slug, needsReview: true) — they stay off the site until
  *    an editor reviews them (the public query filters needsReview).
@@ -57,8 +69,14 @@
  *      it never falls back to the parse it just proved wrong;
  *   2. every parsed name is checked for fused price digits, on all paths;
  *   3. the row count must sit in a sane band around the previous import, and
- *      the run must not create a flood of new companies.
- * --allow-drift relaxes (3) for a genuinely reshaped list. Nothing relaxes (2).
+ *      the run must not create a flood of new companies;
+ *   4. no existing document may be claimed by more than one row of the list.
+ *      The relaxed matching passes are looser than anything this pipeline had
+ *      before, and (4) is the one failure they can cause: two companies
+ *      collapsing onto one document, the second price overwriting the first,
+ *      and a company silently disappearing from the site. It has no flag.
+ * --allow-drift relaxes (3) for a genuinely reshaped list. Nothing relaxes (2)
+ * or (4).
  * ───────────────────────────────────────────────────────────────────────────
  *
  * --seed-editorial (one-time): copies the curated Mode-1 content from
@@ -81,17 +99,19 @@ import {
   parsePriceListText, findHeaderDate, mapCsvHeader, parseInr,
   classifyDepository, normalizeCompanyName, splitEllipsis,
   resolveUnlistedTarget, priceFusedName, validateImportRows,
+  storedNameCorruption, nearbyExistingDocs, buildMatchedDocSet,
   PRICE_MIN_EXCL, PRICE_MAX_EXCL,
 } from "./unlisted-matching.mjs";
 import { readUnlistedXlsx } from "./unlisted-xlsx.mjs";
 
 // ---------- args ----------
-const args = { partner: "uz", dryRun: false, seedEditorial: false, publish: false, allowDrift: false };
+const args = { partner: "uz", dryRun: false, seedEditorial: false, publish: false, allowDrift: false, adoptNames: false };
 for (const a of process.argv.slice(2)) {
   if (a === "--dry-run") args.dryRun = true;
   else if (a === "--seed-editorial") args.seedEditorial = true;
   else if (a === "--publish") args.publish = true;
   else if (a === "--allow-drift") args.allowDrift = true;
+  else if (a === "--adopt-names") args.adoptNames = true;
   else if (a.startsWith("--partner=")) args.partner = a.slice(10).trim();
   else if (a.startsWith("--date=")) args.date = a.slice(7).trim();
   else if (a === "--help" || a === "-h") { console.log("See the header of scripts/import-unlisted-prices.mjs for usage."); process.exit(0); }
@@ -111,7 +131,10 @@ if (!args.seedEditorial && !args.file) {
     "       node scripts/import-unlisted-prices.mjs --seed-editorial [--dry-run]\n\n" +
     "  --publish      make every imported company live immediately (skip the manual review gate).\n" +
     "  --allow-drift  accept a row count / new-company count far off the previous import.\n" +
-    "                 For a genuinely reshaped list or a first import — never to push a bad parse through.");
+    "                 For a genuinely reshaped list or a first import — never to push a bad parse through.\n" +
+    "  --adopt-names  replace a stored company name with the list's when OURS is the damaged one\n" +
+    "                 (OCR-truncated, stray leading characters, l/I/1 confusion). Never moves a slug.\n" +
+    "                 Dry-run first and read the \"old -> new\" list.");
   process.exit(1);
 }
 
@@ -460,15 +483,50 @@ if (check.errors.length) {
 // ---------- match + build mutations ----------
 const mutations = [];
 const updated = [];   // { name, company, price }
-const created = [];   // { name, price }
-const relaxed = { boilerplate: [], "reverse-prefix": [] }; // { name, company }
-const claimed = new Map(); // doc._id or new _id → first row name, to catch dupes in one list
+const created = [];   // { name, listName, price }
+const renames = [];   // { id, from, to, why } — see --adopt-names
+const relaxed = new Map(); // via → [{ name, company }]
+const claimedDocs = new Map(); // existing doc._id → { doc, rows: [name] }
+const claimedNew = new Map();  // new _id → first row name, to catch dupes in one list
+
+/** What each relaxed pass reads, in the operator's language. Order is the
+ *  order the sections print in. */
+const RELAXED_LABELS = new Map([
+  ["boilerplate", 'list name carries the "Unlisted Shares" row boilerplate'],
+  ["reverse-prefix", "full list name matched onto a TRUNCATED stored name"],
+  ["stored-truncated", "stored name was cut mid-word by the old OCR"],
+  ["leading-junk", "stored name carries stray leading characters from the logo cell"],
+  ["il1-confusion", "stored name confuses l / I / 1"],
+]);
 
 /** How a relaxed pass read a name — for the ambiguity report below. */
 const HOW_MATCHED = {
   boilerplate: 'with the list\'s "Unlisted Shares" boilerplate stripped',
   "reverse-prefix": "as the full form of a truncated stored name",
+  "stored-truncated": "as the whole of a stored name cut off mid-word",
+  "leading-junk": "as a stored name minus its stray leading characters",
+  "il1-confusion": "with l / I / 1 read as the same letter",
 };
+
+/**
+ * The incoming list name as a COMPANY name. The list's row boilerplate is not
+ * part of anybody's name, so it never goes into `company` — which matters now
+ * that --adopt-names can write this onto an existing document.
+ */
+function adoptableCompanyName(raw) {
+  return cleanCompanyName(
+    String(raw)
+      .replace(/\s*\bunlisted\s+shares?\b\s*/gi, " ")
+      .replace(/\s*\bprice\s*$/i, "")
+      .replace(/\s{2,}/g, " ")
+      .trim(),
+  );
+}
+
+/** Passes whose match implies our stored name may be the damaged one. A
+ *  boilerplate-only difference says nothing about the stored name's health,
+ *  so it is deliberately absent. */
+const ADOPTABLE_VIA = new Set(["reverse-prefix", "stored-truncated", "leading-junk", "il1-confusion"]);
 
 for (const row of rows) {
   const target = resolveUnlistedTarget(row.name, existing, slugify);
@@ -489,38 +547,63 @@ for (const row of rows) {
     ...(row.depository ? { depository: row.depository } : {}),
     ...(row.lotSize !== undefined ? { lotSize: row.lotSize } : {}),
   };
-  // --publish makes rows live immediately: created docs skip the review gate,
-  // and matched docs that were parked for review on an earlier run get
-  // released too (the public query hides needsReview == true).
-  const publishSet = args.publish ? { needsReview: false } : {};
 
   if (target.doc) {
-    if (claimed.has(target.doc._id)) {
-      skipped.push({ line: row.name, reason: `resolves to the same company as "${claimed.get(target.doc._id)}" — kept the first row` });
-      continue;
+    // A second row landing on a document another row already claimed is the
+    // one failure the relaxed passes can cause, so it is recorded here and
+    // aborts the run below — never silently resolved by keeping the first.
+    const already = claimedDocs.get(target.doc._id);
+    if (already) { already.rows.push(row.name); continue; }
+    claimedDocs.set(target.doc._id, { doc: target.doc, rows: [row.name] });
+
+    // Should this document's own name be replaced by the incoming one? Only
+    // when a relaxed pass that implies OUR name is damaged made the match,
+    // and only when the stored name actually carries a corruption signature.
+    const incomingCompany = adoptableCompanyName(row.name);
+    let adoptCompany = null;
+    if (ADOPTABLE_VIA.has(target.via) && incomingCompany) {
+      const why = storedNameCorruption(target.doc.company, incomingCompany);
+      if (why.length) {
+        renames.push({ id: target.doc._id, from: target.doc.company, to: incomingCompany, why });
+        if (args.adoptNames) adoptCompany = incomingCompany;
+      }
     }
-    claimed.set(target.doc._id, row.name);
-    // Partner data may update prices — never an existing doc's company/slug.
-    mutations.push({ patch: { id: target.doc._id, set: { ...priceFields, ...publishSet } } });
-    // Record the raw list name as an alias whenever the document doesn't
-    // already know it. Every match from a relaxed pass lands here by
-    // construction — that is precisely why the pass was needed — so the same
-    // name resolves EXACTLY on the next run instead of being relaxed again.
+
+    // buildMatchedDocSet is where the "never move a URL" rule lives: `slug` is
+    // not in its output on any path, and a Sanity `set` patch writes only the
+    // keys it is given, so logo/sector/summary/ipoStatus are untouched.
+    mutations.push({
+      patch: { id: target.doc._id, set: buildMatchedDocSet({ priceFields, publish: args.publish, adoptCompany }) },
+    });
+
+    // Record names the document doesn't already answer to, so the same row
+    // resolves EXACTLY on the next run instead of being relaxed again. Every
+    // relaxed match lands here by construction — that is why it was relaxed —
+    // and an adopted rename adds the OLD name so it keeps resolving too.
     const knownNames = [target.doc.company, ...(target.doc.aliases ?? [])].map(normalizeCompanyName);
-    if (!knownNames.includes(normalizeCompanyName(row.name))) {
-      mutations.push({ patch: { id: target.doc._id, setIfMissing: { aliases: [] } } });
-      mutations.push({ patch: { id: target.doc._id, insert: { after: "aliases[-1]", items: [row.name] } } });
+    const newAliases = [];
+    if (!knownNames.includes(normalizeCompanyName(row.name))) newAliases.push(row.name);
+    if (adoptCompany && !newAliases.some((a) => normalizeCompanyName(a) === normalizeCompanyName(target.doc.company))) {
+      newAliases.push(target.doc.company);
     }
-    if (relaxed[target.via]) relaxed[target.via].push({ name: row.name, company: target.doc.company });
+    if (newAliases.length) {
+      mutations.push({ patch: { id: target.doc._id, setIfMissing: { aliases: [] } } });
+      mutations.push({ patch: { id: target.doc._id, insert: { after: "aliases[-1]", items: newAliases } } });
+    }
+
+    if (target.via) {
+      if (!relaxed.has(target.via)) relaxed.set(target.via, []);
+      relaxed.get(target.via).push({ name: row.name, company: target.doc.company });
+    }
     updated.push({ name: row.name, company: target.doc.company, price: row.price });
   } else {
     const company = cleanCompanyName(target.clean ?? splitEllipsis(row.name).clean);
     const _id = `unlistedShare-${slugify(company)}`;
-    if (claimed.has(_id)) {
-      skipped.push({ line: row.name, reason: `duplicate of "${claimed.get(_id)}" within this list — kept the first row` });
+    if (claimedNew.has(_id)) {
+      skipped.push({ line: row.name, reason: `duplicate of "${claimedNew.get(_id)}" within this list — kept the first row` });
       continue;
     }
-    claimed.set(_id, row.name);
+    claimedNew.set(_id, row.name);
     mutations.push({
       create: {
         _id,
@@ -534,7 +617,7 @@ for (const row of rows) {
         ...priceFields,
       },
     });
-    created.push({ name: company, price: row.price });
+    created.push({ name: company, listName: row.name, price: row.price });
   }
 }
 
@@ -547,18 +630,19 @@ if (updated.length) {
   for (const u of updated) console.log(`  • ${u.company}  ₹${u.price.toLocaleString("en-IN")}${u.name !== u.company ? `  (list name: "${u.name}")` : ""}`);
 }
 
-// The two relaxed matching passes are the ones worth a human's eyes: they are
-// the difference between updating an existing company and forking a duplicate
-// of it, and neither is an exact name match. Printed on every run, dry or not.
-if (relaxed.boilerplate.length || relaxed["reverse-prefix"].length) {
-  console.log("\n─── Matched by a RELAXED pass — read these before writing ───");
-  if (relaxed.boilerplate.length) {
-    console.log(`\n  (a) list name carries the "Unlisted Shares" row boilerplate — ${relaxed.boilerplate.length}:`);
-    for (const m of relaxed.boilerplate) console.log(`      "${m.name}"\n          → ${m.company}`);
-  }
-  if (relaxed["reverse-prefix"].length) {
-    console.log(`\n  (b) full list name matched onto a TRUNCATED stored name — ${relaxed["reverse-prefix"].length}:`);
-    for (const m of relaxed["reverse-prefix"]) console.log(`      "${m.name}"\n          → ${m.company}`);
+// The relaxed matching passes are the ones worth a human's eyes: they are the
+// difference between updating an existing company and forking a duplicate of
+// it, and none of them is an exact name match. Printed on every run, dry or not.
+const relaxedTotal = [...relaxed.values()].reduce((n, list) => n + list.length, 0);
+if (relaxedTotal) {
+  console.log(`\n─── ${relaxedTotal} matched by a RELAXED pass — read these before writing ───`);
+  let letter = "a";
+  for (const [via, label] of RELAXED_LABELS) {
+    const list = relaxed.get(via);
+    if (!list?.length) { letter = String.fromCharCode(letter.charCodeAt(0) + 1); continue; }
+    console.log(`\n  (${letter}) ${label} — ${list.length}:`);
+    for (const m of list) console.log(`      "${m.name}"\n          → ${m.company}`);
+    letter = String.fromCharCode(letter.charCodeAt(0) + 1);
   }
   console.log(
     "\n  Each of these appends the list name to that document's aliases, so it matches exactly from the\n" +
@@ -566,15 +650,81 @@ if (relaxed.boilerplate.length || relaxed["reverse-prefix"].length) {
   );
 }
 
+// Name adoption. The stored name is now the untrusted side, so a document
+// matched by a pass that implies OUR name is damaged can take the partner's
+// clean one. Always listed; only applied with --adopt-names.
+if (renames.length) {
+  console.log(args.adoptNames
+    ? `\n─── ${renames.length} company names ADOPTED from the list (--adopt-names) ───`
+    : `\n─── ${renames.length} company names could be adopted from the list — pass --adopt-names to apply ───`);
+  for (const r of renames) {
+    console.log(`  • "${r.from}"\n      -> "${r.to}"\n      (${r.why.join("; ")})`);
+  }
+  console.log(
+    "\n  Slugs are never changed, so no URL moves. Logo, sector, summary and ipoStatus are untouched,\n" +
+    "  and the old name is kept as an alias.",
+  );
+}
+
 if (created.length) {
-  console.log(args.publish
-    ? "\nCreated (live on the site after the next revalidation):"
-    : "\nCreated (review in Studio → Unlisted Shares (needs review) before they go live):");
-  for (const c of created) console.log(`  • ${c.name}  ₹${c.price.toLocaleString("en-IN")}`);
+  // Split the create list: a company we have genuinely never priced looks very
+  // different from a fourth spelling of a document we already have, and only
+  // the second kind needs a decision before it is written.
+  const genuinelyNew = [];
+  const suspect = []; // { c, near }
+  for (const c of created) {
+    const near = nearbyExistingDocs(c.listName, existing);
+    if (near.length) suspect.push({ c, near });
+    else genuinelyNew.push(c);
+  }
+
+  const heading = args.publish ? "live on the site after the next revalidation" : "review in Studio before they go live";
+  if (genuinelyNew.length) {
+    console.log(`\nCreated — genuinely new companies (${genuinelyNew.length}; ${heading}):`);
+    for (const c of genuinelyNew) console.log(`  • ${c.name}  ₹${c.price.toLocaleString("en-IN")}`);
+  }
+  if (suspect.length) {
+    console.log(`\nCreated — POSSIBLE DUPLICATE of an existing document (${suspect.length}) — check each one:`);
+    for (const { c, near } of suspect) {
+      console.log(`  • ${c.name}  ₹${c.price.toLocaleString("en-IN")}`);
+      for (const n of near) console.log(`      looks like: ${n.doc.company}${n.storedName !== n.doc.company ? `  (alias "${n.storedName}")` : ""}`);
+    }
+    console.log(
+      "\n  These share a long opening with a document already in the dataset. If one really is the same\n" +
+      "  company, add the list name to that document's aliases in Studio and re-run — do not let it create.",
+    );
+  }
 }
 if (skipped.length) {
   console.log("\nSkipped:");
   for (const s of skipped) console.log(`  • ${s.line} — ${s.reason}`);
+}
+
+// ---------- one document, one row ----------
+// The matching passes above are looser than anything this pipeline had before,
+// and they can fail in exactly one way: two different companies on the list
+// collapsing onto one of our documents. Whichever row wrote last would win,
+// the other company would silently vanish from the site, and the surviving
+// document would carry a price that isn't its own. There is no flag for this
+// and there should not be — a name collision is resolved by a human deciding
+// which document is which, not by an importer picking one.
+const collisions = [...claimedDocs.values()].filter((c) => c.rows.length > 1);
+if (collisions.length) {
+  console.error(
+    `\nABORTED — ${collisions.length} existing document${collisions.length > 1 ? "s are" : " is"} claimed by more than ` +
+    `one row of this list. Nothing was written to Sanity.\n`,
+  );
+  for (const c of collisions) {
+    console.error(`  ${c.doc.company}  (${c.doc._id})`);
+    for (const name of c.rows) console.error(`      ← "${name}"`);
+    console.error("");
+  }
+  console.error(
+    "  These are different rows on the partner's list, so they are different companies. Open the ones\n" +
+    "  named above in Studio and give each its own document — put the right list name in each doc's\n" +
+    "  aliases — then re-run. --allow-drift does not relax this and neither does --adopt-names.",
+  );
+  process.exit(1);
 }
 
 // A daily price list refreshes companies it has priced before; it does not

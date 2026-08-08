@@ -9,7 +9,9 @@
 > per-sheet row counts, the relaxed-match list to read before importing, and
 > the three Excel-specific aborts (2.8). Logos now come out of the workbook as
 > the partner's own embedded images, with a dry run you can flip through in
-> Finder before anything is attached (Part 2 step 9, and 5.3).
+> Finder before anything is attached (Part 2 step 9, and 5.3). Matching now
+> bridges our OCR-damaged stored names onto the partner's clean ones, and
+> `--adopt-names` (Part 2 step 5b) can repair ours from theirs.
 >
 > **What changed in V2:** the dealer-price leak is resolved and that section now
 > records how it was done. New: a repair procedure for wrong numbers (Part 9), a
@@ -290,12 +292,16 @@ gone.
 - Price and date run together: "₹5222 Jul 2026" should be "₹52 · 22 Jul 2026"
 - Nine duplicate pairs: your editorial entry plus an imported one (PharmEasy /
   Pharm Easy, NSE / NSE India Limited, Chennai Super Kings / I csk, boAt, OYO,
-  Bira, CIAL, Care Health, Motilal Oswal Home Finance)
-- Truncated names: "Signify Innovations (Previously Ph", "Sterlite Electric
-  Limited (Formerly" — the Excel list carries the full name and the import now
-  matches it onto these documents rather than creating a second copy. The stored
-  `company` is deliberately left alone; rename them in Studio when you want the
-  full name on the site
+  Bira, CIAL, Care Health, Motilal Oswal Home Finance). The import will not
+  choose between a pair — it reports them as `ambiguous` and skips the row, so
+  merging them in Studio is still a job for you
+- Truncated names ("Signify Innovations (Previously Ph", "Hindustan Power
+  Exchange Limit"), stray leading characters ("EB Graand Prix Luxury Elevators
+  Limi", "Rt. Hindon Mercantile Limited") and l/I/1 mix-ups ("Bvglndia
+  Limited") — about 34 documents. The Excel list has the correct spelling of
+  every one and the import now matches onto these rather than creating a second
+  copy. `--adopt-names` (Part 2 step 5b) rewrites the stored name from the
+  list, once, without moving any URL
 - ~170 of 188 show sector "Other" — only hand-curated entries have real sectors
 
 ## 1.5 — Open: PMS pins not yet filled
@@ -357,7 +363,8 @@ npm run import:unlisted -- "PASTE_PATH_HERE" --dry-run
 
 **This writes nothing.** Read the output:
 
-- **`ABORTED`** → the file can't be read safely. **Stop. Do not do Step 5.** See 2.8.
+- **`ABORTED`** → the file can't be read safely, or two rows landed on one of
+  our documents. **Stop. Do not do Step 5.** See 2.8.
 - **Names containing numbers** (`"Shares 555"`) → same. Stop.
 - **Fewer than 7 sheets listed, or only one with rows** (Excel only) → stop; the
   import will have aborted by itself.
@@ -382,6 +389,41 @@ the switch from PDF names to full Excel names being absorbed once. It should be
 much shorter on day two and near-empty after that, because each match is
 remembered as an alias. If it stays long, something is not being remembered:
 say so rather than living with it.
+
+**The "Created" list comes in two parts.** "Genuinely new companies" are ones
+nothing in the dataset resembles. "POSSIBLE DUPLICATE of an existing document"
+means the name shares a long opening with something we already have — usually
+our own name is the damaged one and the two should be one document. Fix those
+in Studio (put the list's spelling in the existing doc's aliases) and re-run,
+rather than letting a second copy be created.
+
+### Step 5b — Once, after the first Excel import: adopt the clean names
+
+Roughly 34 of our stored names are wreckage from the old OCR — `Hindustan Power
+Exchange Limit`, `EB Graand Prix Luxury Elevators Limi`, `Bvglndia Limited`.
+The Excel list has the correct spelling of every one. The import can take it:
+
+```
+npm run import:unlisted -- "PASTE_PATH_HERE" --dry-run --adopt-names
+```
+
+Read the `old -> new` list it prints. **Every line is a company name that will
+change on the public site**, so read all of them, not a sample. When they look
+right:
+
+```
+npm run import:unlisted -- "PASTE_PATH_HERE" --adopt-names
+```
+
+- **URLs never move.** The slug is left exactly as it is, so no link breaks.
+- Logos, sectors, summaries and IPO status are untouched.
+- The old name is kept as an alias, so it still resolves.
+- A name is only ever replaced when ours carries actual damage — a cut-off
+  word, stray leading characters, or an l/I/1 mix-up. A name that is merely
+  shorter than the partner's is left alone.
+
+Without `--adopt-names` the list is still printed, and nothing is renamed. You
+only need this once; after it, day-to-day imports need no flag.
 
 ### Step 6 — Tidy names
 
@@ -462,6 +504,7 @@ Three aborts are specific to the Excel file and mean specific things:
 | `is not a RETAIL price column` | They renamed or moved the price column, so the importer can no longer prove which one is the retail price. It will not guess. | Tell them. Never rename the header yourself to get past this — that is the one check standing between the dealer column and a public page. |
 | `Multi-sheet reading failed silently` | Sheets carry price data that wasn't read. | Send them the file name; do not import a partial list. |
 | `no "Share Name" header` | Wrong file, or they restructured it. | Check you sent the right attachment. |
+| `claimed by more than one row` | Two companies on the list matched ONE of our documents. Left alone, the second price would overwrite the first and a company would vanish from the site. | Open the named document in Studio, give each company its own document with the right list name in its aliases, re-run. No flag relaxes this. |
 
 **Stale but correct beats fresh but wrong. Always.**
 
