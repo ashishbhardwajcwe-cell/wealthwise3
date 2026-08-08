@@ -36,10 +36,12 @@ import {
 } from "./unlisted-matching.mjs";
 import { loadUnlistedAliases } from "./unlisted-aliases.mjs";
 import { planCleanup, planAliasDedupe, dedupeAliases } from "./clean-unlisted-dupes.mjs";
-import { approvalBlockers, selectForApproval, reviewRow, renderTable } from "./approve-unlisted.mjs";
 import {
-  auditUnlistedDocs, structuralSignatures, selectPurgeTargets,
-  asOfDateHistogram, confirmExactly,
+  approvalBlockers, selectForApproval, selectForHiding, reviewRow, renderTable,
+} from "./approve-unlisted.mjs";
+import {
+  auditUnlistedDocs, structuralSignatures, selectPurgeTargets, untrustedPriceRows,
+  asOfDateHistogram, confirmExactly, XLSX_PIPELINE_FIRST_IMPORT, GENUINE_TRAILING_DIGIT_NAMES,
 } from "./audit-unlisted.mjs";
 import { Readable } from "node:stream";
 import { crc32 } from "node:zlib";
@@ -123,6 +125,57 @@ test("clean-unlisted-names never hands back an unbalanced name", () => {
   assert.equal(cleanUnlistedName("GS Galaxeye Space"), "Galaxeye Space");
   assert.equal(cleanUnlistedName("A One Steel"), "A One Steel", "A != O, so this is a real name");
   assert.equal(cleanUnlistedName("Capgemini Technology Services|"), "Capgemini Technology Services");
+});
+
+/* ---------- trailing row boilerplate ---------- */
+
+test("clean-unlisted-names strips the list's row boilerplate off the tail", () => {
+  // Four documents the 06-Aug import created with the row heading baked in.
+  assert.equal(cleanUnlistedName("Bazar India Unlisted Shares"), "Bazar India");
+  assert.equal(cleanUnlistedName("Cheelizza Pizza Unlisted Shares"), "Cheelizza Pizza");
+  assert.equal(cleanUnlistedName("Gynofem Healthcare Unlisted Shares Price"), "Gynofem Healthcare");
+  assert.equal(cleanUnlistedName("IKF Finance Limited Unlisted Shares"), "IKF Finance Limited");
+  // Singular too — the list writes both.
+  assert.equal(cleanUnlistedName("Kineco Limited Unlisted Share"), "Kineco Limited");
+});
+
+test("a bracketed qualifier survives the boilerplate strip", () => {
+  // "(Equity)" is the ONLY thing separating this document from the CCPS line.
+  // Stripping to a bare "Zepto" would make the two indistinguishable.
+  assert.equal(cleanUnlistedName("Zepto Unlisted Shares (Equity)"), "Zepto (Equity)");
+});
+
+test("the boilerplate strip leaves curated names alone", () => {
+  for (const n of ["Hero FinCorp", "PharmEasy", "boAt", "Tata Capital", "Sterlite Grid 5",
+                   "Sterlite Electric Limited (formerly Sterlite Power)"]) {
+    assert.equal(cleanUnlistedName(n), n, `"${n}" is curated — nothing to clean`);
+  }
+  // "Price" is only boilerplate at the END of a name, never inside one.
+  assert.equal(cleanUnlistedName("Price Waterhouse Limited"), "Price Waterhouse Limited");
+});
+
+test("cleanUnlistedName is idempotent — re-running changes nothing", () => {
+  for (const n of ["Bazar India Unlisted Shares", "Zepto Unlisted Shares (Equity)",
+                   "Gynofem Healthcare Unlisted Shares Price", "[J] Capgemini Technology Services",
+                   "«wx Fusion Micro Finance", "(Manipal Cards) 385", "Hero FinCorp"]) {
+    const once = cleanUnlistedName(n);
+    assert.equal(cleanUnlistedName(once), once, `"${n}" → "${once}" must be a fixed point`);
+  }
+});
+
+test("clean-unlisted-names shares its boilerplate rule with the matcher", () => {
+  // If these two drifted, this script would rename a document to something its
+  // own matcher no longer recognised, and the next import would fork a duplicate.
+  for (const n of ["Bazar India Unlisted Shares", "Gynofem Healthcare Unlisted Shares Price",
+                   "Zepto Unlisted Shares (Equity)", "IKF Finance Limited Unlisted Shares"]) {
+    assert.equal(cleanUnlistedName(n), stripListBoilerplate(n).replace(/\s{2,}/g, " ").trim());
+  }
+});
+
+test("a price-fused name is still left for the audit, boilerplate or not", () => {
+  // The early return has to win: stripping "Unlisted Shares" out of this would
+  // leave "(NCDEX) Limited 388", which is no more publishable than it was.
+  assert.equal(cleanUnlistedName("(NCDEX) Limited Unlisted Shares 388"), "(NCDEX) Limited Unlisted Shares 388");
 });
 
 /* ---------- the pre-write guard ---------- */
@@ -317,9 +370,13 @@ test("a clean dataset produces no flags at all", () => {
 
 /**
  * The five names below are REAL 22-Jul documents, live on the site with correct
- * retail prices and two of them carrying hand-extracted logos. Every one of
- * them trips a name signature, which is precisely why the purge intersects the
+ * retail prices and two of them carrying hand-extracted logos. Four of them
+ * still trip a name signature, which is precisely why the purge intersects the
  * signature with asOfDate instead of trusting either alone.
+ *
+ * The fifth, "Sterlite Grid 5", is now whitelisted: its trailing 5 is an SPV
+ * number, part of the company. It stays in this list because the purge must go
+ * on treating it as a document to protect, not because it still trips.
  */
 const GENUINE_22_JUL = [
   "Sterlite Grid 5",
@@ -328,12 +385,28 @@ const GENUINE_22_JUL = [
   "Sterlite Electric Limited (Formerly",
   "Fusion Techstack Limited (Forme",
 ];
+const GENUINE_22_JUL_FLAGGED = GENUINE_22_JUL.filter((n) => !GENUINE_TRAILING_DIGIT_NAMES.includes(n));
 
 test("every genuine 22-Jul name really does trip a signature (the trap)", () => {
-  for (const n of GENUINE_22_JUL) {
+  for (const n of GENUINE_22_JUL_FLAGGED) {
     assert.ok(structuralSignatures(n).length > 0,
       `"${n}" must trip a signature — that is what makes name-only purging unsafe`);
   }
+  assert.equal(GENUINE_22_JUL_FLAGGED.length, 4, "one of the five is whitelisted, the rest still trip");
+});
+
+test("a real name ending in digits is whitelisted, not rule-loosened", () => {
+  // The SPV number is part of the company.
+  assert.deepEqual(structuralSignatures("Sterlite Grid 5"), []);
+  // …and the corruptions the rule exists for are structurally identical, so
+  // only an explicit whitelist can spare one without sparing the others.
+  assert.ok(structuralSignatures("Shares 454").some((s) => s.startsWith("ends in digits")));
+  assert.ok(structuralSignatures("(PPFAS) 19850").some((s) => s.startsWith("ends in digits")));
+  assert.ok(structuralSignatures("Sterlite Grid 6").some((s) => s.startsWith("ends in digits")),
+    "an SPV we have not vouched for is NOT covered by the entry for Grid 5");
+  // The whitelist covers the name, not a corrupted variant of it.
+  assert.ok(structuralSignatures("Sterlite Grid 5 332").some((s) => s.startsWith("ends in digits")),
+    "a price fused onto the whitelisted name must still be flagged");
 });
 
 test("purging a date leaves the genuine documents at other dates untouched", () => {
@@ -355,9 +428,14 @@ test("purging a date leaves the genuine documents at other dates untouched", () 
   const jul31 = selectPurgeTargets(rows, "2026-07-31");
   assert.deepEqual(jul31.targets.map((r) => r.doc._id), ["bad-3"]);
 
-  // …and purging the legitimate import's own date would take the five with it,
-  // which is why the date has to be typed explicitly and the list read first.
-  assert.equal(selectPurgeTargets(rows, "2026-07-22").targets.length, 5);
+  // …and purging the legitimate import's own date would take the flagged ones
+  // with it, which is why the date has to be typed explicitly and the list read
+  // first. "Sterlite Grid 5" is spared even then, now that it is whitelisted.
+  const jul22 = selectPurgeTargets(rows, "2026-07-22");
+  assert.equal(jul22.targets.length, 4);
+  assert.ok(!jul22.targets.some((r) => r.doc.company === "Sterlite Grid 5"),
+    "the whitelisted name is not a purge target on any date");
+  assert.deepEqual(jul22.cleanSameDate.map((r) => r.doc.company), ["Sterlite Grid 5"]);
 });
 
 test("a clean name carrying the purge date is reported, never deleted", () => {
@@ -377,6 +455,32 @@ test("selectPurgeTargets ignores documents with no asOfDate", () => {
   const docs = [doc("a", "Shares 555", { asOfDate: undefined }), doc("b", "Shares 666", { asOfDate: "2026-08-01" })];
   const { rows } = auditUnlistedDocs(docs);
   assert.deepEqual(selectPurgeTargets(rows, "2026-08-01").targets.map((r) => r.doc._id), ["b"]);
+});
+
+/* ---------- which flagged prices are actually suspect ---------- */
+
+test("the untrusted-price warning is scoped to the pre-xlsx importer", () => {
+  const docs = [
+    // Named badly by the 06-Aug xlsx run — but its price came through the
+    // asserted retail column, so the price is fine and only the name is not.
+    doc("fresh", "Bazar India Unlisted Shares", { asOfDate: "2026-08-06", indicativePriceINR: 24 }),
+    // The old importer: whichever number sat before the depository column.
+    doc("stale", "Shares 454", { asOfDate: "2026-07-31", indicativePriceINR: 441 }),
+    doc("undated", "Manipal Cards) 385", { asOfDate: undefined, indicativePriceINR: 385 }),
+    // Flagged, but holds no price at all — there is nothing to distrust.
+    doc("priceless", "Shares 555", { asOfDate: "2026-07-22", indicativePriceINR: undefined }),
+  ];
+  const { flagged } = auditUnlistedDocs(docs);
+  assert.equal(flagged.length, 4, "all four names trip a signature");
+  assert.deepEqual(untrustedPriceRows(flagged).map((r) => r.doc._id), ["stale", "undated"]);
+});
+
+test("the xlsx cutoff is the boundary, and it is inclusive", () => {
+  const before = doc("a", "Shares 454", { asOfDate: "2026-08-05", indicativePriceINR: 10 });
+  const on = doc("b", "Shares 455", { asOfDate: XLSX_PIPELINE_FIRST_IMPORT, indicativePriceINR: 10 });
+  const { flagged } = auditUnlistedDocs([before, on]);
+  assert.deepEqual(untrustedPriceRows(flagged).map((r) => r.doc._id), ["a"],
+    "the first xlsx import itself is trustworthy");
 });
 
 test("asOfDateHistogram surfaces the discriminator, newest first", () => {
@@ -996,6 +1100,43 @@ test("naming a slug explicitly overrides the gate — deliberately", () => {
   assert.deepEqual(blocked, [], "the gate belongs to --approve-all");
   // …and the caller still has the reasons to print as a warning.
   assert.equal(approvalBlockers(docs[0]).length, 1);
+});
+
+/* ---------- --hide: the way back off the public page ---------- */
+
+test("--hide takes a live document off the page by slug or by document id", () => {
+  const live = [
+    hiddenDoc("bb-zepto-unlisted-ccps-shares-79", "BB Zepto Unlisted( Ccps Shares((79..",
+      { indicativePriceINR: 39, lotSize: 2, asOfDate: "2026-07-22" }),
+    hiddenDoc("tata-capital", "Tata Capital"),
+  ];
+  // The audit prints _ids, so both spellings have to land on the same document.
+  for (const ref of ["bb-zepto-unlisted-ccps-shares-79", "unlistedShare-bb-zepto-unlisted-ccps-shares-79"]) {
+    const { hide, unknown } = selectForHiding(live, [ref]);
+    assert.deepEqual(hide.map((d) => d.slug), ["bb-zepto-unlisted-ccps-shares-79"]);
+    assert.deepEqual(unknown, []);
+  }
+  // Naming the same document twice hides it once.
+  const both = selectForHiding(live, ["bb-zepto-unlisted-ccps-shares-79", "unlistedShare-bb-zepto-unlisted-ccps-shares-79"]);
+  assert.equal(both.hide.length, 1);
+});
+
+test("--hide never touches a document that is already hidden", () => {
+  // The caller passes ONLY the live set, the mirror of --approve's rule: a
+  // document that is already behind needsReview simply is not there.
+  const { hide, unknown } = selectForHiding([hiddenDoc("live-1", "Live Company Limited")],
+    ["live-1", "already-hidden", "no-such-thing"]);
+  assert.deepEqual(hide.map((d) => d.slug), ["live-1"]);
+  assert.deepEqual(unknown, ["already-hidden", "no-such-thing"]);
+});
+
+test("--hide applies no gate — it is the safe direction", () => {
+  // approvalBlockers guards what goes ONTO the page. Taking something off it
+  // can never embarrass the site, so a document that fails every check is
+  // still hideable.
+  const doc = hiddenDoc("bad", "Foo Unlisted Shares", { indicativePriceINR: undefined, lotSize: undefined });
+  assert.equal(approvalBlockers(doc).length, 3);
+  assert.deepEqual(selectForHiding([doc], ["bad"]).hide.map((d) => d.slug), ["bad"]);
 });
 
 test("the review table renders every column and truncates rather than wraps", () => {
