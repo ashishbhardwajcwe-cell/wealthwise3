@@ -18,6 +18,16 @@ export const unlistedShare = defineType({
   name: "unlistedShare",
   title: "Unlisted Share",
   type: "document",
+  // The derived price-movement fields live in a collapsed fieldset so the
+  // append-only priceHistory log stays out of the way — nobody hand-edits it,
+  // and a manual edit that broke a _key's uniqueness would break the importer.
+  fieldsets: [
+    {
+      name: "priceMovement",
+      title: "Derived price movement (importer-maintained)",
+      options: { collapsible: true, collapsed: true },
+    },
+  ],
   fields: [
     defineField({ name: "company", type: "string", validation: (r) => r.required() }),
     defineField({
@@ -75,6 +85,63 @@ export const unlistedShare = defineType({
       title: "Price as of",
       type: "date",
       description: "Set by the price importer from the list's header date. Blank until the first price lands.",
+    }),
+    // ── Derived price movement — written by the importer, never by hand ────────
+    // The partner sends one spot price with no change data, so any movement we
+    // show is derived and stored by us. All three fields below are maintained by
+    // scripts/import-unlisted-prices.mjs (seeded once by
+    // scripts/seed-unlisted-history.mjs). They are readOnly because a manual
+    // edit that breaks priceHistory's _key uniqueness would break the importer's
+    // idempotency, and because previousPrice*/asOfDate are only meaningful when
+    // derived from priceHistory. CONFIDENTIALITY: priceHistory carries ONLY the
+    // retail/indicative price — the same value written to indicativePriceINR.
+    // The dealer/cost price never reaches it (asserted at write time).
+    defineField({
+      name: "priceHistory",
+      title: "Price history",
+      type: "array",
+      readOnly: true,
+      fieldset: "priceMovement",
+      description:
+        "Append-only log of the retail/indicative prices we have seen, one per distinct as-of date. " +
+        "Written by the importer; do not edit by hand. Field names are one character to keep the " +
+        "document small (this is written ~250×/year per company).",
+      of: [
+        defineField({
+          name: "pricePoint",
+          type: "object",
+          // _key is set to the date string by the importer, so Sanity's
+          // unique-key rule makes a repeated import for the same date a no-op.
+          fields: [
+            defineField({ name: "d", title: "Date", type: "date", validation: (r) => r.required() }),
+            defineField({ name: "p", title: "Indicative price (₹)", type: "number", validation: (r) => r.required() }),
+          ],
+          preview: {
+            select: { d: "d", p: "p" },
+            prepare({ d, p }) {
+              return { title: typeof p === "number" ? `₹${p.toLocaleString("en-IN")}` : "—", subtitle: d };
+            },
+          },
+        }),
+      ],
+    }),
+    defineField({
+      name: "previousPriceINR",
+      title: "Previous indicative price (₹ / share)",
+      type: "number",
+      readOnly: true,
+      fieldset: "priceMovement",
+      description:
+        "The indicative price from the prior distinct as-of date. Derived by the importer so the card " +
+        "can show a change indicator without loading the full history. Do not edit by hand.",
+    }),
+    defineField({
+      name: "previousAsOfDate",
+      title: "Previous price as of",
+      type: "date",
+      readOnly: true,
+      fieldset: "priceMovement",
+      description: "The as-of date `previousPriceINR` was recorded on. Derived by the importer.",
     }),
     defineField({
       name: "partner",

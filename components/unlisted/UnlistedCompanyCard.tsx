@@ -5,6 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 import type { UnlistedCompany } from "@/lib/unlisted-companies";
 import { fmtAsOf } from "@/lib/format";
 import { CompanyLogo } from "@/components/CompanyLogo";
+import { PriceChangeBadge } from "./PriceChangeBadge";
 
 /**
  * Company card for the unlisted-shares explorer. Polished regardless of
@@ -59,8 +60,17 @@ export function UnlistedCompanyCard({
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-slate)]">
                   Indicative price
                 </div>
-                <div className="text-2xl font-bold leading-tight text-[var(--color-navy)] tabular-nums">
-                  ₹{company.indicativePrice!.toLocaleString("en-IN")}
+                <div className="flex items-baseline gap-2">
+                  <div className="text-2xl font-bold leading-tight text-[var(--color-navy)] tabular-nums">
+                    ₹{company.indicativePrice!.toLocaleString("en-IN")}
+                  </div>
+                  <PriceChangeBadge
+                    current={company.indicativePrice}
+                    previous={company.previousPrice}
+                    asOf={company.priceAsOf}
+                    previousAsOf={company.previousPriceAsOf}
+                    className="text-xs"
+                  />
                 </div>
               </div>
               {company.priceAsOf && (

@@ -128,6 +128,7 @@ npm run import:unlisted -- pricelist.pdf --dry-run     # preview first
 npm run import:unlisted -- pricelist.pdf               # write
 npm run import:unlisted -- prices.csv --date=2026-07-22
 npm run import:unlisted -- --seed-editorial            # one-time content seed
+npm run seed:unlisted-history -- --dry-run             # one-time history seed (before the next import)
 npm run audit:unlisted                                 # read-only health check
 npm run test:unlisted                                  # parser/guard self-test
 ```
@@ -157,6 +158,41 @@ devDependencies (`npm install`).
 > importer never captures that column, and the schema has no field for it —
 > the Sanity dataset is publicly readable. Don't "improve" either side.
 
+**Price history (derived movement).** The partner sends only a spot price with
+no change data, so any movement we show is derived and stored by us. Each import,
+in the same patch that sets `indicativePriceINR`/`asOfDate`, also maintains a
+`priceHistory` log (`{ d, p }` per distinct as-of date, `_key` = the date) and
+two precomputed scalars — `previousPriceINR` / `previousAsOfDate` — that the
+listing card reads for its change indicator. The listing GROQ projection
+(`allUnlistedSharesQuery`) deliberately carries only the two scalars, **never
+the array** — it renders 206 cards and its payload must not grow; the array is
+fetched per-company by `unlistedShareBySlugQuery`. Behaviour per row:
+
+- a **new date** appends a point and shifts `previous*` from the entry before it;
+- **re-importing the same date+price** is a no-op (unique `_key` gives idempotency);
+- a **changed price for a date already stored** is treated as a partner
+  correction — replaced in place, `previous*` left untouched;
+- the log is capped at **400 entries** (drop-oldest); this bounds document size
+  and is not a time window — the feed is irregular (alternate days to a fortnight+
+  apart), so 400 entries can span years. Nothing may assume a fixed interval.
+
+The value entering the log is asserted equal to `indicativePriceINR` — the retail
+figure — so no dealer price can leak into it. The dry-run summary adds a
+**"Price history:"** line (appends · in-place corrections · skips · documents
+gaining a first-ever previous price).
+
+Run **`npm run seed:unlisted-history`** once, before the next import: it writes
+each already-priced document's current price as its first history entry (setting
+nothing else — there is no previous yet), so the *next* import is the first
+comparison instead of the first entry. `--dry-run` is required reading; expect
+~185 seeded and the ~20 price-less editorial docs correctly skipped.
+
+`lib/unlisted-history.ts` `changeSince(history, days)` resolves a change **by
+date** (newest entry on or before `latest − days`), returns the actual date and
+day-gap found, and returns `null` rather than mislabel when the nearest match
+overshoots the window by >40% or history has fewer than two points. Nothing
+renders it yet (the per-company detail pages will); it is unit-tested now.
+
 **Pre-write guards (added after the 31-Jul-2026 incident).** The importer now
 refuses to write rather than publish a bad parse:
 
@@ -185,7 +221,10 @@ refuses to write rather than publish a bad parse:
 unbalanced bracket, contains the list's "Unlisted Shares" boilerplate, or is a
 near-duplicate of another document once trailing digits are stripped. For each
 one it prints the price, lot, partner, as-of date, whether it is publicly
-visible, and whether a **clean twin** survives.
+visible, and whether a **clean twin** survives. Its summary also reports
+**price-history coverage** — how many documents still have an empty history
+(should fall to ~0 after the seed) and the largest history length seen — so
+growth is watchable without opening documents.
 
 ```
 npm run audit:unlisted                                # read-only, writes nothing

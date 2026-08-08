@@ -5,6 +5,7 @@ import type { UnlistedCompany } from "@/lib/unlisted-companies";
 import { fmtAsOf } from "@/lib/format";
 import { Th, PlainTh, useTableSort, sortRows } from "@/components/tables/table-utils";
 import { CompanyLogo } from "@/components/CompanyLogo";
+import { PriceChangeBadge } from "./PriceChangeBadge";
 
 /**
  * List / comparison view of the unlisted companies — the same data as the
@@ -77,7 +78,16 @@ export function UnlistedList({
                 <td className="px-4 py-3 text-right font-semibold text-[var(--color-navy)] tabular-nums">
                   {typeof c.indicativePrice === "number" ? (
                     <>
-                      ₹{c.indicativePrice.toLocaleString("en-IN")}
+                      <span className="inline-flex items-baseline gap-1.5">
+                        ₹{c.indicativePrice.toLocaleString("en-IN")}
+                        <PriceChangeBadge
+                          current={c.indicativePrice}
+                          previous={c.previousPrice}
+                          asOf={c.priceAsOf}
+                          previousAsOf={c.previousPriceAsOf}
+                          className="text-[10px]"
+                        />
+                      </span>
                       {c.priceAsOf && (
                         <span className="ml-1 hidden text-[10px] font-normal text-[var(--color-slate)] sm:inline">
                           {fmtAsOf(c.priceAsOf)}

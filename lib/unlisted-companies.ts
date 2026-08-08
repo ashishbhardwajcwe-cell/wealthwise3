@@ -29,6 +29,14 @@ export interface UnlistedCompany {
   lotSize?: number;
   /** Mode 2 only — where the shares can settle, e.g. "NSDL & CDSL". */
   depository?: string;
+  /**
+   * Mode 2 only — the indicative price from the prior distinct as-of date, and
+   * the date it was recorded. Derived by the importer so the card can show a
+   * change indicator without loading the full history. Two indicative quotes,
+   * not a return.
+   */
+  previousPrice?: number;
+  previousPriceAsOf?: string;
   /** Company logo URL (Sanity asset), when seeded. Falls back to a monogram. */
   logoUrl?: string;
 }
