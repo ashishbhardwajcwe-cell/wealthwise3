@@ -33,7 +33,9 @@ import {
   canonicalDepository, classifyDepository, sanitizeListText,
   storedNameCorruption, nearbyExistingDocs, buildMatchedDocSet,
   stripListBoilerplate, normalizeCompanyName, declaredNameKey,
+  planPriceHistoryPatch, PRICE_HISTORY_CAP,
 } from "./unlisted-matching.mjs";
+import { changeSince } from "../lib/unlisted-history.ts";
 import { loadUnlistedAliases } from "./unlisted-aliases.mjs";
 import { planCleanup, planAliasDedupe, dedupeAliases } from "./clean-unlisted-dupes.mjs";
 import {
@@ -46,7 +48,7 @@ import {
 import { Readable } from "node:stream";
 import { crc32 } from "node:zlib";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync, readdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -1977,6 +1979,170 @@ if (makeImage) {
     assert.deepEqual(planned.map((p) => p.doc.slug), ["tata"]);
   });
 }
+
+/* ---------- price history: the importer's derive-and-store logic ---------- */
+//
+// The partner sends one spot price with no change data, so movement is derived
+// and stored by us. planPriceHistoryPatch is the pure core the importer and the
+// seed command both use; `history` is the fully-resolved next array, so what is
+// asserted here is exactly what lands in Sanity.
+
+test("re-importing the same date and price adds no second history entry", () => {
+  const first = planPriceHistoryPatch([], { date: "2026-08-08", price: 100 });
+  assert.equal(first.action, "append");
+  assert.equal(first.history.length, 1);
+  // The same file, run again: same date, same price.
+  const rerun = planPriceHistoryPatch(first.history, { date: "2026-08-08", price: 100 });
+  assert.equal(rerun.action, "skip");
+  assert.equal(rerun.history.length, 1, "a re-run must not add a second entry");
+  assert.deepEqual(rerun.history.map((e) => e._key), ["2026-08-08"]);
+});
+
+test("a partner correction replaces the entry in place and never shifts previous*", () => {
+  const history = [
+    { _key: "2026-08-06", d: "2026-08-06", p: 900 },
+    { _key: "2026-08-08", d: "2026-08-08", p: 950 },
+  ];
+  const plan = planPriceHistoryPatch(history, { date: "2026-08-08", price: 951 });
+  assert.equal(plan.action, "correct");
+  assert.equal(plan.history.length, 2, "a correction does not add an entry");
+  assert.equal(plan.history[1].p, 951, "the entry for that date is replaced in place");
+  assert.equal(plan.history[0].p, 900, "older entries are untouched");
+  // previous* are null so the importer writes NOTHING to them — a correction is
+  // not a new day and must leave previousPriceINR exactly as it was.
+  assert.equal(plan.previousPriceINR, null);
+  assert.equal(plan.previousAsOfDate, null);
+});
+
+test("a new date appends and shifts previous* from the entry before it", () => {
+  const history = [{ _key: "2026-08-06", d: "2026-08-06", p: 900 }];
+  const plan = planPriceHistoryPatch(history, { date: "2026-08-08", price: 950 });
+  assert.equal(plan.action, "append");
+  assert.equal(plan.history.length, 2);
+  assert.deepEqual(plan.history[1], { _key: "2026-08-08", d: "2026-08-08", p: 950 });
+  assert.equal(plan.previousPriceINR, 900, "previous is the entry BEFORE this one");
+  assert.equal(plan.previousAsOfDate, "2026-08-06");
+});
+
+test("the 400-entry cap drops the oldest, never the newest", () => {
+  // Keys sort in insertion order; the values only need to be distinct.
+  const full = Array.from({ length: PRICE_HISTORY_CAP }, (_, i) => {
+    const key = `k${String(i).padStart(4, "0")}`;
+    return { _key: key, d: key, p: 100 + i };
+  });
+  const plan = planPriceHistoryPatch(full, { date: "z-newest", price: 9999 });
+  assert.equal(plan.action, "append");
+  assert.equal(plan.history.length, PRICE_HISTORY_CAP, "stays capped at 400 entries");
+  assert.equal(plan.history[0]._key, "k0001", "the oldest entry (k0000) was dropped");
+  assert.equal(plan.history[PRICE_HISTORY_CAP - 1]._key, "z-newest", "the newest is always kept");
+  assert.equal(plan.previousPriceINR, 100 + (PRICE_HISTORY_CAP - 1), "previous is the last pre-append entry");
+});
+
+test("a first-ever import gets an entry but no previous price", () => {
+  for (const empty of [[], undefined, null]) {
+    const plan = planPriceHistoryPatch(empty, { date: "2026-08-08", price: 950 });
+    assert.equal(plan.action, "append");
+    assert.deepEqual(plan.history, [{ _key: "2026-08-08", d: "2026-08-08", p: 950 }]);
+    assert.equal(plan.previousPriceINR, null, "nothing to compare against yet");
+    assert.equal(plan.previousAsOfDate, null);
+  }
+});
+
+test("allUnlistedSharesQuery never projects priceHistory (the listing payload guarantee)", () => {
+  const src = readFileSync(fileURLToPath(new URL("../sanity/queries.ts", import.meta.url)), "utf8");
+  const m = src.match(/export const allUnlistedSharesQuery = groq`([\s\S]*?)`/);
+  assert.ok(m, "could not locate allUnlistedSharesQuery in sanity/queries.ts");
+  assert.doesNotMatch(m[1], /priceHistory/, "priceHistory must never enter the listing projection");
+  // Guard against the regex silently matching nothing: the by-slug query DOES
+  // carry priceHistory, so the file as a whole must still contain it.
+  assert.match(src, /unlistedShareBySlugQuery[\s\S]*?priceHistory/);
+});
+
+test("the importer reads history, appends a new date, and reports it in the summary", () => {
+  // The one end-to-end check: query → plan → summary. --dry-run, no network
+  // (the Sanity read is answered by a preloaded fetch stub).
+  const dir = mkdtempSync(join(tmpdir(), "unlisted-history-"));
+  try {
+    writeFileSync(join(dir, "list.csv"), "Share Name,Retail Price\nTata Capital,950\n");
+    writeFileSync(join(dir, "stub.mjs"),
+      'const docs = [{ _id: "tata", company: "Tata Capital", slug: "tata-capital", aliases: [],' +
+      ' indicativePriceINR: 900, asOfDate: "2026-08-06",' +
+      ' priceHistory: [{ _key: "2026-08-06", d: "2026-08-06", p: 900 }] }];\n' +
+      'globalThis.fetch = async () => new Response(JSON.stringify({ result: docs }),' +
+      ' { headers: { "content-type": "application/json" } });\n');
+
+    const importer = fileURLToPath(new URL("./import-unlisted-prices.mjs", import.meta.url));
+    const res = spawnSync(
+      process.execPath,
+      ["--import", pathToFileURL(join(dir, "stub.mjs")).href, importer,
+        join(dir, "list.csv"), "--date=2026-08-08", "--dry-run"],
+      { encoding: "utf8", env: { ...process.env, NEXT_PUBLIC_SANITY_PROJECT_ID: "stub", SANITY_API_TOKEN: "stub" } },
+    );
+    assert.equal(res.status, 0, `expected a clean dry-run, got ${res.status}\n${res.stdout}\n${res.stderr}`);
+    assert.match(res.stdout, /Price history: 1 append\b/);
+    assert.match(res.stdout, /0 in-place corrections/);
+    assert.match(res.stdout, /1 document gaining a first-ever previous price/);
+    assert.match(res.stdout, /nothing written/i);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/* ---------- lib/unlisted-history.ts: changeSince, resolved by date ---------- */
+
+test("changeSince resolves by date and reports the real gap (a two-week gap)", () => {
+  const h = [
+    { _key: "2026-07-25", d: "2026-07-25", p: 100 },
+    { _key: "2026-08-08", d: "2026-08-08", p: 110 },
+  ];
+  const r = changeSince(h, 14);
+  assert.ok(r, "a 14-day-apart pair should resolve for a 14-day request");
+  assert.equal(r.fromDate, "2026-07-25");
+  assert.equal(r.fromPrice, 100);
+  assert.equal(r.actualDaysBack, 14);
+  assert.equal(Math.round(r.pct), 10);
+});
+
+test("changeSince returns null for fewer than two entries", () => {
+  assert.equal(changeSince([{ _key: "2026-08-08", d: "2026-08-08", p: 110 }], 30), null);
+  assert.equal(changeSince([], 30), null);
+  assert.equal(changeSince(undefined, 30), null);
+});
+
+test("changeSince returns null when the request falls before the earliest entry", () => {
+  const h = [
+    { _key: "2026-08-01", d: "2026-08-01", p: 100 },
+    { _key: "2026-08-08", d: "2026-08-08", p: 110 },
+  ];
+  assert.equal(changeSince(h, 90), null, "90 days back is well before the earliest point");
+});
+
+test("changeSince rejects a match that overshoots the window by more than 40%", () => {
+  const h = [
+    { _key: "2026-04-01", d: "2026-04-01", p: 100 }, // 130 days before the latest
+    { _key: "2026-08-09", d: "2026-08-09", p: 130 },
+  ];
+  assert.equal(changeSince(h, 90), null, "asked 90, nearest is 130 back (>126) — show nothing");
+  // Widen the request and the same point resolves, labelled by its real date.
+  const ok = changeSince(h, 100);
+  assert.ok(ok);
+  assert.equal(ok.fromDate, "2026-04-01");
+  assert.equal(ok.actualDaysBack, 130);
+});
+
+test("changeSince ignores array order and refuses a zero previous price", () => {
+  const outOfOrder = [
+    { _key: "2026-08-09", d: "2026-08-09", p: 130 }, // newest listed first
+    { _key: "2026-05-01", d: "2026-05-01", p: 100 },
+  ];
+  const r = changeSince(outOfOrder, 90);
+  assert.ok(r);
+  assert.equal(r.fromDate, "2026-05-01", "resolved by date, not position");
+  assert.equal(changeSince([
+    { _key: "2026-07-10", d: "2026-07-10", p: 0 },
+    { _key: "2026-08-09", d: "2026-08-09", p: 100 },
+  ], 30), null, "a zero earlier price cannot yield a percentage");
+});
 
 /* ---------- report ---------- */
 

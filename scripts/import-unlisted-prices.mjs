@@ -35,6 +35,17 @@
  *    An existing doc's `slug` is NEVER touched — a URL is a promise to
  *    everyone who has linked to it. Its `company` is only touched with
  *    --adopt-names; see below.
+ *  - Price movement is derived and stored by us, because the partner sends a
+ *    single spot price with no change data. Each new distinct asOfDate is
+ *    appended to `priceHistory` (a {d,p} log, capped at 400 ENTRIES — see
+ *    planPriceHistoryPatch), and previousPriceINR/previousAsOfDate are set from
+ *    the prior entry so the card shows a change indicator without loading the
+ *    array. Re-importing the same date is a no-op; a changed price for a date
+ *    already stored is treated as a partner correction (replaced in place, no
+ *    shift). Run `npm run seed:unlisted-history` once before the first import so
+ *    the very next run is a comparison. New auto-created docs start their log
+ *    with the first price. The value entering the log is asserted to equal
+ *    indicativePriceINR — the retail figure — so no dealer price can leak in.
  *  - --adopt-names (opt-in) lets the partner's name replace OURS. The rule
  *    that partner data never edits a company name was written when partner
  *    data came from OCR and was the untrusted side. Since the 06-Aug-2026
@@ -89,6 +100,7 @@
  * SANITY_API_TOKEN (Editor) — from the environment or .env.local.
  */
 
+import { strict as assert } from "node:assert";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, extname } from "node:path";
 import {
@@ -100,6 +112,7 @@ import {
   classifyDepository, normalizeCompanyName, splitEllipsis,
   resolveUnlistedTarget, priceFusedName, validateImportRows,
   storedNameCorruption, nearbyExistingDocs, buildMatchedDocSet,
+  planPriceHistoryPatch,
   PRICE_MIN_EXCL, PRICE_MAX_EXCL,
 } from "./unlisted-matching.mjs";
 import { readUnlistedXlsx } from "./unlisted-xlsx.mjs";
@@ -150,8 +163,12 @@ const env = hasEnv ? requireSanityEnv() : null;
 // live, which carries a price, which carries content a human wrote. Choosing
 // between two real documents is not a decision this script may make, but it
 // can lay out everything the person making it needs.
+// priceHistory and previousPriceINR are read so the importer can derive the
+// new history entry, shift previous*, and count first-ever previous prices.
+// priceHistory holds only retail prices (our own derived log), so reading it
+// carries nothing confidential.
 const existing = env
-  ? await sanityQuery(env, `*[_type == "unlistedShare" && !(_id in path("drafts.**"))]{ _id, company, "slug": slug.current, aliases, indicativePriceINR, asOfDate, needsReview, sector, ipoStatus, "hasLogo": defined(logo), "hasSummary": defined(summary) }`)
+  ? await sanityQuery(env, `*[_type == "unlistedShare" && !(_id in path("drafts.**"))]{ _id, company, "slug": slug.current, aliases, indicativePriceINR, asOfDate, needsReview, sector, ipoStatus, priceHistory, previousPriceINR, "hasLogo": defined(logo), "hasSummary": defined(summary) }`)
   : [];
 if (!env) console.log("(no Sanity env — dry-run against an empty dataset: parse/validation preview only)\n");
 
@@ -523,6 +540,11 @@ const brokenDeclarations = []; // { name, reason } — a declared target that no
 const relaxed = new Map(); // via → [{ name, company }]
 const claimedDocs = new Map(); // existing doc._id → { doc, rows: [name] }
 const claimedNew = new Map();  // new _id → first row name, to catch dupes in one list
+// Price-history accounting for the summary (see section below).
+let historyAppends = 0;      // a new distinct as-of date added to a doc's log
+let historyCorrections = 0;  // an existing date's price replaced in place
+let historySkips = 0;        // matched doc already carried this date at this price
+let firstEverPrevious = 0;   // docs gaining a previousPriceINR for the first time
 
 /** What each relaxed pass reads, in the operator's language. Order is the
  *  order the sections print in. */
@@ -591,6 +613,15 @@ for (const row of rows) {
     ...(row.lotSize !== undefined ? { lotSize: row.lotSize } : {}),
   };
 
+  // CONFIDENTIALITY: the ONLY value that may enter priceHistory is the retail
+  // price — the exact number written to indicativePriceINR. The dealer/cost
+  // price is structurally discarded upstream and must never reach the log; this
+  // asserts the two are the same at the point history is derived.
+  assert.equal(
+    row.price, priceFields.indicativePriceINR,
+    "the price appended to priceHistory must equal indicativePriceINR (retail only — never the dealer price)",
+  );
+
   if (target.doc) {
     // A second row landing on a document another row already claimed is the
     // one failure the relaxed passes can cause, so it is recorded here and
@@ -612,11 +643,34 @@ for (const row of rows) {
       }
     }
 
+    // Derive the price-history change. The full resolved array is computed here
+    // (append + cap, or in-place correction, or nothing on a re-run) and written
+    // whole, so a first-time document works without a separate setIfMissing and
+    // what the tests assert is exactly what lands in Sanity.
+    const historyPlan = planPriceHistoryPatch(target.doc.priceHistory, { date: asOfDate, price: row.price });
+    let historyFields = null;
+    if (historyPlan.action === "append") {
+      historyAppends++;
+      historyFields = { priceHistory: historyPlan.history };
+      if (historyPlan.previousPriceINR !== null) {
+        // A partner correction never shifts previous*; only a genuinely new date
+        // does — which is why previous* are set on the append path alone.
+        historyFields.previousPriceINR = historyPlan.previousPriceINR;
+        historyFields.previousAsOfDate = historyPlan.previousAsOfDate;
+        if (target.doc.previousPriceINR == null) firstEverPrevious++;
+      }
+    } else if (historyPlan.action === "correct") {
+      historyCorrections++;
+      historyFields = { priceHistory: historyPlan.history };
+    } else {
+      historySkips++; // same date, same price — a re-run; the log is untouched
+    }
+
     // buildMatchedDocSet is where the "never move a URL" rule lives: `slug` is
     // not in its output on any path, and a Sanity `set` patch writes only the
     // keys it is given, so logo/sector/summary/ipoStatus are untouched.
     mutations.push({
-      patch: { id: target.doc._id, set: buildMatchedDocSet({ priceFields, publish: args.publish, adoptCompany }) },
+      patch: { id: target.doc._id, set: buildMatchedDocSet({ priceFields, publish: args.publish, adoptCompany, historyFields }) },
     });
 
     // Record names the document doesn't already answer to, so the same row
@@ -654,6 +708,10 @@ for (const row of rows) {
       continue;
     }
     claimedNew.set(_id, row.name);
+    // A brand-new company starts its history with this first price so tomorrow's
+    // run has something to compare against (no previous* yet — there is none).
+    const newHistory = planPriceHistoryPatch([], { date: asOfDate, price: row.price }).history;
+    historyAppends++;
     mutations.push({
       create: {
         _id,
@@ -665,6 +723,7 @@ for (const row of rows) {
         // Auto-created: hidden until reviewed, unless --publish makes it live now.
         needsReview: !args.publish,
         ...priceFields,
+        priceHistory: newHistory,
       },
     });
     created.push({ name: company, listName: row.name, price: row.price });
@@ -675,6 +734,16 @@ for (const row of rows) {
 console.log(`Price list: ${args.file} · as of ${asOfDate} · partner "${args.partner}"${args.publish ? " · PUBLISH (live immediately)" : ""}`);
 const createdLabel = args.publish ? "created (live)" : "created (needs review)";
 console.log(`\n${updated.length} updated · ${created.length} ${createdLabel} · ${skipped.length} skipped`);
+// Price-history accounting — its own line so a re-run (all skips) and a real
+// day of movement (appends, some gaining a first-ever previous price) read
+// differently at a glance. Corrections are partner fixes to a date we already
+// stored; they never shift previous*.
+console.log(
+  `Price history: ${historyAppends} append${historyAppends === 1 ? "" : "s"} · ` +
+  `${historyCorrections} in-place correction${historyCorrections === 1 ? "" : "s"} · ` +
+  `${historySkips} skip${historySkips === 1 ? "" : "s"} (already current) · ` +
+  `${firstEverPrevious} document${firstEverPrevious === 1 ? "" : "s"} gaining a first-ever previous price`,
+);
 if (updated.length) {
   console.log("\nUpdated:");
   for (const u of updated) console.log(`  • ${u.company}  ₹${u.price.toLocaleString("en-IN")}${u.name !== u.company ? `  (list name: "${u.name}")` : ""}`);

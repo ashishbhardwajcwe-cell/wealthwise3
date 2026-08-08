@@ -56,6 +56,8 @@ export default async function Page() {
     priceAsOf: s.asOfDate,
     lotSize: s.lotSize,
     depository: s.depository,
+    previousPrice: s.previousPriceINR,
+    previousPriceAsOf: s.previousAsOfDate,
     logoUrl: s.logoUrl,
   }));
 

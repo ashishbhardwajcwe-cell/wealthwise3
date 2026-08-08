@@ -146,6 +146,11 @@ export interface UnlistedShare {
   ipoStatus?: string;
   /** Blank until the first price import lands. */
   asOfDate?: string;
+  /** Derived by the importer — the indicative price from the prior distinct
+   *  asOfDate, and the date it was recorded. Used for the card's change
+   *  indicator. priceHistory itself is never projected into this feed. */
+  previousPriceINR?: number;
+  previousAsOfDate?: string;
   summary?: string;
   /** Company logo URL (resolved Sanity asset), when seeded. */
   logoUrl?: string;

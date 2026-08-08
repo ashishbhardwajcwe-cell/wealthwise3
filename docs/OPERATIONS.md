@@ -340,6 +340,30 @@ with "ambiguous rows". Part 3 step 7a fixes it — one time, ten minutes.
 
 **Time: 10 minutes. Tool: Terminal, then browser.**
 
+> **ONE-TIME, before your next import — seed the price history.** We now store a
+> `priceHistory` log per company and show a small ▲/▼ change indicator on the
+> card, because the partner only ever sends today's price. A company with no
+> history has nothing for tomorrow's import to compare against, so run this once
+> so the *next* import is the first comparison, not the first entry.
+>
+> ```
+> cd ~/Desktop/wealthwise3
+> git pull --no-edit
+> npm run seed:unlisted-history -- --dry-run     # read this — expect ~185 to seed
+> npm run seed:unlisted-history                  # write
+> ```
+>
+> The ~20 editorial companies with no price are skipped (correct). It is
+> idempotent — a second run seeds nothing.
+>
+> **Attribute-ceiling check (also one-time).** A Sanity document may have at most
+> 2000 attribute paths. These three new fields add ~5, and we are nowhere near
+> the ceiling, but confirm it: open
+> `https://fhpazm9i.api.sanity.io/v1/data/stats/production` **before** the seed
+> and **after** the seed + your first import, and note `fields.count.value` both
+> times. A jump of ~5, staying far below 2000, is expected. (~12 KB per company
+> per year — negligible against Sanity's 32 MB-per-document limit.)
+
 ### Step 1 — Save the file
 
 Save the emailed attachment into `~/Desktop/wealthwise3/UNLISTED/`, keeping their
@@ -399,6 +423,10 @@ npm run import:unlisted -- "PASTE_PATH_HERE" --dry-run
   PDF. It is not a reason to stop.
 - **`unreadable depository cells`** → those rows import with no depository
   rather than a guessed one. Tell the partner; don't hand-edit.
+- **`Price history:` line** → appends · in-place corrections · skips · documents
+  gaining a first-ever previous price. On a normal weekday most rows are appends;
+  right after the one-time seed you'll also see many "gaining a first-ever
+  previous price". All-skips means you imported the same date twice (harmless).
 - **Sensible names and prices** → continue.
 
 ### Step 5 — Import

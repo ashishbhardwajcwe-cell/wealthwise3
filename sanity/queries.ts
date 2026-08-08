@@ -163,6 +163,14 @@ export const allAifFundsQuery = groq`
  * clears needsReview; isActive != false keeps soft-deleted rows out. The
  * `partner` provenance code is deliberately NOT projected — it never renders
  * on the site.
+ *
+ * PERFORMANCE GUARANTEE — DO NOT ADD priceHistory HERE. This feed renders 206
+ * cards; its payload must not grow. The card shows a change indicator from the
+ * two SCALARS below (previousPriceINR / previousAsOfDate), which the importer
+ * precomputes at write time — never from the priceHistory array, which stays
+ * out of this projection on purpose. The array is fetched only per-company, by
+ * unlistedShareBySlugQuery. The next person to touch this file will be tempted
+ * to add priceHistory for a detail page; use unlistedShareBySlugQuery instead.
  */
 export const allUnlistedSharesQuery = groq`
   *[_type == "unlistedShare" && !(_id in path("drafts.**"))
@@ -170,6 +178,23 @@ export const allUnlistedSharesQuery = groq`
     | order(company asc)
     { _id, company, "slug": slug.current, sector, summary, ipoStatus,
       indicativePriceINR, lotSize, depository, asOfDate,
+      previousPriceINR, previousAsOfDate,
+      "logoUrl": logo.asset->url }
+`;
+
+/**
+ * A single unlisted company by slug, WITH its full priceHistory — for the
+ * per-company detail pages (to be built next). This is the one place the
+ * history array is allowed into a projection, because it is fetched one
+ * document at a time, not across the whole feed. Nothing consumes it yet.
+ */
+export const unlistedShareBySlugQuery = groq`
+  *[_type == "unlistedShare" && !(_id in path("drafts.**"))
+    && isActive == true && slug.current == $slug][0]
+    { _id, company, "slug": slug.current, sector, summary, ipoStatus,
+      indicativePriceINR, lotSize, depository, asOfDate,
+      previousPriceINR, previousAsOfDate,
+      priceHistory[]{ d, p },
       "logoUrl": logo.asset->url }
 `;
 

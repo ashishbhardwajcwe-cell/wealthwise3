@@ -1011,6 +1011,72 @@ export function nearbyExistingDocs(rawName, docs, limit = 3) {
   return scored.slice(0, limit);
 }
 
+// ─── derived price history ──────────────────────────────────────────
+//
+// The partner sends a single spot price with no change data, so any movement
+// we display is derived and stored by us. priceHistory is our own append-only
+// log; previousPrice*/previousAsOfDate are the last distinct point before the
+// newest, precomputed so the listing card can show a change indicator from two
+// scalars instead of ever loading the array (that is the listing payload's
+// whole performance guarantee — see sanity/queries.ts).
+
+/**
+ * Hard cap on priceHistory length. This bounds DOCUMENT SIZE — it is 400
+ * ENTRIES, not a time window. Imports are ad hoc (sometimes alternate days,
+ * sometimes a fortnight apart), so 400 entries can span anything from a year
+ * to several years; nothing here may assume a fixed interval or a contiguous
+ * series. When the cap is exceeded the OLDEST entries are dropped first.
+ */
+export const PRICE_HISTORY_CAP = 400;
+
+/**
+ * Plan the priceHistory + previous* change for ONE document, given its current
+ * history and the incoming { date, price }. Pure and side-effect free so the
+ * importer's trickiest surface is unit-testable; the importer turns the result
+ * into a Sanity patch.
+ *
+ * `price` is the retail/indicative value — the SAME number written to
+ * indicativePriceINR. No dealer figure ever reaches this function; the importer
+ * asserts the two are equal at the call site.
+ *
+ * Returns { action, history, previousPriceINR, previousAsOfDate }:
+ *   - action "skip":    the incoming date is already stored with the same price
+ *                       (a re-run). Nothing changes; previous* are null.
+ *   - action "correct": the incoming date is already stored with a DIFFERENT
+ *                       price (a partner correction). That entry is replaced in
+ *                       place and previous* are left untouched (null here so the
+ *                       caller writes neither) — a correction is not a new day.
+ *   - action "append":  a new date. The point is appended, the oldest are
+ *                       dropped past the cap, and previous* are taken from the
+ *                       last entry BEFORE this one (null when there was none, so
+ *                       a first-ever point carries no previous).
+ * `history` is always the fully-resolved next array, so what the tests assert
+ * is exactly what the importer writes.
+ */
+export function planPriceHistoryPatch(existingHistory, { date, price }, { cap = PRICE_HISTORY_CAP } = {}) {
+  const history = Array.isArray(existingHistory) ? existingHistory.slice() : [];
+  const idx = history.findIndex((e) => e && e._key === date);
+
+  if (idx !== -1) {
+    if (history[idx].p === price) {
+      return { action: "skip", history, previousPriceINR: null, previousAsOfDate: null };
+    }
+    const corrected = history.slice();
+    corrected[idx] = { _key: date, d: date, p: price };
+    return { action: "correct", history: corrected, previousPriceINR: null, previousAsOfDate: null };
+  }
+
+  const last = history.length ? history[history.length - 1] : null;
+  let next = history.concat([{ _key: date, d: date, p: price }]);
+  if (next.length > cap) next = next.slice(next.length - cap);
+  return {
+    action: "append",
+    history: next,
+    previousPriceINR: last ? last.p : null,
+    previousAsOfDate: last ? last.d : null,
+  };
+}
+
 /**
  * The `set` payload for a document the price list matched.
  *
@@ -1019,10 +1085,14 @@ export function nearbyExistingDocs(rawName, docs, limit = 3) {
  * it, and partner data does not get to move one. Fields not named here —
  * logo, sector, summary, ipoStatus, everything hand-curated — are untouched
  * because a Sanity `set` patch only writes the keys it is given.
+ *
+ * `historyFields` (from a planPriceHistoryPatch result, or null on a skip)
+ * carries priceHistory and, on an append, previousPriceINR/previousAsOfDate.
  */
-export function buildMatchedDocSet({ priceFields, publish = false, adoptCompany = null }) {
+export function buildMatchedDocSet({ priceFields, publish = false, adoptCompany = null, historyFields = null }) {
   return {
     ...priceFields,
+    ...(historyFields ?? {}),
     ...(publish ? { needsReview: false } : {}),
     ...(adoptCompany ? { company: adoptCompany } : {}),
   };

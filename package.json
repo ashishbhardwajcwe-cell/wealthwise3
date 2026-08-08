@@ -15,6 +15,7 @@
     "fetch:benchmark": "node scripts/fetch-benchmark.mjs",
     "fetch:sebi-aif": "node scripts/fetch-sebi-aif.mjs",
     "import:unlisted": "node scripts/import-unlisted-prices.mjs",
+    "seed:unlisted-history": "node scripts/seed-unlisted-history.mjs",
     "logos:unlisted": "node scripts/extract-unlisted-logos.mjs",
     "logos:pms": "node scripts/import-pms-logos.mjs",
     "clean:unlisted-names": "node scripts/clean-unlisted-names.mjs",

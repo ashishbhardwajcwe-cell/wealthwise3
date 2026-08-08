@@ -9,6 +9,11 @@
  *   npm run audit:unlisted -- --delete-flagged            # delete corruptions that have a clean twin
  *   npm run audit:unlisted -- --purge-import=2026-08-01   # delete one bad import
  *
+ * The read-only summary also reports PRICE-HISTORY COVERAGE — how many documents
+ * still have an empty priceHistory (should fall to ~0 after the history seed) and
+ * the largest priceHistory length seen — so growth can be watched without opening
+ * documents. See priceHistoryStats.
+ *
  * The default run writes NOTHING. There are two destructive modes:
  *
  *  --delete-flagged     removes a document only when BOTH hold: the name
@@ -261,6 +266,33 @@ export function asOfDateHistogram(rows) {
 export const XLSX_PIPELINE_FIRST_IMPORT = "2026-08-06";
 
 /**
+ * Price-history coverage across the corpus, so growth can be watched without
+ * inspecting documents: how many docs have an EMPTY (or missing) priceHistory,
+ * and the LARGEST priceHistory length seen (with the document it belongs to).
+ *
+ * Robust to both data shapes: the live query projects "priceHistoryLen" (a
+ * count, so the audit never pulls ~200 full arrays), while a `--from` fixture
+ * may carry the whole priceHistory array instead.
+ */
+export function priceHistoryStats(rows) {
+  const lengthOf = (doc) =>
+    typeof doc.priceHistoryLen === "number"
+      ? doc.priceHistoryLen
+      : Array.isArray(doc.priceHistory)
+        ? doc.priceHistory.length
+        : 0;
+  let empty = 0;
+  let maxLen = 0;
+  let maxDoc = null;
+  for (const r of rows) {
+    const len = lengthOf(r.doc);
+    if (len === 0) empty++;
+    if (len > maxLen) { maxLen = len; maxDoc = r.doc; }
+  }
+  return { empty, maxLen, maxDoc, total: rows.length };
+}
+
+/**
  * Flagged rows whose stored price actually is suspect: priced, and stamped
  * before the xlsx importer (or not stamped at all, which no import leaves).
  *
@@ -423,7 +455,8 @@ if (args.from && args.deleteFlagged) {
 const QUERY = `*[_type == "unlistedShare"]{
      _id, company, indicativePriceINR, lotSize, partner, asOfDate,
      "slug": slug.current, aliases, needsReview, isActive,
-     summary, sector, risks, ipoStatus, "logo": defined(logo)
+     summary, sector, risks, ipoStatus, "logo": defined(logo),
+     "priceHistoryLen": count(priceHistory)
    }`;
 
 const env = args.from
@@ -491,6 +524,15 @@ function printReport(state, { scope = null, flaggedOnly = false, heading = "read
   console.log(`  flagged                ${flagged.length}`);
   console.log(`    · with a clean twin  ${deletable.length}  → deletable with --delete-flagged`);
   console.log(`    · manual review      ${manual.length}`);
+
+  // Price-history coverage — corpus-wide (not scoped), so growth is watchable
+  // without opening documents. `empty` should fall to ~0 once the history seed
+  // has run; `largest` should climb slowly and stay well under the 400 cap.
+  const ph = priceHistoryStats(rows);
+  console.log(
+    `  price history          ${ph.empty} with an empty history · largest ${ph.maxLen} entr${ph.maxLen === 1 ? "y" : "ies"}` +
+    `${ph.maxDoc ? ` ("${ph.maxDoc.company}")` : ""}`,
+  );
 
   const untrusted = untrustedPriceRows(flagged);
   if (untrusted.length) {
