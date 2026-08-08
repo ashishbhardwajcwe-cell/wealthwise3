@@ -26,13 +26,18 @@
  *
  * ── WHY THE DATE, NOT THE NAME ──────────────────────────────────
  * asOfDate is the only reliable discriminator for this incident. Name
- * signatures are NOT: "Sterlite Grid 5", "Zepto Unlisted Shares (Equity)",
- * "Signify Innovations (Previously Ph", "Sterlite Electric Limited (Formerly"
- * and "Fusion Techstack Limited (Forme" are GENUINE 22-Jul documents — live on
- * the site with correct retail prices, two of them carrying hand-extracted
- * logos — and they trip exactly the same name rules the corrupted documents do.
- * Purging by signature alone destroys them; purging by date leaves them
- * untouched. --purge-import intersects the two and never uses either alone.
+ * signatures are NOT: "Zepto Unlisted Shares (Equity)", "Signify Innovations
+ * (Previously Ph", "Sterlite Electric Limited (Formerly" and "Fusion Techstack
+ * Limited (Forme" are GENUINE 22-Jul documents — live on the site with correct
+ * retail prices, two of them carrying hand-extracted logos — and they trip
+ * exactly the same name rules the corrupted documents do. Purging by signature
+ * alone destroys them; purging by date leaves them untouched. --purge-import
+ * intersects the two and never uses either alone.
+ *
+ * "Sterlite Grid 5" was a fifth such name until its trailing 5 — which is part
+ * of the company, an SPV number — was whitelisted in
+ * GENUINE_TRAILING_DIGIT_NAMES. That is a whitelist by name and not a looser
+ * rule, for the reason recorded there.
  *
  * ── WHY THIS EXISTS ────────────────────────────────────────────────────────
  * The 31-Jul-2026 price import took the partner list's name and price columns
@@ -49,10 +54,14 @@
  * ── CONFIDENTIALITY ────────────────────────────────────────────────────────
  * The report prints `indicativePriceINR` for flagged documents because you
  * cannot triage without it, and because those values are ALREADY in a publicly
- * readable dataset — that is the incident, not this report. Treat the printed
- * price of any flagged document as untrusted: the importer bug stored whichever
- * number came last before the depository column, which on the partner's list is
- * the DEALER (cost) price. Do not copy those figures anywhere; delete them.
+ * readable dataset — that is the incident, not this report.
+ *
+ * Treat the printed price as untrusted ONLY for documents stamped before
+ * XLSX_PIPELINE_FIRST_IMPORT: the old importer stored whichever number came
+ * last before the depository column, which on the partner's list is the DEALER
+ * (cost) price. Do not copy those figures anywhere; delete them. Documents from
+ * the .xlsx importer are not in that category — it resolves the price column by
+ * header and asserts it matches /retail/i — and the report says which is which.
  * ───────────────────────────────────────────────────────────────────────────
  *
  * Env: NEXT_PUBLIC_SANITY_PROJECT_ID (reads — the dataset is public),
@@ -73,6 +82,24 @@ import {
 // ─── signatures ─────────────────────────────────────────────────────
 
 /**
+ * Company names whose trailing digits are PART OF THE NAME.
+ *
+ * "Sterlite Grid 5" is one of Sterlite Power's numbered transmission SPVs — the
+ * 5 is the company, not a price column that leaked into the name field. It is
+ * listed here BY NAME rather than by loosening the ends-in-digits rule, because
+ * every rule general enough to spare it also spares the corruptions the rule
+ * exists to catch: "Shares 454" and "(PPFAS) 19850" are a bare word and a
+ * bracketed monogram followed by digits, structurally identical to this.
+ *
+ * Add to this list only after checking the document is real. A wrong entry here
+ * makes a corrupted document invisible to the audit.
+ */
+export const GENUINE_TRAILING_DIGIT_NAMES = ["Sterlite Grid 5"];
+const GENUINE_TRAILING_DIGIT_KEYS = new Set(
+  GENUINE_TRAILING_DIGIT_NAMES.map(normalizeCompanyName).filter(Boolean),
+);
+
+/**
  * Structural corruption signatures on a company name — each one is visible in
  * the name itself, no corpus needed.
  */
@@ -81,7 +108,9 @@ export function structuralSignatures(company) {
   const out = [];
   if (!s.trim()) return ["no company name"];
   const tail = trailingNumber(s);
-  if (tail) out.push(`ends in digits ("${tail.raw}")`);
+  if (tail && !GENUINE_TRAILING_DIGIT_KEYS.has(normalizeCompanyName(s))) {
+    out.push(`ends in digits ("${tail.raw}")`);
+  }
   if (hasUnbalancedBracket(s)) out.push("unbalanced bracket");
   if (LIST_BOILERPLATE_RE.test(s)) out.push('contains "Unlisted Shares"');
   return out;
@@ -185,11 +214,11 @@ function findCleanTwin(row, clean, cleanByKey) {
  * Split an audited corpus around one import's asOfDate.
  *
  * `asOfDate` is the only reliable discriminator for the 31-Jul/01-Aug incident.
- * Name signatures are NOT: real 22-Jul documents like "Sterlite Grid 5",
- * "Zepto Unlisted Shares (Equity)" and "Signify Innovations (Previously Ph"
- * trip the same rules, are live on the site with correct retail prices, and two
- * of them carry hand-extracted logos. Purging by signature alone destroys them;
- * purging by date leaves them untouched.
+ * Name signatures are NOT: real 22-Jul documents like "Zepto Unlisted Shares
+ * (Equity)" and "Signify Innovations (Previously Ph" trip the same rules, are
+ * live on the site with correct retail prices, and two of them carry
+ * hand-extracted logos. Purging by signature alone destroys them; purging by
+ * date leaves them untouched.
  *
  * Returns:
  *  - targets        — this date AND a corruption signature: the purge list.
@@ -217,6 +246,34 @@ export function asOfDateHistogram(rows) {
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+}
+
+/**
+ * The asOfDate of the first import that read the partner's .xlsx directly.
+ *
+ * Before this date the importer took whichever number sat last before the
+ * depository column, which on the partner's list is the confidential DEALER
+ * price — that is the leak the audit was written to find. From this date on the
+ * price column is resolved by header and asserted to match /retail/i before a
+ * single data row is read, so a flagged document's price is a NAME problem and
+ * nothing more.
+ */
+export const XLSX_PIPELINE_FIRST_IMPORT = "2026-08-06";
+
+/**
+ * Flagged rows whose stored price actually is suspect: priced, and stamped
+ * before the xlsx importer (or not stamped at all, which no import leaves).
+ *
+ * Scoping matters. Printing "this price is NOT trustworthy — treat it as a
+ * leak" under every flagged document says it about rows imported this morning
+ * through the asserted retail column, where it is both wrong and alarming.
+ */
+export function untrustedPriceRows(rows) {
+  return rows.filter(
+    (r) =>
+      typeof r.doc.indicativePriceINR === "number" &&
+      (!r.doc.asOfDate || r.doc.asOfDate < XLSX_PIPELINE_FIRST_IMPORT),
+  );
 }
 
 /**
@@ -435,12 +492,31 @@ function printReport(state, { scope = null, flaggedOnly = false, heading = "read
   console.log(`    · with a clean twin  ${deletable.length}  → deletable with --delete-flagged`);
   console.log(`    · manual review      ${manual.length}`);
 
-  if (flagged.length) {
+  const untrusted = untrustedPriceRows(flagged);
+  if (untrusted.length) {
     console.log(
-      "\n  Note: a flagged document's stored price is NOT trustworthy. The importer bug took\n" +
-      "  whichever number sat last before the depository column, which on the partner's list\n" +
-      "  is the confidential dealer price. Treat every flagged figure as a leak to be removed,\n" +
-      "  not a value to be re-used.",
+      `\n  Note: ${untrusted.length} flagged document${untrusted.length === 1 ? "" : "s"} ` +
+      `predate${untrusted.length === 1 ? "s" : ""} the .xlsx importer (asOfDate before ` +
+      `${XLSX_PIPELINE_FIRST_IMPORT}), so the stored price is NOT trustworthy.\n` +
+      "  The old importer took whichever number sat last before the depository column, which on\n" +
+      "  the partner's list is the confidential dealer price. Treat those figures as a leak to be\n" +
+      "  removed, not a value to be re-used:",
+    );
+    for (const r of untrusted) {
+      console.log(`      ${r.doc._id}  "${r.doc.company}"  as of ${field(r.doc.asOfDate)}`);
+    }
+    const rest = flagged.length - untrusted.length;
+    if (rest > 0) {
+      console.log(
+        `\n  The other ${rest} ${rest === 1 ? "was" : "were"} imported from the .xlsx, which resolves the price\n` +
+        "  column by header and asserts it is the RETAIL one. Those names need fixing; their prices\n" +
+        "  are fine — npm run clean:unlisted-names fixes most of them.",
+      );
+    }
+  } else if (flagged.length) {
+    console.log(
+      "\n  Every flagged document was imported from the .xlsx, which resolves the price column by\n" +
+      "  header and asserts it is the RETAIL one. These are name problems, not price problems.",
     );
   }
   return { flagged, clean, deletable, manual };

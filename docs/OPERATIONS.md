@@ -1,9 +1,19 @@
 # PlanMyCashflows — Master Operations Manual
 
-## Version 3 · 7 August 2026
+## Version 3.1 · 8 August 2026
 
 **Assume nothing. Follow exactly. Every command is written out in full.**
 
+> **What changed in V3.1:** `npm run clean:unlisted-names` (Part 2 step 6) now
+> strips the list's row boilerplate off the END of a name as well as OCR junk
+> off the front, so "Bazar India Unlisted Shares" becomes "Bazar India" — that
+> is the same rule the matcher uses, and it clears the one thing `--approve-all`
+> refuses to publish. `npm run approve:unlisted -- --hide=<slug>` is new: it
+> takes a live document back off the page without deleting it. And the audit no
+> longer cries wolf — the "price is not trustworthy" warning is now limited to
+> documents that predate the Excel importer, and "Sterlite Grid 5" is no longer
+> flagged for ending in a digit.
+>
 > **What changed in V3:** UnlistedZone now send the daily list as `.xlsx`
 > instead of PDF (1.3), so Part 2 no longer depends on OCR. Part 2 gains the
 > per-sheet row counts, the relaxed-match list to read before importing, and
@@ -306,6 +316,10 @@ gone.
   every one and the import now matches onto these rather than creating a second
   copy. `--adopt-names` (Part 2 step 5b) rewrites the stored name from the
   list, once, without moving any URL
+- Row boilerplate baked into a company name ("Bazar India Unlisted Shares",
+  "Gynofem Healthcare Unlisted Shares Price") on rows the first Excel run
+  created from scratch — five documents. **Step 6 now strips this**; run it and
+  they are gone
 - ~170 of 188 show sector "Other" — only hand-curated entries have real sectors
 
 ## 1.5 — Open: PMS pins not yet filled
@@ -444,8 +458,39 @@ only need this once; after it, day-to-day imports need no flag.
 ### Step 6 — Tidy names
 
 ```
+npm run clean:unlisted-names -- --dry-run
+```
+
+It prints every rename it would make. Two kinds:
+
+- **OCR junk off the front** — `"[J] Capgemini…"`, `"«wx Fusion…"`, `"i Urban
+  Tots"`. That is the logo the old PDF list rendered next to the name.
+- **Row boilerplate off the back** — `"Bazar India Unlisted Shares"` →
+  `"Bazar India"`, `"Gynofem Healthcare Unlisted Shares Price"` → `"Gynofem
+  Healthcare"`. Every row on the partner's sheet is headed "<Company> Unlisted
+  Shares"; when a row matches nothing the importer creates the document with
+  that heading baked in, and it would go onto a public page as the company's
+  name. This is what step 6c refuses to publish, so run step 6 first.
+
+A bracketed qualifier survives: `"Zepto Unlisted Shares (Equity)"` becomes
+`"Zepto (Equity)"`, not `"Zepto"` — the `(Equity)` is the only thing separating
+it from the CCPS line.
+
+Read the list, then apply:
+
+```
 npm run clean:unlisted-names
 ```
+
+**It only ever changes the display name.** Slugs are not touched — a slug is a
+public URL — and the old name is added to that document's `aliases`, so
+tomorrow's list still lands on the same document instead of creating a second
+one. Safe to re-run: a name that is already tidy is left alone, and an alias the
+document already has is not added twice.
+
+Names it cannot fix confidently — a leading digit logo like `"4A …"`, or the
+mangled `"BB Zepto Unlisted( Ccps Shares((79.."` — are left for a hand edit in
+Studio. It will not guess.
 
 ### Step 6b — Once, after the first Excel import: merge the duplicates
 
@@ -502,7 +547,8 @@ npm run approve:unlisted -- --approve-all
 which publishes everything **except** documents with no price, no minimum lot
 size, or `"Unlisted Shares"` still in the company name — those are printed and
 skipped, because that is the partner's row boilerplate and it would go straight
-onto a public page. Fix them in Studio and re-run.
+onto a public page. **Step 6 fixes that last one for you**; if anything is still
+refused for its name after step 6, fix it in Studio and re-run.
 
 Or publish specific ones:
 
@@ -514,9 +560,32 @@ Naming a slug is your decision and is honoured even if the gate would complain
 — you get a warning, not a refusal. A document that is already live is never
 touched on any path, and publishing changes `needsReview` and nothing else.
 
-**Order matters:** run 6b before 6c. Several of the hidden documents are
-duplicates that 6b deletes, and there is no point reviewing something that is
-about to go.
+**Order matters:** run 6b before 6c, and step 6 before both. Several of the
+hidden documents are duplicates that 6b deletes, and there is no point reviewing
+something that is about to go.
+
+### Step 6d — Taking something back off the page
+
+Sometimes a document that is already live should not be. The usual reason: it
+carries a price no current list can refresh, so the figure is stale and nothing
+will correct it.
+
+```
+npm run approve:unlisted -- --hide=bb-zepto-unlisted-ccps-shares-79
+```
+
+That sets `needsReview` back to true, which takes it off the public page. It
+**deletes nothing** — the price, name, slug and aliases all stay — so when the
+partner lists that line again, `--approve=<slug>` brings it straight back. You
+can pass the document id instead of the slug; the audit prints ids.
+
+A document that is already hidden is never touched, the same way an already-live
+document is never re-published.
+
+> Done once already, on 8 August 2026:
+> `unlistedShare-bb-zepto-unlisted-ccps-shares-79` (the Zepto CCPS line) was
+> live with a price from the old importer, a lot size of 2, and no row in the
+> 06-Aug list to refresh it. It is hidden, not deleted.
 
 ### Step 7 — Audit
 
@@ -525,6 +594,17 @@ npm run audit:unlisted
 ```
 
 Total should be about **188**. If it jumped, go to Part 10.
+
+Flagged documents are ones whose **name** looks wrong. Read the note under the
+summary carefully — it now separates the two cases:
+
+- Flagged **and** stamped before `2026-08-06` (the first Excel import): the
+  price came from the old importer and may be the confidential dealer figure.
+  Those documents are listed by id. Delete the price; do not re-use it.
+- Flagged and stamped `2026-08-06` or later: the price came through the Excel
+  importer, which picks the price column by its header and refuses to run
+  unless that header says "retail". **The name needs fixing; the price is
+  fine.** Step 6 fixes most of these names.
 
 ### Step 8 — SPOT-CHECK THE PRICES — MANDATORY
 

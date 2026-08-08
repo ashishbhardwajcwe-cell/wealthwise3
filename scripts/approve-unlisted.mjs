@@ -5,6 +5,7 @@
  *   npm run approve:unlisted                                # list them all
  *   npm run approve:unlisted -- --approve=slug-a,slug-b     # publish those
  *   npm run approve:unlisted -- --approve-all               # publish everything that passes
+ *   npm run approve:unlisted -- --hide=slug-a               # send a live one back to review
  *
  * The price importer creates a company it has never seen with needsReview:
  * true, so it stays off the site until someone has looked at it. That is the
@@ -28,6 +29,18 @@
  * it is a choice rather than an accident.
  *
  * A document that is already live is never touched on any path.
+ *
+ * ── THE WAY BACK ───────────────────────────────────────────────────────────
+ * --hide=<slug>,<slug> is the exact inverse: it sets needsReview back to TRUE
+ * on documents that are currently live, which takes them off the public page.
+ * It is what you reach for when a live document turns out to be carrying a
+ * price no current list can refresh — the price is stale and nothing will
+ * correct it, so the row should not be on the site.
+ *
+ * It DELETES NOTHING. The document keeps its price, name, slug and aliases, and
+ * comes back with --approve the moment the partner lists that line again.
+ * Symmetrically to the above, a document that is already hidden is never
+ * touched: a slug that is not live is reported and skipped.
  * ───────────────────────────────────────────────────────────────────────────
  *
  * Run this AFTER `npm run clean:unlisted-dupes` — several of the hidden
@@ -99,6 +112,33 @@ export function selectForApproval(docs, { slugs = null, all = false } = {}) {
   return { publish, blocked: [], unknown };
 }
 
+/**
+ * Decide what to hide. `docs` must already be the LIVE set (needsReview not
+ * true), so a document that is already hidden cannot be "hidden" again and
+ * lands in `unknown` instead — the mirror of selectForApproval's rule that an
+ * already-live document is never republished.
+ *
+ * Returns { hide, unknown }. Nothing here deletes; the caller writes
+ * needsReview: true and no other field.
+ */
+export function selectForHiding(docs, refs = []) {
+  // Slug OR _id: the audit report prints _ids, and retyping one as a slug is
+  // an easy way to hide the wrong row (or, more likely, nothing at all).
+  const byRef = new Map();
+  for (const d of docs) {
+    if (d.slug) byRef.set(d.slug, d);
+    if (d._id) byRef.set(d._id, d);
+  }
+  const hide = [];
+  const unknown = [];
+  for (const ref of refs) {
+    const doc = byRef.get(ref);
+    if (!doc) unknown.push(ref);
+    else if (!hide.includes(doc)) hide.push(doc);
+  }
+  return { hide, unknown };
+}
+
 /** One row of the review table. */
 export function reviewRow(doc) {
   return {
@@ -137,11 +177,13 @@ export function renderTable(rows, { maxCompany = 42, maxSlug = 38 } = {}) {
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
 
 // ---------- args ----------
-const args = { slugs: null, all: false };
+const args = { slugs: null, all: false, hide: null };
 for (const a of process.argv.slice(2)) {
   if (a === "--approve-all") args.all = true;
   else if (a.startsWith("--approve=")) {
     args.slugs = a.slice(10).split(",").map((s) => s.trim()).filter(Boolean);
+  } else if (a.startsWith("--hide=")) {
+    args.hide = a.slice(7).split(",").map((s) => s.trim()).filter(Boolean);
   } else if (a === "--help" || a === "-h") { console.log("See the header of scripts/approve-unlisted.mjs for usage."); process.exit(0); }
   else { console.error(`Unknown flag ${a}`); process.exit(1); }
 }
@@ -149,14 +191,52 @@ if (args.all && args.slugs) {
   console.error("Use --approve-all or --approve=<slugs>, not both.");
   process.exit(1);
 }
+if (args.hide && (args.all || args.slugs)) {
+  console.error("--hide moves documents the other way; run it on its own, not with --approve.");
+  process.exit(1);
+}
 if (args.slugs && args.slugs.length === 0) {
   console.error("--approve= needs at least one slug. Run with no flags to see them.");
   process.exit(1);
 }
+if (args.hide && args.hide.length === 0) {
+  console.error("--hide= needs at least one slug or document id.");
+  process.exit(1);
+}
 
-const writing = args.all || !!args.slugs;
+const writing = args.all || !!args.slugs || !!args.hide;
 loadDotEnvLocal();
 const env = requireSanityEnv({ write: writing });
+
+// ---------- hide: the way back off the public page ----------
+if (args.hide) {
+  const live = await sanityQuery(
+    env,
+    `*[_type == "unlistedShare" && !(_id in path("drafts.**")) && needsReview != true]` +
+    `{ _id, company, "slug": slug.current, indicativePriceINR, lotSize, depository, asOfDate, "hasLogo": defined(logo) }`,
+  );
+  const { hide, unknown } = selectForHiding(live, args.hide);
+
+  if (unknown.length) {
+    console.log(`${unknown.length} named reference${unknown.length > 1 ? "s are" : " is"} not live — already hidden, or no such document:`);
+    for (const s of unknown) console.log(`  • ${s}`);
+    console.log("  Nothing was done for these.\n");
+  }
+  if (hide.length === 0) {
+    console.log("Nothing to hide.");
+    process.exit(unknown.length ? 1 : 0);
+  }
+
+  console.log(`Hiding ${hide.length} — needsReview goes back to true, nothing else changes:\n`);
+  console.log(renderTable(hide.map(reviewRow)));
+  console.log("\n  The price, name, slug and aliases are all kept. Nothing is deleted.");
+  console.log("  Bring one back with:  npm run approve:unlisted -- --approve=<slug>");
+
+  await sanityMutate(env, hide.map((doc) => ({ patch: { id: doc._id, set: { needsReview: true } } })));
+  console.log(`\nWrote ${hide.length} mutation${hide.length === 1 ? "" : "s"} to Sanity (${env.projectId}/${env.dataset}).`);
+  console.log("They leave the unlisted-shares page at its next revalidation (≤1h) or deploy.");
+  process.exit(0);
+}
 
 const hidden = await sanityQuery(
   env,
@@ -183,7 +263,8 @@ if (!writing) {
   console.log(
     `\nNothing published — this was a listing.\n\n` +
     `  Publish some:  npm run approve:unlisted -- --approve=${hidden[0].slug}${hidden[1] ? `,${hidden[1].slug}` : ""}\n` +
-    `  Publish all:   npm run approve:unlisted -- --approve-all${gated.length ? `   (skips the ${gated.length} above)` : ""}\n\n` +
+    `  Publish all:   npm run approve:unlisted -- --approve-all${gated.length ? `   (skips the ${gated.length} above)` : ""}\n` +
+    "  Hide a live one: npm run approve:unlisted -- --hide=<slug>\n\n" +
     "  Run npm run clean:unlisted-dupes first if you haven't — some of these are duplicates it deletes.",
   );
   process.exit(0);
