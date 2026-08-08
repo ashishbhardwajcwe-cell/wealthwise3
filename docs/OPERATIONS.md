@@ -14,7 +14,8 @@
 > `--adopt-names` (Part 2 step 5b) can repair ours from theirs. The tail that
 > heuristics cannot safely reach is declared in `scripts/unlisted-aliases.json`,
 > and `npm run clean:unlisted-dupes` (step 6b) merges the duplicates the first
-> Excel run created.
+> Excel run created. `npm run approve:unlisted` (step 6c) reviews and publishes
+> the new companies as one table instead of one Studio visit each.
 >
 > **What changed in V2:** the dealer-price leak is resolved and that section now
 > records how it was done. New: a repair procedure for wrong numbers (Part 9), a
@@ -474,6 +475,48 @@ npm run clean:unlisted-dupes
 ```
 
 Safe to re-run — an alias the survivor already has is not added twice.
+
+It also tidies **doubled aliases**: 25 documents carry the same name twice
+because the `--adopt-names` run appended an old company name the document
+already answered to under a slightly different spelling. Cosmetic only — both
+spellings match identically — but it makes the alias lists readable again.
+
+### Step 6c — Publish the new companies
+
+The import parks a company it has never seen behind `needsReview`, so it stays
+off the site until someone reads it. After the first Excel run that is ~18
+documents, which is 18 trips through Studio. Instead:
+
+```
+npm run approve:unlisted
+```
+
+That writes nothing. It prints one table — slug, company, price, lot,
+depository, as-of date, logo — so you can scan the whole set at once, and lists
+anything `--approve-all` would refuse. Then either:
+
+```
+npm run approve:unlisted -- --approve-all
+```
+
+which publishes everything **except** documents with no price, no minimum lot
+size, or `"Unlisted Shares"` still in the company name — those are printed and
+skipped, because that is the partner's row boilerplate and it would go straight
+onto a public page. Fix them in Studio and re-run.
+
+Or publish specific ones:
+
+```
+npm run approve:unlisted -- --approve=machint-solutions-limited,vivriti-finance-limited
+```
+
+Naming a slug is your decision and is honoured even if the gate would complain
+— you get a warning, not a refusal. A document that is already live is never
+touched on any path, and publishing changes `needsReview` and nothing else.
+
+**Order matters:** run 6b before 6c. Several of the hidden documents are
+duplicates that 6b deletes, and there is no point reviewing something that is
+about to go.
 
 ### Step 7 — Audit
 

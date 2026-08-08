@@ -13,7 +13,10 @@
  *
  *   1. the declared list name is appended to the TARGET document's aliases, so
  *      tomorrow's import matches it exactly and no heuristic is involved;
- *   2. the duplicate the 06-Aug run created for that same name is deleted.
+ *   2. the duplicate the 06-Aug run created for that same name is deleted;
+ *   3. any `aliases` list carrying the same name twice is tidied — the
+ *      --adopt-names run appended an old company name the document already
+ *      answered to under a slightly different spelling.
  *
  * ── WHAT IT REFUSES TO DELETE ──────────────────────────────────────────────
  * Deletion is forever and this dataset is publicly readable, so a document is
@@ -68,6 +71,59 @@ export function deletionBlockers(doc) {
   if (doc.needsReview !== true) blockers.push("is LIVE on the site (needsReview is not true)");
   for (const f of curatedFields(doc)) blockers.push(`carries ${f}`);
   return blockers;
+}
+
+/**
+ * Between two spellings of one name, the better one to keep. Purely cosmetic:
+ * both normalise identically, so either matches the same rows. Prefer the one
+ * that is not cut off with an ellipsis, then the longer.
+ */
+function isBetterAlias(candidate, current) {
+  const cut = (s) => /(\.{3,}|…)\s*$/.test(s);
+  if (cut(current) !== cut(candidate)) return cut(current);
+  return candidate.length > current.length;
+}
+
+/**
+ * One alias per distinct name, in first-seen order.
+ *
+ * An entry that normalises to nothing (punctuation only) is kept as-is and
+ * compared literally — dropping it would be a judgement this function has no
+ * business making.
+ */
+export function dedupeAliases(aliases = []) {
+  const chosen = new Map(); // key → best spelling
+  const order = [];         // keys, first-seen order
+  for (const a of aliases) {
+    if (typeof a !== "string") continue;
+    const key = normalizeCompanyName(a) || `\u0000${a}`;
+    if (!chosen.has(key)) { chosen.set(key, a); order.push(key); continue; }
+    if (isBetterAlias(a, chosen.get(key))) chosen.set(key, a);
+  }
+  return order.map((k) => chosen.get(k));
+}
+
+/**
+ * Documents carrying the same name twice in `aliases`.
+ *
+ * The --adopt-names run put them there: when it renamed a document it appended
+ * the OLD company name, but only checked the names queued in that run, not the
+ * ones the document already answered to. "EB Graand Prix Luxury Elevators
+ * Limi…" and "EB Graand Prix Luxury Elevators Limi" are the same name to every
+ * comparison in this pipeline, so the second was a no-op that stuck.
+ *
+ * Harmless to matching, untidy in Studio, and misleading to read. Returns
+ * [{ doc, before, after, removed }] for documents that actually change.
+ */
+export function planAliasDedupe(docs) {
+  const out = [];
+  for (const doc of docs) {
+    const before = doc.aliases ?? [];
+    if (before.length < 2) continue;
+    const after = dedupeAliases(before);
+    if (after.length !== before.length) out.push({ doc, before, after, removed: before.length - after.length });
+  }
+  return out;
 }
 
 /**
@@ -151,6 +207,7 @@ const docs = await sanityQuery(
 );
 
 const plan = planCleanup(aliasFile.entries, docs);
+const dedupes = planAliasDedupe(docs);
 
 console.log(`${docs.length} unlistedShare documents · ${aliasFile.entries.length} declared names in ${ALIASES_DISPLAY_PATH}\n`);
 
@@ -195,12 +252,26 @@ if (plan.blocked.length) {
   );
 }
 
+if (dedupes.length) {
+  console.log(`\nDoubled aliases to tidy (${dedupes.length}) — same name stored twice by the --adopt-names run:`);
+  for (const d of dedupes) {
+    console.log(`  • ${label(d.doc)}  (${d.before.length} → ${d.after.length})`);
+    const kept = new Set(d.after);
+    for (const a of d.before) console.log(`      ${kept.has(a) ? "keep  " : "DROP  "}"${a}"`);
+    kept.forEach((a) => { if (!d.before.includes(a)) console.log(`      keep  "${a}"`); });
+  }
+  console.log("\n  Cosmetic only — both spellings normalise the same, so nothing about matching changes.");
+}
+
 if (plan.noDuplicate.length) {
   console.log(`\nNo duplicate found (${plan.noDuplicate.length}) — declared, aliased, nothing to delete:`);
   for (const n of plan.noDuplicate) console.log(`  • "${n.name}" → ${label(n.target)}`);
 }
 
+// Dedupe FIRST: a document that is both tidied and given a new alias must have
+// the tidy applied before the append, or the append lands on the old array.
 const mutations = [
+  ...dedupes.map((d) => ({ patch: { id: d.doc._id, set: { aliases: d.after } } })),
   ...plan.aliasAdds.flatMap((a) => [
     { patch: { id: a.target._id, setIfMissing: { aliases: [] } } },
     { patch: { id: a.target._id, insert: { after: "aliases[-1]", items: [a.name] } } },
@@ -208,7 +279,10 @@ const mutations = [
   ...plan.deletions.map((d) => ({ delete: { id: d.duplicate._id } })),
 ];
 
-console.log(`\n${plan.aliasAdds.length} alias additions · ${plan.deletions.length} deletions · ${plan.blocked.length} skipped for review`);
+console.log(
+  `\n${plan.aliasAdds.length} alias additions · ${dedupes.length} alias lists tidied · ` +
+  `${plan.deletions.length} deletions · ${plan.blocked.length} skipped for review`,
+);
 
 if (args.dryRun) {
   console.log("\n--dry-run: nothing written. Re-run without it to apply.");
