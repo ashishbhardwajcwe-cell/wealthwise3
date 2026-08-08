@@ -667,17 +667,135 @@ function normalizeWithoutBoilerplate(raw) {
  */
 const REVERSE_PREFIX_MIN = 12;
 
+// ─── damage in the STORED name ──────────────────────────────────────
+//
+// Everything above assumes the stored side is clean and the incoming side may
+// be damaged. On 06-Aug-2026 that inverted. The partner's Excel names are now
+// complete and correct; OURS are the ones the old OCR mangled, in three
+// recognisable ways. Bridging them is what keeps a price list from forking a
+// second copy of a company we already have.
+
+/**
+ * Suffix words the old OCR cut in half. A stored name's final token is a
+ * severed word when it is a PROPER prefix of one of these — "Limit",
+ * "Limite", "Corporatio".
+ */
+const SUFFIX_WORDS = [
+  "limited", "private", "india", "corporation", "company", "solutions",
+  "services", "technologies", "industries", "financial", "international",
+];
+
+/** How much name has to survive a repair before it may claim a match. Short
+ *  remainders are the dangerous ones: "csk", "kineco", "rkb global" could
+ *  each belong to several companies, so they go to a human instead. */
+const REPAIRED_MIN = 12;
+
+/**
+ * Drop a normalised stored name's final token when it looks like a word the
+ * old OCR cut off partway: under 5 characters, or a proper prefix of a suffix
+ * word the partner's names habitually end in. Returns null when the final
+ * token reads as a whole word — i.e. when there is nothing to repair.
+ *
+ * normalizeCompanyName already strips ltd/limited/pvt/private/india as WHOLE
+ * words, which is precisely why the fragments "Li", "Lim", "Limit" and
+ * "Limite" are still here to be found: they are not those words.
+ */
+function dropTruncatedTail(normalised) {
+  const tokens = String(normalised ?? "").split(" ").filter(Boolean);
+  if (tokens.length < 2) return null;
+  const last = tokens[tokens.length - 1];
+  // A trailing NUMBER is part of the name, never a severed word. OCR truncates
+  // letters; it does not invent digits. Dropping one would reduce "Sterlite
+  // Grid 5" to "Sterlite Grid" and let it answer for Sterlite Grid 1-4.
+  if (/^\d+$/.test(last)) return null;
+  const severed = last.length < 5 || SUFFIX_WORDS.some((w) => w.length > last.length && w.startsWith(last));
+  return severed ? tokens.slice(0, -1).join(" ") : null;
+}
+
+/**
+ * Drop a normalised stored name's first token when it is short enough to be
+ * the 1-2 stray characters the old OCR lifted out of the logo cell ("EB
+ * Graand Prix…", "B® Orbis…", "Rt. Hindon…"). Returns null when the first
+ * token is too long to be junk.
+ */
+function dropLeadingJunk(normalised) {
+  const tokens = String(normalised ?? "").split(" ").filter(Boolean);
+  if (tokens.length < 2 || tokens[0].length > 4) return null;
+  return tokens.slice(1).join(" ");
+}
+
+/** Fold the three glyphs the old OCR could not tell apart onto one character.
+ *  "Bvglndia" / "Hellalnfra" / "Kim Axiva" are l-for-I and I-for-L errors. */
+const foldIL1 = (s) => String(s).replace(/[il1]/g, "i");
+
+/** Letters and digits only, KEEPING the ltd/private/india suffix words. The
+ *  l/I/1 fold needs this: OCR fuses a suffix word onto the token before it
+ *  ("Bvglndia" for "BVG India"), so normalizeCompanyName drops "India" from
+ *  the clean side while the damaged side keeps it buried inside a token. */
+const compactKeepingSuffixes = (raw) => String(raw ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Why a stored company name looks like a DAMAGED version of the incoming one.
+ * Returns human-readable reasons; an EMPTY array means the stored name looks
+ * intact and must never be overwritten by partner data.
+ *
+ * This is the gate on --adopt-names, so it is the one place that decides
+ * whether a public-facing company name gets rewritten. Every test below is a
+ * positive sign of damage; nothing here fires on a merely different name.
+ */
+export function storedNameCorruption(storedName, incomingName) {
+  const reasons = [];
+  const stored = String(storedName ?? "");
+  const storedNorm = normalizeCompanyName(stored);
+  const incomingNorm = normalizeCompanyName(String(incomingName ?? ""));
+  if (!storedNorm || !incomingNorm) return reasons;
+
+  if (hasUnbalancedBracket(stored)) reasons.push("unbalanced bracket");
+
+  // The two names are the same word-for-word once l, I and 1 are folded
+  // together — so one of them has the wrong glyph, and by the premise of this
+  // whole pass it is not the partner's. "Bvglndia" for "BVG India".
+  const foldedMatch =
+    storedNorm !== incomingNorm &&
+    (foldIL1(storedNorm.replace(/ /g, "")) === foldIL1(incomingNorm.replace(/ /g, "")) ||
+      foldIL1(compactKeepingSuffixes(stored)) === foldIL1(compactKeepingSuffixes(incomingName)));
+  if (foldedMatch) reasons.push("differs from the incoming name only in l / I / 1");
+
+  const tokens = storedNorm.split(" ").filter(Boolean);
+  if (dropTruncatedTail(storedNorm) !== null) {
+    reasons.push(`ends in the part-word "${tokens.at(-1)}"`);
+  }
+
+  // A short first token is completely ordinary in Indian company names — NSE,
+  // APL, HDB, 3M — so it is only evidence of damage when the clean name does
+  // not contain it at all. And not when the fold above already explains it:
+  // "Kim" is a misread "KLM", not a stray character.
+  const incomingTokens = new Set(incomingNorm.split(" ").filter(Boolean));
+  if (!foldedMatch && tokens.length >= 2 && tokens[0].length <= 4 && !incomingTokens.has(tokens[0])) {
+    reasons.push(`starts with the stray token "${tokens[0]}"`);
+  }
+
+  if (storedNorm !== incomingNorm && incomingNorm.startsWith(storedNorm)) {
+    reasons.push("is a strict prefix of the incoming name");
+  }
+  return reasons;
+}
+
 /**
  * Resolve a raw partner-list name against the existing Sanity docs.
- * Order: slug → aliases → normalised company name → space-insensitive
- * company/alias → id collision → (a) boilerplate-insensitive → (b) reverse
- * prefix → (truncated names only) unique prefix of company/alias.
  * Docs: { _id, company, slug?, aliases? }.
+ *
+ * Exact tests first — slug → aliases → normalised company name →
+ * space-insensitive company/alias → id collision — then five RELAXED passes
+ * whose candidates are pooled: (a) boilerplate-insensitive, (b) reverse
+ * prefix, (c) stored name truncated mid-word, (d) stored name with a leading
+ * junk token, (e) l/I/1 confusion. Last, for an incoming name that ends in an
+ * ellipsis, a unique prefix of a company/alias.
  *
  * Returns { doc } on a match, { create: true } for a confident new company,
  * or { ambiguous: [...] } when a name matches several docs. Matches from the
- * two relaxed passes also carry { via, alias }: `alias` is the raw incoming
- * name, which the importer appends to the document's aliases so the next run
+ * relaxed passes also carry { via, alias }: `alias` is the raw incoming name,
+ * which the importer appends to the document's aliases so the next run
  * matches it exactly rather than relaxing again.
  */
 export function resolveUnlistedTarget(rawName, docs, slugify) {
@@ -713,41 +831,82 @@ export function resolveUnlistedTarget(rawName, docs, slugify) {
   const byId = docs.find((d) => d._id === `unlistedShare-${slug}`);
   if (byId) return { doc: byId };
 
-  // ── (a) boilerplate-insensitive ────────────────────────────────────
-  // The 06-Aug-2026 Excel list spells 97 of its 183 names "<Company> Unlisted
-  // Shares"; that is the list's ROW BOILERPLATE, not part of any company's
-  // name, and the stored documents never carried it. Compare with it stripped
-  // from BOTH sides — one candidate matches, two or more is ambiguous and is
-  // reported rather than guessed.
-  const bare = normalizeWithoutBoilerplate(clean);
-  if (bare) {
-    const candidates = docs.filter(
-      (d) =>
-        normalizeWithoutBoilerplate(d.company) === bare ||
-        (d.aliases ?? []).some((a) => normalizeWithoutBoilerplate(a) === bare),
-    );
-    if (candidates.length === 1) return { doc: candidates[0], via: "boilerplate", alias: clean };
-    if (candidates.length > 1) return { ambiguous: candidates, via: "boilerplate" };
-  }
-
-  // ── (b) reverse prefix ─────────────────────────────────────────────
-  // The mirror image of the truncated-name branch below. The old OCR cut long
-  // names off mid-word ("Signify Innovations (Previously Ph"), and those
-  // stumps are what is STORED; the Excel list now supplies the full name. So
-  // the stored name is the prefix and the incoming one is the long form —
-  // exactly the opposite of the case handled further down.
+  // ═══ relaxed passes ════════════════════════════════════════════════
   //
-  // The prefix is deliberately not word-aligned: truncation happens mid-word,
-  // which is the whole point. REVERSE_PREFIX_MIN is what keeps that safe.
-  const isReversePrefix = (storedRaw) => {
+  // Everything above this line is an EXACT test of one kind or another. What
+  // follows is not: each pass models one specific way the two sides disagree,
+  // and none of them can prove identity on its own. That is why the importer
+  // refuses to write a run in which two incoming rows land on one document.
+  //
+  // Candidates from ALL the passes are pooled before the exactly-one rule is
+  // applied, rather than letting whichever pass runs first take the row. That
+  // is deliberately stricter than running them in order: an editorial
+  // document ("Motilal Oswal Home Finance") and its OCR-damaged twin
+  // ("Motilal Oswal Home Finance Limi") are each found by a DIFFERENT pass,
+  // and resolving by pass order would silently pick one of two real
+  // documents. Pooled, they come back ambiguous and a human decides.
+  const bare = normalizeWithoutBoilerplate(clean);
+
+  const found = new Map(); // doc._id → { doc, via } — first pass to find it wins the label
+  const consider = (test, via) => {
+    for (const d of docs) {
+      if (found.has(d._id)) continue;
+      if (test(d.company) || (d.aliases ?? []).some((a) => test(a))) found.set(d._id, { doc: d, via });
+    }
+  };
+
+  // (a) Boilerplate-insensitive. The Excel list spells 97 of its 183 names
+  // "<Company> Unlisted Shares"; that is the list's ROW BOILERPLATE, not part
+  // of anyone's name, and the stored documents never carried it.
+  if (bare) consider((s) => normalizeWithoutBoilerplate(s) === bare, "boilerplate");
+
+  // (b) Reverse prefix — the mirror of the truncated-INCOMING branch below.
+  // The old OCR cut long names off mid-word and those stumps are what is
+  // STORED; the Excel list now supplies the full name. The prefix is
+  // deliberately not word-aligned, because truncation happens mid-word.
+  // REVERSE_PREFIX_MIN is what keeps that safe.
+  consider((storedRaw) => {
     const stored = normalizeCompanyName(storedRaw);
     return stored.length >= REVERSE_PREFIX_MIN && (norm.startsWith(stored) || bare.startsWith(stored));
+  }, "reverse-prefix");
+
+  // (c) Stored name truncated mid-word, leaving a partial FINAL token that
+  // stops (b)'s prefix test dead: "Krasny Defence Technologies Li",
+  // "Hindustan Power Exchange Limit", "Galaxeye Space Solutions Limite".
+  const truncatedTailHit = (storedRaw) => {
+    const repaired = dropTruncatedTail(normalizeCompanyName(storedRaw));
+    return repaired !== null && repaired.length >= REPAIRED_MIN &&
+      (norm.startsWith(repaired) || bare.startsWith(repaired));
   };
-  const longer = docs.filter(
-    (d) => isReversePrefix(d.company) || (d.aliases ?? []).some((a) => isReversePrefix(a)),
-  );
-  if (longer.length === 1) return { doc: longer[0], via: "reverse-prefix", alias: clean };
-  if (longer.length > 1) return { ambiguous: longer, via: "reverse-prefix" };
+  consider(truncatedTailHit, "stored-truncated");
+
+  // (d) Leading junk: 1-2 stray characters the old OCR lifted out of the logo
+  // cell ("EB Graand Prix…", "4A sigachilaboratories…", "Rt. Hindon…"). Drop
+  // the token and retry (c) and the plain prefix/compact tests on what is
+  // left. REPAIRED_MIN is why "I csk" and "w+ Kineco" stay unmatched: three
+  // and six characters are not enough to identify a company by.
+  consider((storedRaw) => {
+    const rest = dropLeadingJunk(normalizeCompanyName(storedRaw));
+    if (rest === null || rest.length < REPAIRED_MIN) return false;
+    if (norm.startsWith(rest) || bare.startsWith(rest)) return true;
+    if (rest.replace(/ /g, "") === compact) return true;
+    const repaired = dropTruncatedTail(rest);
+    return repaired !== null && repaired.length >= REPAIRED_MIN &&
+      (norm.startsWith(repaired) || bare.startsWith(repaired));
+  }, "leading-junk");
+
+  // (e) l / I / 1 confusion — "Bvglndia" for "BVG India", "Kim" for "KLM".
+  // Only reached when the plain compact comparison above has already failed,
+  // so this is the fold of last resort, and it demands full equality.
+  const foldedCompact = foldIL1(compact);
+  const foldedFull = foldIL1(compactKeepingSuffixes(clean));
+  consider((storedRaw) =>
+    foldIL1(normalizeCompanyName(storedRaw).replace(/ /g, "")) === foldedCompact ||
+    foldIL1(compactKeepingSuffixes(storedRaw)) === foldedFull, "il1-confusion");
+
+  const hits = [...found.values()];
+  if (hits.length === 1) return { doc: hits[0].doc, via: hits[0].via, alias: clean };
+  if (hits.length > 1) return { ambiguous: hits.map((h) => h.doc), via: hits[0].via };
 
   if (truncated) {
     const candidates = docs.filter(
@@ -760,4 +919,76 @@ export function resolveUnlistedTarget(rawName, docs, slugify) {
   }
 
   return { create: true, clean };
+}
+
+/** Length of the shared opening of two strings. */
+function commonPrefixLength(a, b) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i;
+}
+
+/** How much shared opening makes two names worth a second look. */
+const SUSPECT_PREFIX_MIN = 10;
+
+/**
+ * For a name the matcher decided to CREATE, find existing documents that
+ * nonetheless look like the same company.
+ *
+ * Same similarity signals as the relaxed passes — boilerplate stripped, the
+ * l/I/1 fold, a shared opening — but WITHOUT the exactly-one requirement,
+ * because this decides nothing. It exists so the operator reading a create
+ * list can tell "we have never priced this company" apart from "this is a
+ * fourth spelling of a document we already have".
+ *
+ * Returns [{ doc, shared, storedName }], longest shared opening first.
+ */
+export function nearbyExistingDocs(rawName, docs, limit = 3) {
+  const { clean } = splitEllipsis(String(rawName ?? ""));
+  const incoming = normalizeWithoutBoilerplate(clean) || normalizeCompanyName(clean);
+  if (!incoming) return [];
+  const key = foldIL1(incoming.replace(/ /g, ""));
+
+  const scored = [];
+  for (const d of docs) {
+    let best = null;
+    for (const name of [d.company, ...(d.aliases ?? [])]) {
+      const stored = normalizeWithoutBoilerplate(name) || normalizeCompanyName(name);
+      if (!stored) continue;
+      // Also try the stored name without a leading junk token. Those are the
+      // near-misses that matter most here: a stray "Ee" in front of "Rkb
+      // Global" both destroys the shared opening AND leaves too little name
+      // for the matcher's floor, so the row creates a duplicate with nothing
+      // to say why. This is where a human gets told to look.
+      for (const form of [stored, dropLeadingJunk(stored)]) {
+        if (!form) continue;
+        const candidate = foldIL1(form.replace(/ /g, ""));
+        const shared = commonPrefixLength(key, candidate);
+        const ratio = shared / Math.min(key.length, candidate.length);
+        if (shared >= SUSPECT_PREFIX_MIN || (shared >= 6 && ratio >= 0.6)) {
+          if (!best || shared > best.shared) best = { shared, storedName: name };
+        }
+      }
+    }
+    if (best) scored.push({ doc: d, ...best });
+  }
+  scored.sort((a, b) => b.shared - a.shared);
+  return scored.slice(0, limit);
+}
+
+/**
+ * The `set` payload for a document the price list matched.
+ *
+ * `slug` is NEVER in the result, on any path. A company's name is editorial
+ * and can be corrected; its URL is a promise to everyone who has linked to
+ * it, and partner data does not get to move one. Fields not named here —
+ * logo, sector, summary, ipoStatus, everything hand-curated — are untouched
+ * because a Sanity `set` patch only writes the keys it is given.
+ */
+export function buildMatchedDocSet({ priceFields, publish = false, adoptCompany = null }) {
+  return {
+    ...priceFields,
+    ...(publish ? { needsReview: false } : {}),
+    ...(adoptCompany ? { company: adoptCompany } : {}),
+  };
 }

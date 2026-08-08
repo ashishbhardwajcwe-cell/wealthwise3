@@ -31,6 +31,7 @@ import {
   hasUnbalancedBracket, stripCorruption, trailingNumber,
   mapCsvHeader, assertRetailPriceColumn, resolveUnlistedTarget,
   canonicalDepository, classifyDepository, sanitizeListText,
+  storedNameCorruption, nearbyExistingDocs, buildMatchedDocSet,
 } from "./unlisted-matching.mjs";
 import {
   auditUnlistedDocs, structuralSignatures, selectPurgeTargets,
@@ -38,6 +39,11 @@ import {
 } from "./audit-unlisted.mjs";
 import { Readable } from "node:stream";
 import { crc32 } from "node:zlib";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { cleanUnlistedName } from "./clean-unlisted-names.mjs";
 import { readUnlistedXlsxBytes, joinLogosToRows } from "./unlisted-xlsx.mjs";
 import { slugify, normalizeIsoDate } from "./import-shared.mjs";
@@ -583,6 +589,235 @@ test("the relaxed passes never displace an exact match", () => {
   assert.equal(resolveUnlistedTarget("Bira 91", docs, slugify).doc._id, "bira91");
   assert.equal(resolveUnlistedTarget("Bira 91 Unlisted Shares", docs, slugify).doc._id, "bira91");
   assert.equal(resolveUnlistedTarget("Bira", docs, slugify).doc._id, "bira");
+});
+
+/* ---------- damage in the STORED name ---------- */
+
+/**
+ * Every string below is REAL: the stored side is what the old OCR pipeline
+ * actually wrote into Sanity, the incoming side is what the partner's Excel
+ * now sends. Left unbridged, each of these forks a second document for a
+ * company we already have — 34 of them on the 06-Aug list.
+ *
+ * They are all loaded into ONE dataset for these tests, alongside decoys, so
+ * the exactly-one rule is genuinely under test rather than assumed.
+ */
+const OCR_DAMAGE = {
+  "stored-truncated": [
+    ["Krasny Defence Technologies Li", "Krasny Defence Technologies Limited"],
+    ["Evergreen Recyclekaro (India) Li", "Evergreen Recyclekaro (India) Limited"],
+    ["Galaxeye Space Solutions Limite", "Galaxeye Space Solutions Limited"],
+    ["Hindustan Power Exchange Limit", "Hindustan Power Exchange Limited (HPX India)"],
+    ["Shree Associates Infraventures P", "Shree Associates Infraventures Private Limited"],
+    ["Imperative Business Ventures Lim", "Imperative Business Ventures Limited"],
+  ],
+  "leading-junk": [
+    ["EB Graand Prix Luxury Elevators Limi", "Graand Prix Luxury Elevators Limited"],
+    ["El Easterninvestment Limited", "Eastern Investment Limited"],
+    ["EE Kanara Consumer Products For", "Kanara Consumer Products Formulations Limited"],
+    ["Net Ncl Buildtek Limited (Previously N", "NCL Buildtek Limited (Previously Nagarjuna Cement Limited)"],
+    ["Z Cochin International Airport Limit", "Cochin International Airport Limited"],
+    ["B® Orbis Financial Corporation", "Orbis Financial Corporation Limited"],
+    ["4A sigachilaboratories Limited", "Sigachi Laboratories Limited"],
+    ["cost Boat Unlisted Share (Imagine Mar", "boAt Unlisted Share (Imagine Marketing Limited)"],
+    ["Rt. Hindon Mercantile Limited", "Hindon Mercantile Limited"],
+  ],
+  "il1-confusion": [
+    ["Bvglndia Limited", "BVG India Limited"],
+    ["Hellalnfra Market", "Hella Infra Market"],
+    ["Kim Axiva Finvest", "KLM Axiva Finvest"],
+    ["Madhurlron And Steel", "Madhur Iron and Steel"],
+  ],
+};
+
+/** Real names that must never be dragged into a relaxed match. */
+const DECOYS = ["Tata Capital", "Hero FinCorp", "NSE India", "3M India", "Sterlite Grid 5", "Bira 91"];
+
+const DAMAGED_DOCS = [...Object.values(OCR_DAMAGE).flat().map(([s]) => s), ...DECOYS]
+  .map((company, i) => share(`dmg-${i}`, company));
+
+for (const [via, cases] of Object.entries(OCR_DAMAGE)) {
+  test(`${via}: the Excel name finds the document our OCR damaged`, () => {
+    for (const [storedName, incoming] of cases) {
+      const t = resolveUnlistedTarget(incoming, DAMAGED_DOCS, slugify);
+      assert.equal(t.doc?.company, storedName,
+        `"${incoming}" should resolve to "${storedName}", got ${t.doc?.company ?? (t.ambiguous ? "ambiguous" : "create")}`);
+      assert.equal(t.via, via);
+      assert.equal(t.alias, incoming, "the clean name is recorded so the next run is exact");
+    }
+  });
+}
+
+test("a name too short after repair goes to a human, not to a guess", () => {
+  // The 12-character floor. "csk" could be Chennai Super Kings or a dozen
+  // other things; "kineco" and "rkb global" are no better. Loosening the floor
+  // to catch them would let far worse through.
+  const docs = [...DAMAGED_DOCS, share("short-1", "I csk"), share("short-2", "w+ Kineco Limited"), share("short-3", "Ee Rkb Global Limited")];
+  for (const incoming of ["Chennai Super Kings Cricket Limited", "Kineco Limited", "RKB Global Limited"]) {
+    const t = resolveUnlistedTarget(incoming, docs, slugify);
+    assert.equal(t.create, true, `"${incoming}" must be left for manual review, got ${t.doc?.company ?? "ambiguous"}`);
+  }
+});
+
+test("a trailing NUMBER is part of the name, never a severed word", () => {
+  // "Sterlite Grid 5" reduced to "Sterlite Grid" would answer for Grid 1-4.
+  const docs = [share("grid5", "Sterlite Grid 5"), share("bira", "Bira 91")];
+  assert.equal(resolveUnlistedTarget("Sterlite Grid 6 Limited", docs, slugify).create, true);
+  assert.equal(resolveUnlistedTarget("Bira 92 Beverages", docs, slugify).create, true);
+  // …while the real one still resolves.
+  assert.equal(resolveUnlistedTarget("Sterlite Grid 5 Limited", docs, slugify).doc?._id, "grid5");
+});
+
+test("three Inox companies stay three companies", () => {
+  const docs = [
+    share("clean", "Inox Clean Energy Limited"),
+    share("leasing", "Inox Leasing and Finance Limited"),
+    share("neo", "Inox Neo Energies Limited"),
+  ];
+  const hits = [
+    "Inox Clean Energy Limited",
+    "Inox Leasing and Finance Limited Unlisted Shares",
+    "Inox Neo Energies Limited",
+  ].map((n) => resolveUnlistedTarget(n, docs, slugify));
+
+  assert.deepEqual(hits.map((h) => h.doc?._id), ["clean", "leasing", "neo"]);
+  assert.equal(new Set(hits.map((h) => h.doc._id)).size, 3, "three rows, three documents");
+});
+
+test("an editorial document and its OCR-damaged twin are ambiguous, not a coin toss", () => {
+  // Both are real documents for one real company. Each is found by a
+  // DIFFERENT relaxed pass, which is exactly why the passes pool their
+  // candidates instead of letting whichever ran first take the row.
+  const docs = [
+    share("editorial", "Motilal Oswal Home Finance"),
+    share("imported", "Motilal Oswal Home Finance Limi"),
+    share("other", "Tata Capital"),
+  ];
+  const t = resolveUnlistedTarget("Motilal Oswal Home Finance Limited Unlisted Shares", docs, slugify);
+  assert.equal(t.doc, undefined, "must not pick one of two real documents");
+  assert.deepEqual(t.ambiguous.map((d) => d._id).sort(), ["editorial", "imported"]);
+});
+
+/* ---------- name adoption ---------- */
+
+test("a corruption signature is required before a stored name may be overwritten", () => {
+  // Damaged — every one of these is a reason to prefer the partner's spelling.
+  assert.deepEqual(storedNameCorruption("Hindustan Power Exchange Limit", "Hindustan Power Exchange Limited"),
+    ['ends in the part-word "limit"']);
+  assert.deepEqual(storedNameCorruption("Rt. Hindon Mercantile Limited", "Hindon Mercantile Limited"),
+    ['starts with the stray token "rt"']);
+  assert.deepEqual(storedNameCorruption("Bvglndia Limited", "BVG India Limited"),
+    ["differs from the incoming name only in l / I / 1"]);
+  assert.deepEqual(storedNameCorruption("Signify Innovations (Previously Ph", "Signify Innovations India Limited (Previously Philips Lighting)"),
+    ["unbalanced bracket", 'ends in the part-word "ph"', "is a strict prefix of the incoming name"]);
+  assert.ok(storedNameCorruption("Manipal Cards) 385", "Manipal Payment and Identity Solutions").includes("unbalanced bracket"));
+
+  // Intact — a merely SHORTER or differently-spelled name is not a damaged one.
+  for (const [stored, incoming] of [
+    ["Tata Capital", "Tata Capital Limited"],
+    ["NSE India", "NSE India Limited"],       // a short first token is ordinary
+    ["3M India", "3M India Limited"],
+    ["Hero FinCorp", "Hero FinCorp"],
+    ["Sterlite Grid 5", "Sterlite Grid 5 Limited"], // a trailing number is a name
+  ]) {
+    assert.deepEqual(storedNameCorruption(stored, incoming), [], `"${stored}" must not be treated as damaged`);
+  }
+});
+
+test("a stored name that is merely shorter is never reached for adoption", () => {
+  // "Bira 91" IS a strict prefix of "Bira 91 Beverages Limited", so the
+  // signature fires — but adoption only ever consults it after a relaxed pass
+  // matched, and at 7 normalised characters "Bira 91" is under
+  // REVERSE_PREFIX_MIN. The row creates a new company instead, and the
+  // existing document keeps its name.
+  assert.deepEqual(storedNameCorruption("Bira 91", "Bira 91 Beverages Limited"),
+    ["is a strict prefix of the incoming name"]);
+  assert.equal(resolveUnlistedTarget("Bira 91 Beverages Limited", [share("bira", "Bira 91")], slugify).create, true);
+});
+
+test("adoption never touches slug, and only touches company when asked", () => {
+  const priceFields = { indicativePriceINR: 950, asOfDate: "2026-08-06", partner: "uz", lotSize: 100 };
+  for (const publish of [false, true]) {
+    for (const adoptCompany of [null, "Hindustan Power Exchange Limited"]) {
+      const set = buildMatchedDocSet({ priceFields, publish, adoptCompany });
+      assert.equal("slug" in set, false, "a URL is a promise — partner data never moves one");
+      assert.equal(set.company, adoptCompany ?? undefined);
+      assert.equal(set.indicativePriceINR, 950, "the price still gets written");
+      // Hand-curated fields are absent from the payload, so a `set` patch
+      // cannot disturb them.
+      for (const k of ["logo", "sector", "summary", "ipoStatus", "isActive"]) {
+        assert.equal(k in set, false, `${k} must not be in a matched-doc patch`);
+      }
+    }
+  }
+});
+
+/* ---------- one document, one row ---------- */
+
+/**
+ * The relaxed passes are looser than anything this pipeline had before, and
+ * they can fail in exactly one way: two companies on the list collapsing onto
+ * one of our documents. The second price would overwrite the first and a
+ * company would vanish from the site with nothing in the output to say so.
+ *
+ * This is the only test here that runs the importer for real, because "aborts
+ * the run" is not a property of a pure function. No network: the Sanity read
+ * is answered by a preloaded fetch stub, and --dry-run means there is nothing
+ * to write even if the guard failed.
+ */
+test("two incoming rows claiming one document abort the run", () => {
+  const dir = mkdtempSync(join(tmpdir(), "unlisted-collide-"));
+  try {
+    // Both spell the SAME stored company, whose name our OCR cut to
+    // "…Technologies Li" — so both rows resolve onto it.
+    writeFileSync(join(dir, "list.csv"),
+      "Share Name,Retail Price\n" +
+      "Krasny Defence Technologies Limited,950\n" +
+      "Krasny Defence Technologies Private Limited,1200\n");
+    writeFileSync(join(dir, "stub.mjs"),
+      'const docs = [{ _id: "krasny", company: "Krasny Defence Technologies Li",' +
+      ' slug: "krasny-defence-technologies-li", aliases: [] }];\n' +
+      'globalThis.fetch = async () => new Response(JSON.stringify({ result: docs }),' +
+      ' { headers: { "content-type": "application/json" } });\n');
+
+    const importer = fileURLToPath(new URL("./import-unlisted-prices.mjs", import.meta.url));
+    const res = spawnSync(
+      process.execPath,
+      ["--import", pathToFileURL(join(dir, "stub.mjs")).href, importer, join(dir, "list.csv"), "--dry-run"],
+      { encoding: "utf8", env: { ...process.env, NEXT_PUBLIC_SANITY_PROJECT_ID: "stub", SANITY_API_TOKEN: "stub" } },
+    );
+
+    assert.equal(res.status, 1, `expected a non-zero exit, got ${res.status}\n${res.stdout}\n${res.stderr}`);
+    assert.match(res.stderr, /ABORTED/);
+    assert.match(res.stderr, /claimed by more than\s+one row/);
+    assert.match(res.stderr, /Krasny Defence Technologies Li/);
+    assert.doesNotMatch(res.stdout, /nothing written/i, "it must not reach the ordinary dry-run ending");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/* ---------- the create list, split ---------- */
+
+test("a create that resembles an existing document is separated out", () => {
+  const docs = [
+    share("krasny", "Krasny Defence Technologies Li"),
+    share("tata", "Tata Capital"),
+  ];
+  // A fourth spelling of a document we already have…
+  const near = nearbyExistingDocs("Krasny Defence Technologies Limited", docs);
+  assert.equal(near[0]?.doc._id, "krasny");
+  // …versus a company we have genuinely never priced.
+  assert.deepEqual(nearbyExistingDocs("Waaree Renewable Technologies Limited", docs), []);
+});
+
+test("the duplicate report reads aliases too, and never claims a match", () => {
+  const docs = [share("hpx", "Hindustan Power Exchange Limit", ["Hindustan Power Exchange"])];
+  const near = nearbyExistingDocs("Hindustan Power Exchange Limited (HPX India)", docs);
+  assert.equal(near.length, 1);
+  assert.ok(near[0].shared >= 10);
+  // It is a report, not a decision: resolveUnlistedTarget is what matches.
+  assert.equal(typeof near[0].doc._id, "string");
 });
 
 /* ---------- the ligature sanitiser ---------- */
