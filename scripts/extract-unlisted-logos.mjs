@@ -21,6 +21,12 @@
  *   node scripts/extract-unlisted-logos.mjs <pricelist.xlsx> --force    # also overwrite logos already set
  *   npm run logos:unlisted -- <pricelist.xlsx> --dry-run
  *
+ * A --dry-run always writes the new crop for every document that already has a
+ * logo into <out>/_already-has-logo/, whether or not --force is passed, and
+ * prints how many documents --force would REPLACE. That folder is the
+ * before/after review set: flip through it in Finder, confirm the new crops beat
+ * the old ones, then re-run with --force to upload the replacements.
+ *
  * ── CONFIDENTIALITY ────────────────────────────────────────────────────────
  * This script reads company NAMES and IMAGES. It reads no price of any kind —
  * not the retail price, and above all not the dealer (cost) price, which is
@@ -78,9 +84,12 @@ const EXISTING_QUERY =
  *  is a floor rather than equality. */
 export const WHITE_FLOOR = 246;
 
-/** Under this in either dimension, after trimming, an image is a bullet or a
- *  rule rather than a brand mark — our monogram looks better than a smudge. */
-export const MIN_LOGO_PX = 32;
+/** The floor is on the LONGER side, after trimming: an image whose longer side
+ *  is under this is a bullet or a rule, not a brand mark, and our monogram looks
+ *  better than a smudge. Testing the longer side (not both) keeps legitimate
+ *  wide-but-short wordmarks — APL Metals 50×24, Digvijay Finlease 168×26,
+ *  Sundrops 168×28 — which a both-dimensions floor wrongly killed. */
+export const MIN_LOGO_PX = 40;
 
 /** Re-encode quality, used ONLY when a border was actually trimmed. */
 const JPEG_QUALITY = 92;
@@ -169,6 +178,14 @@ export function planAttachments(crops, existing, { force = false, declared = nul
  * a real run would upload. The two subfolders hold the rest, because "why is
  * this logo missing from the site" is a question the dry run should be able to
  * answer without re-running anything.
+ *
+ * `_already-has-logo/` is the before/after review folder, and it is populated
+ * UNCONDITIONALLY: a document that already has a logo gets its new crop mirrored
+ * here whether --force skipped it (so it is in `unmatched`) or --force queued it
+ * for replacement (so it is in `planned`). That way the folder holds every
+ * would-be-replaced document regardless of the flag, and can be eyeballed in
+ * Finder before deciding on --force. The mirror is not counted in `total` — it
+ * is a copy of a crop already counted, not another crop.
  */
 export function writeCrops(outDir, planned, unmatched) {
   const dirs = {
@@ -179,7 +196,7 @@ export function writeCrops(outDir, planned, unmatched) {
   const counts = { planned: 0, hasLogo: 0, noMatch: 0, total: 0 };
   const used = new Map();
 
-  const put = (bucket, doc, crop) => {
+  const put = (bucket, doc, crop, { countTotal = true } = {}) => {
     mkdirSync(dirs[bucket], { recursive: true });
     const name = cropFileName(doc, crop);
     // Two rows resolving to one name is itself reportable; don't let the
@@ -189,10 +206,14 @@ export function writeCrops(outDir, planned, unmatched) {
     used.set(key, seen);
     writeFileSync(join(dirs[bucket], seen > 1 ? name.replace(/(\.[^.]+)$/, `-${seen}$1`) : name), crop.bytes);
     counts[bucket]++;
-    counts.total++;
+    if (countTotal) counts.total++;
   };
 
-  for (const { crop, doc } of planned) put("planned", doc, crop);
+  for (const { crop, doc } of planned) {
+    put("planned", doc, crop);
+    // Would be replaced with --force → also mirror into the before/after folder.
+    if (doc?.hasLogo) put("hasLogo", doc, crop, { countTotal: false });
+  }
   for (const { crop, doc } of unmatched) {
     if (!crop) continue;
     put(doc ? "hasLogo" : "noMatch", doc, crop);
@@ -290,7 +311,10 @@ export async function trimUniformWhiteBorder(bytes, mediaPath) {
   if (maxX < 0) return { blank: true };
 
   const cw = maxX - minX + 1, ch = maxY - minY + 1;
-  if (cw < MIN_LOGO_PX || ch < MIN_LOGO_PX) return { tooSmall: true, width: cw, height: ch };
+  // Floor on the LONGER side only, so a short-but-wide wordmark survives while a
+  // genuinely tiny thumbnail (both sides small) is still dropped.
+  const longer = Math.max(cw, ch);
+  if (longer < MIN_LOGO_PX) return { tooSmall: true, width: cw, height: ch, longer };
 
   // Nothing to trim — upload exactly what the partner embedded.
   if (minX === 0 && minY === 0 && cw === w && ch === h) {
@@ -390,7 +414,7 @@ if (isXlsx) {
     }
     if (image.blank) { rejected.push({ name: logo.name, reason: "image is blank after trimming white" }); continue; }
     if (image.tooSmall) {
-      rejected.push({ name: logo.name, reason: `${image.width}×${image.height} after trimming — under the ${MIN_LOGO_PX}px floor` });
+      rejected.push({ name: logo.name, reason: `${image.width}×${image.height} after trimming (longer side ${image.longer}px) — under the ${MIN_LOGO_PX}px floor` });
       continue;
     }
     crops.push({ ...image, name: logo.name });
@@ -425,12 +449,20 @@ if (isXlsx) {
   if (args.dryRun || !env) {
     const outDir = resolve(args.out);
     const written = writeCrops(outDir, planned, unmatched);
+    // Distinct documents that currently have a logo AND have a new crop this
+    // run — i.e. what --force would overwrite. Counted the same whether --force
+    // is set (they are in `planned`) or not (they are in `unmatched`).
+    const replaceIds = new Set();
+    for (const p of planned) if (p.doc?.hasLogo) replaceIds.add(p.doc._id);
+    for (const u of unmatched) if (u.doc?.hasLogo && /logo already set/.test(u.reason)) replaceIds.add(u.doc._id);
+    const wouldReplace = replaceIds.size;
     console.log(
       `\n--dry-run: wrote ${written.total} crops to ${outDir}/ — open it in Finder and flip through before uploading.\n` +
       `  ${outDir}/                     ${written.planned} that WILL be uploaded, named <slug>.<ext>\n` +
-      (written.hasLogo ? `  ${outDir}/_already-has-logo/   ${written.hasLogo} whose document already has one (--force replaces them)\n` : "") +
+      (written.hasLogo ? `  ${outDir}/_already-has-logo/   ${written.hasLogo} new crops for documents that already have a logo — the before/after set to review before --force\n` : "") +
       (written.noMatch ? `  ${outDir}/_unmatched/          ${written.noMatch} that match no document, named from the list\n` : ""),
     );
+    console.log(`${wouldReplace} document${wouldReplace === 1 ? "" : "s"} would be REPLACED with --force`);
     if (unmatched.length) {
       console.log(`${unmatched.length} logos will NOT be uploaded:`);
       for (const s of unmatched.slice(0, 40)) console.log(`  • ${s.name} — ${s.reason}`);

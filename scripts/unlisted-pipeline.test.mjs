@@ -54,7 +54,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { cleanUnlistedName } from "./clean-unlisted-names.mjs";
 import { readUnlistedXlsxBytes, joinLogosToRows } from "./unlisted-xlsx.mjs";
-import { planAttachments, cropFileName, trimUniformWhiteBorder } from "./extract-unlisted-logos.mjs";
+import { planAttachments, cropFileName, trimUniformWhiteBorder, writeCrops } from "./extract-unlisted-logos.mjs";
 import { slugify, normalizeIsoDate } from "./import-shared.mjs";
 
 let passed = 0;
@@ -1818,6 +1818,32 @@ test("a document that already has a logo is left alone unless --force", () => {
   assert.deepEqual(forced.planned.map((p) => p.doc.slug), ["tata"]);
 });
 
+test("a would-be-replaced crop lands in _already-has-logo/ whether or not --force is set", () => {
+  const docs = [logoDoc("tata", "Tata Capital", { hasLogo: true })];
+
+  // Without --force: the doc is skipped, but its new crop is still filed for
+  // before/after review.
+  const dirA = mkdtempSync(join(tmpdir(), "logos-review-a-"));
+  // With --force: the doc is queued for upload AND mirrored into the same folder,
+  // so the review set is complete either way.
+  const dirB = mkdtempSync(join(tmpdir(), "logos-review-b-"));
+  try {
+    const plain = planAttachments([crop("Tata Capital")], docs, {});
+    const cA = writeCrops(dirA, plain.planned, plain.unmatched);
+    assert.deepEqual(readdirSync(join(dirA, "_already-has-logo")), ["tata.jpeg"]);
+    assert.equal(cA.planned, 0, "nothing would upload without --force");
+
+    const forced = planAttachments([crop("Tata Capital")], docs, { force: true });
+    const cB = writeCrops(dirB, forced.planned, forced.unmatched);
+    assert.deepEqual(readdirSync(join(dirB, "_already-has-logo")), ["tata.jpeg"]);
+    assert.deepEqual(readdirSync(dirB).filter((f) => f.endsWith(".jpeg")), ["tata.jpeg"], "and it WILL upload with --force");
+    assert.equal(cB.total, 1, "the mirror is not double-counted");
+  } finally {
+    rmSync(dirA, { recursive: true, force: true });
+    rmSync(dirB, { recursive: true, force: true });
+  }
+});
+
 test("two logos claiming one document: the first wins, the second is reported", () => {
   const docs = [logoDoc("krasny", "Krasny Defence Technologies Li")];
   const { planned, unmatched } = planAttachments(
@@ -1901,15 +1927,28 @@ if (makeImage) {
     }
   });
 
-  test("a mark under 32px after trimming is dropped for the monogram", async () => {
-    // A 100px tile whose actual mark is 20px is a bullet or a rule.
-    const out = await trimUniformWhiteBorder(makeImage(100, 100, 40), "xl/media/image1.png");
-    assert.equal(out.tooSmall, true);
-    assert.equal(out.width, 20);
-    // …and the floor is a floor: 32 exactly survives.
-    const edge = await trimUniformWhiteBorder(makeImage(100, 100, 34), "xl/media/image1.png");
-    assert.equal(edge.width, 32);
-    assert.ok(!edge.tooSmall, "32px is the floor, not below it");
+  test("a mark is dropped only when its LONGER side is under 40px", async () => {
+    // A short-but-wide wordmark (APL Metals 50×24, Digvijay Finlease 168×26) is
+    // a real logo, not a fragment — reject only on the longer side.
+    const wide = await trimUniformWhiteBorder(makeImage(70, 44, 10), "xl/media/image1.png");
+    assert.equal(wide.width, 50);
+    assert.equal(wide.height, 24);
+    assert.ok(!wide.tooSmall, "50×24 is a wordmark — its longer side clears 40px");
+
+    // Both sides small → a bullet or a rule → dropped, and the rejection carries
+    // the longer dimension so the logic is visible.
+    const tiny = await trimUniformWhiteBorder(makeImage(100, 100, 40), "xl/media/image1.png");
+    assert.equal(tiny.tooSmall, true);
+    assert.equal(tiny.width, 20);
+    assert.equal(tiny.longer, 20);
+
+    // The floor is on the longer side and is a floor: 40 survives, 39 does not.
+    const at40 = await trimUniformWhiteBorder(makeImage(100, 100, 30), "xl/media/image1.png");
+    assert.equal(at40.width, 40);
+    assert.ok(!at40.tooSmall, "40px longer side is the floor, not below it");
+    const below = await trimUniformWhiteBorder(makeImage(59, 40, 10), "xl/media/image1.png");
+    assert.equal(Math.max(below.width, below.height), 39);
+    assert.equal(below.tooSmall, true);
   });
 
   test("an all-white image is blank, not a logo", async () => {
