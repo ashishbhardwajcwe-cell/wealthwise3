@@ -32,7 +32,10 @@ import {
   mapCsvHeader, assertRetailPriceColumn, resolveUnlistedTarget,
   canonicalDepository, classifyDepository, sanitizeListText,
   storedNameCorruption, nearbyExistingDocs, buildMatchedDocSet,
+  stripListBoilerplate, normalizeCompanyName, declaredNameKey,
 } from "./unlisted-matching.mjs";
+import { loadUnlistedAliases } from "./unlisted-aliases.mjs";
+import { planCleanup } from "./clean-unlisted-dupes.mjs";
 import {
   auditUnlistedDocs, structuralSignatures, selectPurgeTargets,
   asOfDateHistogram, confirmExactly,
@@ -696,6 +699,205 @@ test("an editorial document and its OCR-damaged twin are ambiguous, not a coin t
   const t = resolveUnlistedTarget("Motilal Oswal Home Finance Limited Unlisted Shares", docs, slugify);
   assert.equal(t.doc, undefined, "must not pick one of two real documents");
   assert.deepEqual(t.ambiguous.map((d) => d._id).sort(), ["editorial", "imported"]);
+});
+
+/* ---------- boilerplate stripped before EVERY comparison ---------- */
+
+/**
+ * The 06-Aug bug, exactly. Passes A and B stripped the list's "Unlisted
+ * Shares" boilerplate before comparing; the compact and l/I/1-fold
+ * comparisons did not. So a row needing BOTH — boilerplate stripping AND a
+ * fuzzy fold — matched on neither rung and created a duplicate document.
+ *
+ * The first two names below carry no boilerplate and matched even then. The
+ * last two carry it and did not. That was the whole difference.
+ */
+const FOLD_PAIRS = [
+  // [stored (ours, damaged), incoming (theirs, clean)] — real strings
+  ["Hellalnfra Market Private Limited", "Hella Infra Market Private Limited"],  // matched before
+  ["Madhurlron And Steel (India)", "Madhur Iron and Steel (India)"],            // matched before
+  ["Kim Axiva Finvest", "KLM Axiva Finvest Unlisted Shares Price"],             // CREATED a duplicate
+  ["Bvglndia Limited", "BVG India Limited Unlisted Share"],                     // CREATED a duplicate
+];
+
+test("the l/I/1 fold works whether or not the row carries boilerplate", () => {
+  const docs = FOLD_PAIRS.map(([stored], i) => share(`fold-${i}`, stored));
+  FOLD_PAIRS.forEach(([stored, incoming], i) => {
+    const t = resolveUnlistedTarget(incoming, docs, slugify);
+    assert.equal(t.doc?._id, `fold-${i}`,
+      `"${incoming}" should reach "${stored}", got ${t.doc?.company ?? (t.ambiguous ? "ambiguous" : "create")}`);
+  });
+});
+
+test("a trailing \"Price\" is boilerplate too", () => {
+  // The partner writes "… Unlisted Shares Price" on some rows and
+  // "… Unlisted Share Price" on others.
+  assert.equal(stripListBoilerplate("KLM Axiva Finvest Unlisted Shares Price"), "KLM Axiva Finvest");
+  assert.equal(stripListBoilerplate("Lakeshore Hospital Unlisted Share Price"), "Lakeshore Hospital");
+  assert.equal(stripListBoilerplate("Market Simplified Unlisted Shares Price"), "Market Simplified");
+  assert.equal(stripListBoilerplate("APL Metals Unlisted Shares"), "APL Metals");
+  // …and a name that merely begins with the word is left alone.
+  assert.equal(stripListBoilerplate("Price Waterhouse Limited"), "Price Waterhouse Limited");
+  assert.equal(stripListBoilerplate("Tata Capital"), "Tata Capital");
+});
+
+test("every rung compares the same stripped text", () => {
+  // One document per rung, one incoming name each, all carrying boilerplate.
+  const docs = [
+    share("exact", "Zenith Holdings Limited"),
+    share("compact", "RrpS4EInnovation"),
+    share("fold", "Kim Axiva Finvest"),
+    share("junk", "4A sigachilaboratories Limited"),
+    share("tail", "Krasny Defence Technologies Li"),
+  ];
+  const cases = [
+    ["exact", "Zenith Holdings Limited Unlisted Shares"],
+    ["compact", "RRP S4E innovation Unlisted Shares Price"],
+    ["fold", "KLM Axiva Finvest Unlisted Shares Price"],
+    ["junk", "Sigachi Laboratories Limited Unlisted Shares"],
+    ["tail", "Krasny Defence Technologies Limited Unlisted Shares"],
+  ];
+  for (const [id, incoming] of cases) {
+    assert.equal(resolveUnlistedTarget(incoming, docs, slugify).doc?._id, id, `"${incoming}"`);
+  }
+});
+
+test("the looser fold does not collapse companies that share a stem", () => {
+  // Real trios and pairs from the dataset. Every one must stay its own row.
+  const groups = [
+    [["rrp-s4e", "Rrp S4EInnovation"], ["rrp-semi", "Rrp Semiconductor (Ccps)"], ["rrp-elec", "RRP Electronics Limited"]],
+    [["ifincorp", "IFincorp Limited"], ["ikf", "IKF Finance Limited"]],
+    [["mill", "Invade Mill Limited"], ["agro", "Invade Agro Limited"]],
+    [["pay", "Manipal Payment Identity Solut"], ["housing", "Manipal Housing Finance Syndicate Limited"]],
+  ];
+  for (const group of groups) {
+    const docs = group.map(([id, company]) => share(id, company));
+    const resolved = group.map(([id, company]) => {
+      const t = resolveUnlistedTarget(`${company} Unlisted Shares`, docs, slugify);
+      return t.doc?._id ?? (t.ambiguous ? `ambiguous:${id}` : `create:${id}`);
+    });
+    assert.deepEqual(resolved, group.map(([id]) => id),
+      `${group.map(([, c]) => c).join(" / ")} must stay separate`);
+    assert.equal(new Set(resolved).size, group.length);
+  }
+});
+
+/* ---------- the declared alias file ---------- */
+
+test("a declared name outranks every heuristic", () => {
+  // "IFincorp" is our stored spelling of "ICL Fincorp" with a letter missing;
+  // no fold reaches it, and a rule loose enough to would be dangerous. So it
+  // is declared, and the declaration beats even an exact match elsewhere.
+  const docs = [
+    share("ours", "IFincorp Limited", ["|cIFincorp Limited"]),
+    share("dupe", "ICL Fincorp Limited Unlisted Shares"),
+  ];
+  const declared = new Map([[declaredNameKey("ICL Fincorp Limited Unlisted Shares"), "ifincorp-limited"]]);
+
+  // Without the file the exact name wins — which is how the duplicate got made.
+  assert.equal(resolveUnlistedTarget("ICL Fincorp Limited Unlisted Shares", docs, slugify).doc?._id, "dupe");
+  // With it, the operator's decision wins.
+  const t = resolveUnlistedTarget("ICL Fincorp Limited Unlisted Shares", docs, slugify, { declared });
+  assert.equal(t.doc?._id, "ours");
+  assert.equal(t.via, "declared");
+});
+
+test("a declared name matches however the list punctuates it", () => {
+  const docs = [share("target", "Hur Solar Private Limited")];
+  const declared = new Map([[declaredNameKey("HVR Solar Private Limited"), "hur-solar-private-limited"]]);
+  for (const spelling of ["HVR Solar Private Limited", "HVR Solar Pvt. Ltd.", "HVR SOLAR PRIVATE LIMITED Unlisted Shares"]) {
+    assert.equal(resolveUnlistedTarget(spelling, docs, slugify, { declared }).doc?._id, "target", spelling);
+  }
+});
+
+test("a declaration pointing at a missing document is an error, never a silent fallback", () => {
+  const docs = [share("other", "Something Else Entirely")];
+  const declared = new Map([[declaredNameKey("RKB Global Limited"), "ee-rkb-global-limited"]]);
+  const t = resolveUnlistedTarget("RKB Global Limited", docs, slugify, { declared });
+  assert.equal(t.doc, undefined);
+  assert.equal(t.create, undefined, "it must not quietly create the duplicate the entry exists to prevent");
+  assert.match(t.error, /unlisted-aliases\.json/);
+  assert.match(t.error, /ee-rkb-global-limited/);
+});
+
+test("the shipped alias file is valid and self-consistent", () => {
+  const loaded = loadUnlistedAliases();
+  assert.deepEqual(loaded.errors, [], "the committed file must always load");
+  assert.ok(loaded.entries.length >= 10, `expected the seeded pairs, got ${loaded.entries.length}`);
+  // Every pair the brief named is present, keyed by the real slug.
+  for (const [slug, name] of [
+    ["kim-axiva-finvest", "KLM Axiva Finvest Unlisted Shares Price"],
+    ["rrp-s4einnovation", "RRP S4E innovation Unlisted Shares Price"],
+    ["4a-sigachilaboratories-limited", "Sigachi Laboratories Limited Unlisted Shares"],
+    ["bvglndia-limited", "BVG India Limited Unlisted Share"],
+    ["c-ifincorp-limited", "ICL Fincorp Limited Unlisted Shares"],
+    ["ee-rkb-global-limited", "RKB Global Limited"],
+    ["w-kineco-limited", "Kineco Limited Unlisted Share"],
+    ["hur-solar-private-limited", "HVR Solar Private Limited"],
+    ["chennai-super-kings", "CSK Unlisted Shares"],
+    ["api-holdings-pharmeasy", "PharmEasy Unlisted Shares"],
+  ]) {
+    assert.equal(loaded.byIncoming.get(declaredNameKey(name)), slug, `${name} → ${slug}`);
+  }
+});
+
+test("one name may not be declared for two documents", () => {
+  const dir = mkdtempSync(join(tmpdir(), "unlisted-aliases-"));
+  try {
+    const file = join(dir, "a.json");
+    writeFileSync(file, JSON.stringify({ aliases: { "doc-a": ["Same Name Limited"], "doc-b": ["Same Name Ltd."] } }));
+    const loaded = loadUnlistedAliases(pathToFileURL(file));
+    assert.equal(loaded.errors.length, 1);
+    assert.match(loaded.errors[0], /declared for both/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+/* ---------- the duplicate cleanup ---------- */
+
+test("cleanup deletes only a hidden, uncurated duplicate", () => {
+  const target = { _id: "t", slug: "kim-axiva-finvest", company: "Kim Axiva Finvest", aliases: [] };
+  const dupe = {
+    _id: "d", slug: "klm-axiva-finvest-unlisted-shares-price",
+    company: "KLM Axiva Finvest Unlisted Shares Price", aliases: ["KLM Axiva Finvest Unlisted Shares Price"],
+    needsReview: true, indicativePriceINR: 18, asOfDate: "2026-08-06",
+  };
+  const plan = planCleanup(
+    [{ slug: "kim-axiva-finvest", name: "KLM Axiva Finvest Unlisted Shares Price" }],
+    [target, dupe],
+  );
+  assert.deepEqual(plan.deletions.map((x) => x.duplicate._id), ["d"]);
+  assert.deepEqual(plan.aliasAdds.map((x) => x.name), ["KLM Axiva Finvest Unlisted Shares Price"]);
+  assert.deepEqual(plan.blocked, []);
+});
+
+test("cleanup refuses a live duplicate, or one carrying anything a human wrote", () => {
+  const target = { _id: "t", slug: "target", company: "Target Company", aliases: [] };
+  const base = { slug: "dupe", company: "Target Company Unlisted Shares", aliases: [], needsReview: true };
+  const entries = [{ slug: "target", name: "Target Company Unlisted Shares" }];
+
+  for (const [label, extra] of [
+    ["live", { needsReview: false }],
+    ["logo", { hasLogo: true }],
+    ["summary", { hasSummary: true }],
+    ["sector", { sector: "Financial Services" }],
+    ["ipoStatus", { ipoStatus: "drhp-filed" }],
+  ]) {
+    const plan = planCleanup(entries, [target, { ...base, _id: `d-${label}`, ...extra }]);
+    assert.deepEqual(plan.deletions, [], `a duplicate with ${label} must not be deleted`);
+    assert.equal(plan.blocked.length, 1, `a duplicate with ${label} must be reported`);
+    assert.ok(plan.blocked[0].blockers.length >= 1);
+  }
+});
+
+test("cleanup never deletes the target, and never re-adds an alias it already has", () => {
+  const target = {
+    _id: "t", slug: "target", company: "Target Company",
+    aliases: ["Target Company Unlisted Shares"], needsReview: true,
+  };
+  const plan = planCleanup([{ slug: "target", name: "Target Company Unlisted Shares" }], [target]);
+  assert.deepEqual(plan.aliasAdds, [], "idempotent — the target already answers to this name");
+  assert.deepEqual(plan.deletions, [], "the target is never a deletion candidate, whatever it looks like");
+  assert.deepEqual(plan.noDuplicate.map((n) => n.target._id), ["t"]);
 });
 
 /* ---------- name adoption ---------- */

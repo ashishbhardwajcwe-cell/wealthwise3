@@ -1,0 +1,40 @@
+{
+  "README": [
+    "Declared name→document mappings for the unlisted-shares price import. COMMITTED — these must survive every daily run.",
+    "",
+    "An entry says: this name on the partner's list belongs to THIS document, stop guessing. It exists for the tail the",
+    "matcher cannot reach safely — names where our stored spelling lost or gained characters the heuristics cannot bridge",
+    "('IFincorp' for 'ICL Fincorp', 'Hur Solar' for 'HVR Solar'), and names short enough after repair that a guess could",
+    "land on several companies ('csk', 'kineco', 'rkb global').",
+    "",
+    "Keyed by the TARGET document's slug. The values are the names as the partner's list writes them.",
+    "resolveUnlistedTarget checks this map FIRST, ahead of every heuristic including the exact tests: an entry here is an",
+    "operator decision and nothing below it gets a vote.",
+    "",
+    "Matching is on the normalised name, so punctuation, case and the ltd/limited/private/india suffix words do not have",
+    "to be reproduced exactly. The list's own 'Unlisted Shares' / 'Price' boilerplate does not have to be stripped.",
+    "",
+    "To add an entry: run the importer's dry run, find the row under 'POSSIBLE DUPLICATE' or 'matched N companies',",
+    "    npm run import:unlisted -- \"<file>\" --dry-run",
+    "then put the incoming name under the slug of the document it belongs to. A slug that no document has is reported and",
+    "aborts the run, so a typo cannot silently do nothing.",
+    "",
+    "After adding entries, npm run clean:unlisted-dupes --dry-run shows which duplicate documents they make deletable."
+  ],
+  "aliases": {
+    "kim-axiva-finvest": ["KLM Axiva Finvest Unlisted Shares Price"],
+    "rrp-s4einnovation": ["RRP S4E innovation Unlisted Shares Price"],
+    "4a-sigachilaboratories-limited": ["Sigachi Laboratories Limited Unlisted Shares"],
+    "bvglndia-limited": ["BVG India Limited Unlisted Share"],
+    "c-ifincorp-limited": ["ICL Fincorp Limited Unlisted Shares"],
+    "ee-rkb-global-limited": ["RKB Global Limited"],
+    "w-kineco-limited": ["Kineco Limited Unlisted Share"],
+    "hur-solar-private-limited": ["HVR Solar Private Limited"],
+    "chennai-super-kings": ["CSK Unlisted Shares"],
+    "api-holdings-pharmeasy": ["PharmEasy Unlisted Shares"]
+  },
+  "notes": {
+    "chennai-super-kings": "Three documents exist for this company: chennai-super-kings (editorial), i-csk (22-Jul price, OCR name) and csk-unlisted-shares (06-Aug). The editorial one is the survivor. i-csk still needs merging by hand — it is not a 06-Aug creation, so the cleanup will not touch it.",
+    "api-holdings-pharmeasy": "'PharmEasy Unlisted Shares' is ALSO an alias on pharm-easy, which carries the 06-Aug price and a logo. This entry makes the editorial document win the match; pharm-easy has to be merged in Studio because the cleanup refuses to delete a document with a logo."
+  }
+}

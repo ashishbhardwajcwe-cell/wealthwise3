@@ -18,6 +18,7 @@
     "logos:unlisted": "node scripts/extract-unlisted-logos.mjs",
     "logos:pms": "node scripts/import-pms-logos.mjs",
     "clean:unlisted-names": "node scripts/clean-unlisted-names.mjs",
+    "clean:unlisted-dupes": "node scripts/clean-unlisted-dupes.mjs",
     "audit:unlisted": "node scripts/audit-unlisted.mjs",
     "archive:pms": "node scripts/archive-pms.mjs",
     "test:pms": "node scripts/pms-pipeline.test.mjs",
