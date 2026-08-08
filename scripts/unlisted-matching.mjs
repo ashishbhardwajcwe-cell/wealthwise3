@@ -644,18 +644,46 @@ export function validateImportRows(rows, { previousRowCount = 0, previousAsOfDat
 const LIST_BOILERPLATE_RE_G = /\bunlisted\s+shares?\b/gi;
 
 /**
- * Normalise a name with the partner list's row boilerplate removed, so
- * "APL Metals Unlisted Shares" and "APL Metals" both reduce to "apl metals".
- * A trailing "price" goes too ("… Unlisted Shares Price").
+ * Strip the partner's ROW BOILERPLATE from a raw name: "Unlisted Shares" /
+ * "Unlisted Share" wherever it appears, and a trailing "Price" — the list
+ * writes "… Unlisted Shares Price" on some rows. None of it is part of any
+ * company's name.
+ *
+ * This runs on the RAW string, before normalisation, so that every comparison
+ * key below — normalised, compact, folded — is built from the same stripped
+ * text. Stripping for only SOME comparisons is what let the 06-Aug list fork
+ * duplicates: a row needing both boilerplate stripping and a fuzzy fold
+ * matched on neither and created a second document for a company we had.
+ */
+export function stripListBoilerplate(raw) {
+  return String(raw ?? "")
+    .replace(LIST_BOILERPLATE_RE_G, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s*\bprice\s*$/i, "")
+    .trim();
+}
+
+/**
+ * Normalise a name with the row boilerplate removed, so "APL Metals Unlisted
+ * Shares" and "APL Metals" both reduce to "apl metals".
  *
  * Local on purpose: normalizeCompanyName is shared with the audit, the logo
  * extractor and clean-unlisted-names, where "Zepto Unlisted Shares (Equity)"
  * has to keep reading as its own distinct stored name.
  */
 function normalizeWithoutBoilerplate(raw) {
-  return normalizeCompanyName(String(raw ?? "").replace(LIST_BOILERPLATE_RE_G, " "))
-    .replace(/\s*\bprice\b$/, "")
-    .trim();
+  return normalizeCompanyName(stripListBoilerplate(raw)).replace(/\s*\bprice\b$/, "").trim();
+}
+
+/**
+ * The key scripts/unlisted-aliases.json is indexed by, and the key a list name
+ * is looked up with. Exported so the loader and the matcher cannot drift: two
+ * sides computing "the same" key slightly differently is exactly the bug that
+ * let the 06-Aug list fork duplicates, and a declared entry that silently fails
+ * to match is worse than no entry at all.
+ */
+export function declaredNameKey(raw) {
+  return normalizeWithoutBoilerplate(raw);
 }
 
 /**
@@ -798,38 +826,76 @@ export function storedNameCorruption(storedName, incomingName) {
  * which the importer appends to the document's aliases so the next run
  * matches it exactly rather than relaxing again.
  */
-export function resolveUnlistedTarget(rawName, docs, slugify) {
+export function resolveUnlistedTarget(rawName, docs, slugify, { declared } = {}) {
   const { clean, truncated } = splitEllipsis(rawName);
   const norm = normalizeCompanyName(clean);
   if (!norm) return { error: "name is empty after normalisation" };
 
-  const slug = slugify(clean);
-  const bySlug = docs.find((d) => d.slug && d.slug === slug);
-  if (bySlug) return { doc: bySlug };
+  // ── 0. the alias file ──────────────────────────────────────────────
+  // An operator wrote this down. It is not a heuristic and it outranks every
+  // one of them, including the exact tests: when a human has said which
+  // document a list name belongs to, nothing below gets a vote.
+  const declaredSlug = declared?.get(declaredNameKey(clean)) ?? declared?.get(normalizeCompanyName(clean));
+  if (declaredSlug) {
+    const target = docs.find((d) => d.slug === declaredSlug);
+    if (target) return { doc: target, via: "declared", alias: clean };
+    return {
+      error: `scripts/unlisted-aliases.json points this name at slug "${declaredSlug}", ` +
+        "which no unlistedShare document has — fix the file or the slug",
+    };
+  }
 
-  const aliasHit = docs.find((d) => (d.aliases ?? []).some((a) => normalizeCompanyName(a) === norm));
-  if (aliasHit) return { doc: aliasHit };
+  // ── comparison keys ────────────────────────────────────────────────
+  // Every key is built from the SAME boilerplate-stripped text. Coarsest
+  // last. Running one of these on the raw name while the others ran on the
+  // stripped name is precisely the bug that forked the 06-Aug duplicates.
+  const bare = normalizeWithoutBoilerplate(clean);
+  const compact = bare.replace(/ /g, "");
+  const KEYS = [
+    [(s) => normalizeCompanyName(s), undefined],                                   // exact name
+    [(s) => normalizeWithoutBoilerplate(s), "boilerplate"],                        // + row boilerplate gone
+    [(s) => normalizeWithoutBoilerplate(s).replace(/ /g, ""), "compact"],          // + spacing ignored
+    // The l/I/1 fold, in two forms. The suffix-KEEPING one is the load-bearing
+    // half: OCR fuses a suffix word onto the token before it ("Bvglndia" for
+    // "BVG India"), so the clean side drops "India" as a word while the
+    // damaged side has it buried inside a token and keeps it.
+    [(s) => foldIL1(normalizeWithoutBoilerplate(s).replace(/ /g, "")), "il1-confusion"],
+    [(s) => foldIL1(compactKeepingSuffixes(stripListBoilerplate(s))), "il1-confusion"],
+  ];
 
-  const nameHit = docs.find((d) => normalizeCompanyName(d.company) === norm);
-  if (nameHit) return { doc: nameHit };
+  // Every rung's candidates are POOLED, and the exactly-one rule is applied to
+  // the pool rather than to whichever rung matched first. That is the
+  // difference between resolving a row and deciding one: "Motilal Oswal Home
+  // Finance" (editorial) is an exact match once the boilerplate is stripped,
+  // while "Motilal Oswal Home Finance Limi" — the same company, our OCR-cut
+  // copy of it — is found a rung lower. Taking the exact one would silently
+  // pick a survivor for a duplicate pair and quietly orphan the other
+  // document, logo and all. Pooled, the row is reported and a human decides.
+  const found = new Map(); // doc._id → { doc, via } — the first rung to find it wins the label
+  const consider = (test, via) => {
+    for (const d of docs) {
+      if (found.has(d._id)) continue;
+      if (test(d.company) || (d.aliases ?? []).some((a) => test(a))) found.set(d._id, { doc: d, via });
+    }
+  };
 
-  // OCR sometimes fuses words ("AplMetals", "ArohanFinancial") — retry the
-  // company/alias comparison with spaces removed on both sides.
-  const compact = norm.replace(/ /g, "");
-  const compactHit = docs.find(
-    (d) =>
-      normalizeCompanyName(d.company).replace(/ /g, "") === compact ||
-      (d.aliases ?? []).some((a) => normalizeCompanyName(a).replace(/ /g, "") === compact),
-  );
-  if (compactHit) return { doc: compactHit };
+  for (const [key, via] of KEYS) {
+    const want = key(clean);
+    if (!want) continue;
+    consider((stored) => key(stored) === want, via);
+  }
 
   // The importer's doc ids are unlistedShare-<slug>; treat an id collision as
-  // the same company so a create can never clobber an existing document. This
-  // stays AHEAD of the two relaxed passes below: an exact id match is a
-  // stronger statement about identity than any name-shape heuristic, and
-  // routing the row elsewhere would leave a create colliding with this id.
-  const byId = docs.find((d) => d._id === `unlistedShare-${slug}`);
-  if (byId) return { doc: byId };
+  // the same company so a create can never clobber an existing document.
+  const slug = slugify(clean);
+  const bareSlug = slugify(stripListBoilerplate(clean));
+  for (const d of docs) {
+    if (found.has(d._id)) continue;
+    if (d._id === `unlistedShare-${slug}` || (d.slug && d.slug === slug)) found.set(d._id, { doc: d, via: undefined });
+    else if (bareSlug && (d._id === `unlistedShare-${bareSlug}` || (d.slug && d.slug === bareSlug))) {
+      found.set(d._id, { doc: d, via: "boilerplate" });
+    }
+  }
 
   // ═══ relaxed passes ════════════════════════════════════════════════
   //
@@ -838,53 +904,31 @@ export function resolveUnlistedTarget(rawName, docs, slugify) {
   // and none of them can prove identity on its own. That is why the importer
   // refuses to write a run in which two incoming rows land on one document.
   //
-  // Candidates from ALL the passes are pooled before the exactly-one rule is
-  // applied, rather than letting whichever pass runs first take the row. That
-  // is deliberately stricter than running them in order: an editorial
-  // document ("Motilal Oswal Home Finance") and its OCR-damaged twin
-  // ("Motilal Oswal Home Finance Limi") are each found by a DIFFERENT pass,
-  // and resolving by pass order would silently pick one of two real
-  // documents. Pooled, they come back ambiguous and a human decides.
-  const bare = normalizeWithoutBoilerplate(clean);
-
-  const found = new Map(); // doc._id → { doc, via } — first pass to find it wins the label
-  const consider = (test, via) => {
-    for (const d of docs) {
-      if (found.has(d._id)) continue;
-      if (test(d.company) || (d.aliases ?? []).some((a) => test(a))) found.set(d._id, { doc: d, via });
-    }
-  };
-
-  // (a) Boilerplate-insensitive. The Excel list spells 97 of its 183 names
-  // "<Company> Unlisted Shares"; that is the list's ROW BOILERPLATE, not part
-  // of anyone's name, and the stored documents never carried it.
-  if (bare) consider((s) => normalizeWithoutBoilerplate(s) === bare, "boilerplate");
-
-  // (b) Reverse prefix — the mirror of the truncated-INCOMING branch below.
-  // The old OCR cut long names off mid-word and those stumps are what is
-  // STORED; the Excel list now supplies the full name. The prefix is
-  // deliberately not word-aligned, because truncation happens mid-word.
-  // REVERSE_PREFIX_MIN is what keeps that safe.
+  // Reverse prefix — the mirror of the truncated-INCOMING branch below. The
+  // old OCR cut long names off mid-word and those stumps are what is STORED;
+  // the Excel list now supplies the full name. The prefix is deliberately not
+  // word-aligned, because truncation happens mid-word. REVERSE_PREFIX_MIN is
+  // what keeps that safe.
   consider((storedRaw) => {
     const stored = normalizeCompanyName(storedRaw);
     return stored.length >= REVERSE_PREFIX_MIN && (norm.startsWith(stored) || bare.startsWith(stored));
   }, "reverse-prefix");
 
-  // (c) Stored name truncated mid-word, leaving a partial FINAL token that
-  // stops (b)'s prefix test dead: "Krasny Defence Technologies Li",
-  // "Hindustan Power Exchange Limit", "Galaxeye Space Solutions Limite".
-  const truncatedTailHit = (storedRaw) => {
+  // Stored name truncated mid-word, leaving a partial FINAL token that stops
+  // the prefix test dead: "Krasny Defence Technologies Li", "Hindustan Power
+  // Exchange Limit", "Galaxeye Space Solutions Limite".
+  consider((storedRaw) => {
     const repaired = dropTruncatedTail(normalizeCompanyName(storedRaw));
     return repaired !== null && repaired.length >= REPAIRED_MIN &&
       (norm.startsWith(repaired) || bare.startsWith(repaired));
-  };
-  consider(truncatedTailHit, "stored-truncated");
+  }, "stored-truncated");
 
-  // (d) Leading junk: 1-2 stray characters the old OCR lifted out of the logo
-  // cell ("EB Graand Prix…", "4A sigachilaboratories…", "Rt. Hindon…"). Drop
-  // the token and retry (c) and the plain prefix/compact tests on what is
-  // left. REPAIRED_MIN is why "I csk" and "w+ Kineco" stay unmatched: three
-  // and six characters are not enough to identify a company by.
+  // Leading junk: 1-2 stray characters the old OCR lifted out of the logo cell
+  // ("EB Graand Prix…", "4A sigachilaboratories…", "Rt. Hindon…"). Drop the
+  // token and retry the truncated-tail and prefix/compact tests on what is
+  // left. REPAIRED_MIN is why "I csk", "w+ Kineco" and "Ee Rkb Global" stay
+  // unmatched here — three, six and ten characters are not enough to identify
+  // a company by, so they are declared in scripts/unlisted-aliases.json.
   consider((storedRaw) => {
     const rest = dropLeadingJunk(normalizeCompanyName(storedRaw));
     if (rest === null || rest.length < REPAIRED_MIN) return false;
@@ -894,15 +938,6 @@ export function resolveUnlistedTarget(rawName, docs, slugify) {
     return repaired !== null && repaired.length >= REPAIRED_MIN &&
       (norm.startsWith(repaired) || bare.startsWith(repaired));
   }, "leading-junk");
-
-  // (e) l / I / 1 confusion — "Bvglndia" for "BVG India", "Kim" for "KLM".
-  // Only reached when the plain compact comparison above has already failed,
-  // so this is the fold of last resort, and it demands full equality.
-  const foldedCompact = foldIL1(compact);
-  const foldedFull = foldIL1(compactKeepingSuffixes(clean));
-  consider((storedRaw) =>
-    foldIL1(normalizeCompanyName(storedRaw).replace(/ /g, "")) === foldedCompact ||
-    foldIL1(compactKeepingSuffixes(storedRaw)) === foldedFull, "il1-confusion");
 
   const hits = [...found.values()];
   if (hits.length === 1) return { doc: hits[0].doc, via: hits[0].via, alias: clean };

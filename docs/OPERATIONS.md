@@ -11,7 +11,10 @@
 > the partner's own embedded images, with a dry run you can flip through in
 > Finder before anything is attached (Part 2 step 9, and 5.3). Matching now
 > bridges our OCR-damaged stored names onto the partner's clean ones, and
-> `--adopt-names` (Part 2 step 5b) can repair ours from theirs.
+> `--adopt-names` (Part 2 step 5b) can repair ours from theirs. The tail that
+> heuristics cannot safely reach is declared in `scripts/unlisted-aliases.json`,
+> and `npm run clean:unlisted-dupes` (step 6b) merges the duplicates the first
+> Excel run created.
 >
 > **What changed in V2:** the dealer-price leak is resolved and that section now
 > records how it was done. New: a repair procedure for wrong numbers (Part 9), a
@@ -390,6 +393,18 @@ much shorter on day two and near-empty after that, because each match is
 remembered as an alias. If it stays long, something is not being remembered:
 say so rather than living with it.
 
+**`AMBIGUOUS` rows are yours to decide.** When two of our documents both claim
+one row, the import refuses to guess and prints both — slug, live or hidden,
+current price and date, and what curated content each carries. Pick the
+survivor (usually the one with the logo and summary — that is the expensive
+part) and add the row to `scripts/unlisted-aliases.json`:
+
+```
+"<survivor-slug>": ["<the name exactly as the list writes it>"]
+```
+
+Commit that. Until you do, those companies keep the price they had before.
+
 **The "Created" list comes in two parts.** "Genuinely new companies" are ones
 nothing in the dataset resembles. "POSSIBLE DUPLICATE of an existing document"
 means the name shares a long opening with something we already have — usually
@@ -430,6 +445,35 @@ only need this once; after it, day-to-day imports need no flag.
 ```
 npm run clean:unlisted-names
 ```
+
+### Step 6b — Once, after the first Excel import: merge the duplicates
+
+The 06-Aug run created a second document for ~9 companies whose stored names
+our old OCR had mangled beyond what matching can bridge. `scripts/unlisted-aliases.json`
+says which list name belongs to which document. This applies it:
+
+```
+npm run clean:unlisted-dupes -- --dry-run
+```
+
+Read the three sections:
+
+- **Alias additions** — the list's spelling is recorded on the surviving
+  document, so tomorrow's import matches it exactly with no guessing.
+- **Deletions** — the duplicate the 06-Aug run created. Only ever a document
+  that is still hidden (`needsReview`) and carries no logo, summary, sector or
+  IPO status.
+- **Skipped — NOT deletable** — anything live or curated. These are printed
+  with the reason and **never touched**. Merge them in Studio yourself: open
+  both, move anything worth keeping onto the survivor, delete the other.
+
+Then:
+
+```
+npm run clean:unlisted-dupes
+```
+
+Safe to re-run — an alias the survivor already has is not added twice.
 
 ### Step 7 — Audit
 
@@ -504,6 +548,7 @@ Three aborts are specific to the Excel file and mean specific things:
 | `is not a RETAIL price column` | They renamed or moved the price column, so the importer can no longer prove which one is the retail price. It will not guess. | Tell them. Never rename the header yourself to get past this — that is the one check standing between the dealer column and a public page. |
 | `Multi-sheet reading failed silently` | Sheets carry price data that wasn't read. | Send them the file name; do not import a partial list. |
 | `no "Share Name" header` | Wrong file, or they restructured it. | Check you sent the right attachment. |
+| `declared in scripts/unlisted-aliases.json, but the document pointed at no longer exists` | A row on today's list is declared, but its target document has been renamed, merged or deleted. Honouring it is impossible; ignoring it would recreate the duplicate it exists to prevent. | Find the document in Studio, copy the slug from the URL bar, correct the file. |
 | `claimed by more than one row` | Two companies on the list matched ONE of our documents. Left alone, the second price would overwrite the first and a company would vanish from the site. | Open the named document in Studio, give each company its own document with the right list name in its aliases, re-run. No flag relaxes this. |
 
 **Stale but correct beats fresh but wrong. Always.**

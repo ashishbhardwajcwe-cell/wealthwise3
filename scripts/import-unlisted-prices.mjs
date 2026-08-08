@@ -103,6 +103,7 @@ import {
   PRICE_MIN_EXCL, PRICE_MAX_EXCL,
 } from "./unlisted-matching.mjs";
 import { readUnlistedXlsx } from "./unlisted-xlsx.mjs";
+import { loadUnlistedAliases, unresolvedAliasTargets, ALIASES_DISPLAY_PATH } from "./unlisted-aliases.mjs";
 
 // ---------- args ----------
 const args = { partner: "uz", dryRun: false, seedEditorial: false, publish: false, allowDrift: false, adoptNames: false };
@@ -144,8 +145,13 @@ const hasEnv = !!(process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && process.env.SANIT
 if (!hasEnv && !args.dryRun) requireSanityEnv(); // prints the standard error and exits
 const env = hasEnv ? requireSanityEnv() : null;
 
+// needsReview / logo / summary / sector / ipoStatus are read only so that an
+// AMBIGUOUS row can describe its candidates properly — which of the two is
+// live, which carries a price, which carries content a human wrote. Choosing
+// between two real documents is not a decision this script may make, but it
+// can lay out everything the person making it needs.
 const existing = env
-  ? await sanityQuery(env, `*[_type == "unlistedShare" && !(_id in path("drafts.**"))]{ _id, company, "slug": slug.current, aliases, indicativePriceINR, asOfDate }`)
+  ? await sanityQuery(env, `*[_type == "unlistedShare" && !(_id in path("drafts.**"))]{ _id, company, "slug": slug.current, aliases, indicativePriceINR, asOfDate, needsReview, sector, ipoStatus, "hasLogo": defined(logo), "hasSummary": defined(summary) }`)
   : [];
 if (!env) console.log("(no Sanity env — dry-run against an empty dataset: parse/validation preview only)\n");
 
@@ -480,11 +486,40 @@ if (check.errors.length) {
   process.exit(1);
 }
 
+// ---------- declared name → document mappings ----------
+// Read before anything is matched, and validated against the dataset: an entry
+// pointing at a slug no document has would otherwise be silent, and the row it
+// was written to rescue would fall through to the heuristics and create the
+// very duplicate the entry exists to prevent.
+const aliasFile = loadUnlistedAliases();
+if (aliasFile.errors.length) {
+  console.error(`\nABORTED — ${ALIASES_DISPLAY_PATH} is not usable. Nothing was written to Sanity.\n`);
+  for (const e of aliasFile.errors) console.error(`  ${e}`);
+  process.exit(1);
+}
+const declared = aliasFile.byIncoming;
+if (aliasFile.entries.length) {
+  console.log(`${aliasFile.entries.length} declared name${aliasFile.entries.length > 1 ? "s" : ""} loaded from ${ALIASES_DISPLAY_PATH}.`);
+}
+// A target slug no document has means the file has gone stale — the document
+// was renamed, merged or deleted. Reported here as a warning rather than an
+// abort, because an entry for a company that is not on TODAY'S list is a
+// bookkeeping problem and should not cost a day of prices. If the row IS on
+// today's list the entry mattered and its failure aborts the run further down.
+const staleAliases = existing.length ? unresolvedAliasTargets(aliasFile.entries, existing) : [];
+if (staleAliases.length) {
+  console.log(`\nWarning: ${ALIASES_DISPLAY_PATH} points at ${staleAliases.length} slug${staleAliases.length > 1 ? "s" : ""} no document has:`);
+  for (const m of staleAliases) console.log(`  • "${m.name}"  ->  ${m.slug}`);
+  console.log("  Check the slug in Studio's URL bar and correct the file, or remove the entry.");
+}
+
 // ---------- match + build mutations ----------
 const mutations = [];
 const updated = [];   // { name, company, price }
 const created = [];   // { name, listName, price }
 const renames = [];   // { id, from, to, why } — see --adopt-names
+const ambiguousRows = []; // { name, via, candidates } — reported in full, never guessed
+const brokenDeclarations = []; // { name, reason } — a declared target that no longer exists
 const relaxed = new Map(); // via → [{ name, company }]
 const claimedDocs = new Map(); // existing doc._id → { doc, rows: [name] }
 const claimedNew = new Map();  // new _id → first row name, to catch dupes in one list
@@ -529,13 +564,21 @@ function adoptableCompanyName(raw) {
 const ADOPTABLE_VIA = new Set(["reverse-prefix", "stored-truncated", "leading-junk", "il1-confusion"]);
 
 for (const row of rows) {
-  const target = resolveUnlistedTarget(row.name, existing, slugify);
-  if (target.error) { skipped.push({ line: row.name, reason: target.error }); continue; }
+  const target = resolveUnlistedTarget(row.name, existing, slugify, { declared });
+  if (target.error) {
+    // A declared entry whose target is gone matters TODAY — this row would
+    // otherwise fall through to the heuristics and recreate the duplicate the
+    // entry exists to prevent. Collected here and aborted on below.
+    if (/unlisted-aliases\.json/.test(target.error)) brokenDeclarations.push({ name: row.name, reason: target.error });
+    skipped.push({ line: row.name, reason: target.error });
+    continue;
+  }
   if (target.ambiguous) {
+    ambiguousRows.push({ name: row.name, via: target.via, candidates: target.ambiguous });
     skipped.push({
       line: row.name,
       reason: `matches ${target.ambiguous.length} companies ${HOW_MATCHED[target.via] ?? "as a truncated name"} ` +
-        `(${target.ambiguous.map((d) => d.company).slice(0, 3).join(" / ")}) — add the raw name to the right doc's aliases`,
+        `(${target.ambiguous.map((d) => d.company).slice(0, 3).join(" / ")}) — see the AMBIGUOUS section below`,
     });
     continue;
   }
@@ -582,10 +625,17 @@ for (const row of rows) {
     // and an adopted rename adds the OLD name so it keeps resolving too.
     const knownNames = [target.doc.company, ...(target.doc.aliases ?? [])].map(normalizeCompanyName);
     const newAliases = [];
-    if (!knownNames.includes(normalizeCompanyName(row.name))) newAliases.push(row.name);
-    if (adoptCompany && !newAliases.some((a) => normalizeCompanyName(a) === normalizeCompanyName(target.doc.company))) {
-      newAliases.push(target.doc.company);
-    }
+    // Track what this run has already queued as well as what the document
+    // already answers to. Checking only the former is how the 06-Aug adopt run
+    // wrote "EB Graand Prix Luxury Elevators Limi" into aliases a second time:
+    // the old company name was already in there under a slightly different
+    // spelling that normalises the same.
+    const wouldAdd = (name) => {
+      const key = normalizeCompanyName(name);
+      return key && !knownNames.includes(key) && !newAliases.some((a) => normalizeCompanyName(a) === key);
+    };
+    if (wouldAdd(row.name)) newAliases.push(row.name);
+    if (adoptCompany && wouldAdd(target.doc.company)) newAliases.push(target.doc.company);
     if (newAliases.length) {
       mutations.push({ patch: { id: target.doc._id, setIfMissing: { aliases: [] } } });
       mutations.push({ patch: { id: target.doc._id, insert: { after: "aliases[-1]", items: newAliases } } });
@@ -695,9 +745,57 @@ if (created.length) {
     );
   }
 }
+// Rows that resolve to more than one real document. These are never guessed
+// at — but the company keeps yesterday's price until someone decides, so the
+// report has to carry everything that decision needs.
+if (ambiguousRows.length) {
+  console.log(`\n─── ${ambiguousRows.length} AMBIGUOUS — two documents claim one row; pick a survivor ───`);
+  for (const a of ambiguousRows) {
+    console.log(`\n  "${a.name}"`);
+    for (const d of a.candidates) {
+      const curated = [
+        d.hasLogo ? "logo" : null,
+        d.hasSummary ? "summary" : null,
+        d.sector ? `sector "${d.sector}"` : null,
+        d.ipoStatus ? `ipoStatus "${d.ipoStatus}"` : null,
+      ].filter(Boolean);
+      const price = typeof d.indicativePriceINR === "number"
+        ? `₹${d.indicativePriceINR.toLocaleString("en-IN")} as of ${d.asOfDate ?? "(no date)"}`
+        : "no price";
+      console.log(`      ${d.slug ?? "(no slug)"}`);
+      console.log(`          ${d.company}`);
+      console.log(`          ${d.needsReview ? "HIDDEN (needsReview)" : "LIVE"} · ${price}`);
+      console.log(`          curated: ${curated.length ? curated.join(", ") : "nothing"}`);
+    }
+    console.log(
+      `      → decide, then add to ${ALIASES_DISPLAY_PATH}:\n` +
+      `          "<survivor-slug>": ["${a.name}"]`,
+    );
+  }
+  console.log(
+    "\n  Until one is declared, these companies keep the price they had before this list. Prefer the\n" +
+    "  document carrying curated content as the survivor — its logo and summary are the expensive part.",
+  );
+}
+
 if (skipped.length) {
   console.log("\nSkipped:");
   for (const s of skipped) console.log(`  • ${s.line} — ${s.reason}`);
+}
+
+// ---------- a declared name whose document is gone ----------
+// The alias file is an operator decision. When one of today's rows relies on an
+// entry whose target no longer exists, honouring it is impossible and ignoring
+// it recreates the duplicate it was written to prevent — so neither happens.
+if (brokenDeclarations.length) {
+  console.error(
+    `\nABORTED — ${brokenDeclarations.length} row${brokenDeclarations.length > 1 ? "s" : ""} on this list ` +
+    `${brokenDeclarations.length > 1 ? "are" : "is"} declared in ${ALIASES_DISPLAY_PATH}, but the document ` +
+    `pointed at no longer exists. Nothing was written to Sanity.\n`,
+  );
+  for (const b of brokenDeclarations) console.error(`  "${b.name}"\n      ${b.reason}`);
+  console.error("\n  Find the document in Studio, copy its slug from the URL bar, and correct the file.");
+  process.exit(1);
 }
 
 // ---------- one document, one row ----------
