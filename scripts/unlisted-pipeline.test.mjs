@@ -46,12 +46,13 @@ import {
 import { Readable } from "node:stream";
 import { crc32 } from "node:zlib";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { cleanUnlistedName } from "./clean-unlisted-names.mjs";
 import { readUnlistedXlsxBytes, joinLogosToRows } from "./unlisted-xlsx.mjs";
+import { planAttachments, cropFileName, trimUniformWhiteBorder } from "./extract-unlisted-logos.mjs";
 import { slugify, normalizeIsoDate } from "./import-shared.mjs";
 
 let passed = 0;
@@ -1496,6 +1497,77 @@ function buildWorkbook() {
 
 const WORKBOOK = buildWorkbook();
 
+/** Every retail and dealer figure in the logo fixture. All unique, and none of
+ *  them a lot size or an image dimension, so the confidentiality check can
+ *  search the whole output for them and mean it. */
+const LOGO_FIXTURE_PRICES = [385, 371, 332, 301, 930, 901, 55, 51];
+
+/**
+ * A workbook whose rows carry REAL embedded images, for the end-to-end run.
+ * Four priced rows, three with a logo anchored to them:
+ *   • PharmEasy      — a mark with a white border, which gets trimmed
+ *   • Sterlite Grid 5 — a mark filling its tile, uploaded as-is
+ *   • Some Company…  — a good image belonging to no document of ours
+ *   • Zzz Holdings   — priced, but no image at all
+ */
+function buildLogoWorkbook(makeJpeg) {
+  const sst = [];
+  const header = ["S.No", "", "Share Name", "Retail Price", "Dealer Price", "Depository", "Min. Lot Size"];
+  const sheet = sheetPart([
+    [1, ["Unlisted Shares Price List — As on 06 Aug 2026"]],
+    [2, header],
+    [3, [1, "", "PharmEasy Unlisted Shares", 385, 371, "NSDL & CDSL", 100]],
+    [4, [2, "", "Sterlite Grid 5 Unlisted Shares", 332, 301, "NSDL", 100]],
+    [5, [3, "", "Some Company Nobody Has Limited", 930, 901, "NSDL", 100]],
+    [6, [4, "", "Zzz Holdings Limited", 55, 51, "NSDL", 10]],
+  ], sst, '<drawing r:id="rId1"/>');
+
+  // <xdr:row> is zero-based, so 2/3/4 are Excel rows 3/4/5.
+  const anchor = (row, rid) =>
+    `<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>` +
+    `<xdr:ext cx="400" cy="400"/><xdr:pic><xdr:blipFill><a:blip r:embed="${rid}"/></xdr:blipFill></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+
+  const sharedStrings =
+    `<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sst.length}" uniqueCount="${sst.length}">` +
+    sst.map((s) => `<si><t>${xmlEscape(s)}</t></si>`).join("") + "</sst>";
+
+  return storedZip([
+    { name: "[Content_Types].xml", data: '<?xml version="1.0"?><Types/>' },
+    { name: "_rels/.rels", data: `<?xml version="1.0"?><Relationships xmlns="${REL}"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    {
+      name: "xl/workbook.xml",
+      data: `<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${REL}">` +
+        '<sheets><sheet name="A-M" sheetId="1" r:id="rId2"/></sheets></workbook>',
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      data: `<?xml version="1.0"?><Relationships xmlns="${REL}">` +
+        `<Relationship Id="rId2" Type="${REL}/worksheet" Target="worksheets/sheet1.xml"/>` +
+        `<Relationship Id="rId11" Type="${REL}/sharedStrings" Target="sharedStrings.xml"/></Relationships>`,
+    },
+    { name: "xl/worksheets/sheet1.xml", data: sheet },
+    {
+      name: "xl/worksheets/_rels/sheet1.xml.rels",
+      data: `<?xml version="1.0"?><Relationships xmlns="${REL}"><Relationship Id="rId1" Type="${REL}/drawing" Target="../drawings/drawing1.xml"/></Relationships>`,
+    },
+    {
+      name: "xl/drawings/drawing1.xml",
+      data: `<?xml version="1.0"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${REL}">` +
+        anchor(2, "rId1") + anchor(3, "rId2") + anchor(4, "rId3") + "</xdr:wsDr>",
+    },
+    {
+      name: "xl/drawings/_rels/drawing1.xml.rels",
+      data: `<?xml version="1.0"?><Relationships xmlns="${REL}">` +
+        [1, 2, 3].map((i) => `<Relationship Id="rId${i}" Type="${REL}/image" Target="../media/image${i}.jpeg"/>`).join("") +
+        "</Relationships>",
+    },
+    { name: "xl/media/image1.jpeg", data: makeJpeg(84, 84, 10, "image/jpeg") },
+    { name: "xl/media/image2.jpeg", data: makeJpeg(120, 60, 0, "image/jpeg") },
+    { name: "xl/media/image3.jpeg", data: makeJpeg(60, 60, 6, "image/jpeg") },
+    { name: "xl/sharedStrings.xml", data: sharedStrings },
+  ]);
+}
+
 test("a multi-sheet workbook yields rows from EVERY data sheet", () => {
   const book = readUnlistedXlsxBytes(WORKBOOK, "fixture.xlsx");
   assert.deepEqual(book.sheetsRead.map((s) => s.name), ["A-M", "N-Z"], "the cover page is not a price list");
@@ -1675,6 +1747,236 @@ test("joinLogosToRows copes with a workbook that has no images at all", () => {
   assert.deepEqual(joinLogosToRows({ rows, logos: [] }), { paired: [], orphans: [], missing: ["Tata Capital"] });
   assert.deepEqual(joinLogosToRows(), { paired: [], orphans: [], missing: [] });
 });
+
+/* ---------- attaching logos to documents ---------- */
+
+/**
+ * The logo path resolves a name through the SAME resolveUnlistedTarget and the
+ * SAME declared alias file as the price import. Anything less and a name lands
+ * on one document when it carries a price and another — or none — when it
+ * carries a picture.
+ */
+
+const logoDoc = (slug, company, extra = {}) => ({
+  _id: `unlistedShare-${slug}`, slug, company, aliases: [], hasLogo: false, ...extra,
+});
+const crop = (name) => ({ name, bytes: Buffer.from([1, 2, 3]), contentType: "image/jpeg", extension: "jpeg" });
+
+test("a logo is never allowed to create a document", () => {
+  const { planned, unmatched } = planAttachments([crop("Some Company Nobody Has Limited")], [logoDoc("tata", "Tata Capital")], {});
+  assert.deepEqual(planned, []);
+  assert.equal(unmatched.length, 1);
+  assert.match(unmatched[0].reason, /never create/);
+  assert.equal(unmatched[0].name, "Some Company Nobody Has Limited", "reported by company name, not by index");
+});
+
+test("the declared alias file decides a logo the heuristics cannot", () => {
+  // Real shape from the live dataset: the partner writes "PharmEasy Unlisted
+  // Shares", and that exact string is an alias on TWO of our documents. Without
+  // the alias file the matcher correctly refuses to guess — and the logo is
+  // dropped. With it, the operator's choice wins.
+  const docs = [
+    logoDoc("api-holdings-pharmeasy", "API Holdings (PharmEasy)", { aliases: ["API Holdings (PharmEasy)", "PharmEasy Unlisted Shares"] }),
+    logoDoc("pharm-easy", "Pharm Easy", { aliases: ["PharmEasy", "PharmEasy Unlisted Shares"] }),
+  ];
+  const crops = [crop("PharmEasy Unlisted Shares")];
+
+  const without = planAttachments(crops, docs, {});
+  assert.deepEqual(without.planned, [], "two candidates must never be guessed between");
+  assert.match(without.unmatched[0].reason, /^ambiguous/);
+
+  const declared = new Map([[declaredNameKey("PharmEasy Unlisted Shares"), "api-holdings-pharmeasy"]]);
+  const with_ = planAttachments(crops, docs, { declared });
+  assert.deepEqual(with_.planned.map((p) => p.doc.slug), ["api-holdings-pharmeasy"]);
+  assert.equal(with_.planned[0].via, "declared");
+});
+
+test("the committed alias file is the one the logo path actually loads", () => {
+  // Guards against the two drifting: the file on disk has to parse, and its
+  // keys have to be the keys the matcher looks up.
+  const { byIncoming, errors } = loadUnlistedAliases();
+  assert.deepEqual(errors, [], "scripts/unlisted-aliases.json must be structurally valid");
+  assert.equal(byIncoming.get(declaredNameKey("PharmEasy Unlisted Shares")), "api-holdings-pharmeasy");
+  const docs = [
+    logoDoc("api-holdings-pharmeasy", "API Holdings (PharmEasy)", { aliases: ["PharmEasy Unlisted Shares"] }),
+    logoDoc("pharm-easy", "Pharm Easy", { aliases: ["PharmEasy Unlisted Shares"] }),
+  ];
+  const { planned } = planAttachments([crop("PharmEasy Unlisted Shares")], docs, { declared: byIncoming });
+  assert.deepEqual(planned.map((p) => p.doc.slug), ["api-holdings-pharmeasy"]);
+});
+
+test("a document that already has a logo is left alone unless --force", () => {
+  const docs = [logoDoc("tata", "Tata Capital", { hasLogo: true })];
+  const plain = planAttachments([crop("Tata Capital")], docs, {});
+  assert.deepEqual(plain.planned, []);
+  assert.match(plain.unmatched[0].reason, /--force/);
+  assert.equal(plain.unmatched[0].doc.slug, "tata", "the skipped entry knows its document, so a dry run can file it");
+
+  const forced = planAttachments([crop("Tata Capital")], docs, { force: true });
+  assert.deepEqual(forced.planned.map((p) => p.doc.slug), ["tata"]);
+});
+
+test("two logos claiming one document: the first wins, the second is reported", () => {
+  const docs = [logoDoc("krasny", "Krasny Defence Technologies Li")];
+  const { planned, unmatched } = planAttachments(
+    [crop("Krasny Defence Technologies Limited"), crop("Krasny Defence Technologies Private Limited")], docs, {},
+  );
+  assert.equal(planned.length, 1, "one document, one logo");
+  assert.equal(planned[0].crop.name, "Krasny Defence Technologies Limited");
+  assert.match(unmatched[0].reason, /already got a logo this run/);
+});
+
+test("a logo plan carries nothing that could rename or move a document", () => {
+  const docs = [logoDoc("wu-sterlite-grid-5", "Sterlite Grid 5")];
+  const { planned } = planAttachments([crop("Sterlite Grid 5 Unlisted Shares")], docs, {});
+  assert.deepEqual(Object.keys(planned[0]).sort(), ["crop", "doc", "via"]);
+  // The document object is passed through by reference and never rewritten.
+  assert.equal(planned[0].doc, docs[0]);
+  assert.equal(planned[0].doc.company, "Sterlite Grid 5");
+  assert.equal(planned[0].doc.slug, "wu-sterlite-grid-5");
+});
+
+test("a crop is filed under the document's real slug, not a slug of its name", () => {
+  // These differ in live data more often than you'd think: "Sterlite Grid 5"
+  // lives at wu-sterlite-grid-5, because the slug was minted from an OCR-damaged
+  // name and slugs never move. Naming the file from the company would put a
+  // picture in the review folder that matches no document in Studio.
+  const doc = logoDoc("wu-sterlite-grid-5", "Sterlite Grid 5");
+  assert.equal(cropFileName(doc, crop("Sterlite Grid 5 Unlisted Shares")), "wu-sterlite-grid-5.jpeg");
+  assert.notEqual(cropFileName(doc, crop("x")), `${slugify(doc.company)}.jpeg`);
+  // An unmatched crop has no slug to use, so it is filed under the list name.
+  assert.equal(cropFileName(null, crop("Some Company Nobody Has")), "some-company-nobody-has.jpeg");
+});
+
+/* ---------- the embedded images ---------- */
+
+/**
+ * These marks arrive small — 40 to 168px wide, median 84 — and already at the
+ * size they will be published at. The rules are: trim uniform white borders,
+ * never scale anything, and drop what is too small to be a brand mark.
+ */
+
+let makeImage = null;
+try {
+  const { createCanvas } = await import("@napi-rs/canvas");
+  /** A `w`×`h` white tile with a solid mark inset by `pad` on every side. */
+  makeImage = (w, h, pad, mime = "image/png") => {
+    const c = createCanvas(w, h);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    if (pad * 2 < Math.min(w, h)) {
+      ctx.fillStyle = "#1b3a8f";
+      ctx.fillRect(pad, pad, w - pad * 2, h - pad * 2);
+    }
+    return mime === "image/png" ? c.toBuffer("image/png") : c.toBuffer("image/jpeg", 92);
+  };
+} catch { /* @napi-rs/canvas absent — the image tests below skip themselves */ }
+
+if (makeImage) {
+  test("a uniform white border is trimmed down to the mark", async () => {
+    const out = await trimUniformWhiteBorder(makeImage(120, 120, 20), "xl/media/image1.png");
+    assert.equal(out.trimmed, true);
+    assert.equal(out.width, 80, "120 less a 20px border on each side");
+    assert.equal(out.height, 80);
+    assert.equal(out.contentType, "image/png");
+  });
+
+  test("an image with no border is handed back byte-for-byte, not re-encoded", async () => {
+    // Re-encoding a JPEG that needed no work just adds a second round of loss.
+    const bytes = makeImage(84, 84, 0, "image/jpeg");
+    const out = await trimUniformWhiteBorder(bytes, "xl/media/image1.jpeg");
+    assert.equal(out.trimmed, false);
+    assert.equal(out.bytes, bytes, "the partner's own bytes, unchanged");
+    assert.equal(out.contentType, "image/jpeg");
+  });
+
+  test("nothing is ever upscaled", async () => {
+    // A 40px mark is the smallest the partner sends. It must come out 40px.
+    for (const [w, h] of [[40, 40], [48, 84], [168, 60]]) {
+      const out = await trimUniformWhiteBorder(makeImage(w, h, 0), "xl/media/image1.png");
+      assert.ok(out.width <= w && out.height <= h, `${w}×${h} grew to ${out.width}×${out.height}`);
+    }
+  });
+
+  test("a mark under 32px after trimming is dropped for the monogram", async () => {
+    // A 100px tile whose actual mark is 20px is a bullet or a rule.
+    const out = await trimUniformWhiteBorder(makeImage(100, 100, 40), "xl/media/image1.png");
+    assert.equal(out.tooSmall, true);
+    assert.equal(out.width, 20);
+    // …and the floor is a floor: 32 exactly survives.
+    const edge = await trimUniformWhiteBorder(makeImage(100, 100, 34), "xl/media/image1.png");
+    assert.equal(edge.width, 32);
+    assert.ok(!edge.tooSmall, "32px is the floor, not below it");
+  });
+
+  test("an all-white image is blank, not a logo", async () => {
+    const out = await trimUniformWhiteBorder(makeImage(84, 84, 84), "xl/media/image1.png");
+    assert.equal(out.blank, true);
+  });
+
+  /**
+   * The one end-to-end run of the logo extractor. Everything above is a pure
+   * function; this checks the two things that are only true of the whole
+   * script: that a dry run files each crop under its DOCUMENT's slug, and that
+   * no price of any kind reaches the output.
+   *
+   * No network — the Sanity read is answered by a preloaded fetch stub — and
+   * --dry-run means there is nothing to upload even if that failed.
+   */
+  test("a dry run files crops by slug and prints no price", () => {
+    const dir = mkdtempSync(join(tmpdir(), "unlisted-logos-"));
+    try {
+      writeFileSync(join(dir, "list.xlsx"), buildLogoWorkbook(makeImage));
+      writeFileSync(join(dir, "stub.mjs"),
+        "const docs = [\n" +
+        '  { _id: "d1", company: "API Holdings (PharmEasy)", slug: "api-holdings-pharmeasy", aliases: ["PharmEasy Unlisted Shares"], hasLogo: false },\n' +
+        '  { _id: "d2", company: "Pharm Easy", slug: "pharm-easy", aliases: ["PharmEasy Unlisted Shares"], hasLogo: false },\n' +
+        '  { _id: "d3", company: "Sterlite Grid 5", slug: "wu-sterlite-grid-5", aliases: [], hasLogo: false },\n' +
+        "];\n" +
+        'globalThis.fetch = async () => new Response(JSON.stringify({ result: docs }),' +
+        ' { headers: { "content-type": "application/json" } });\n');
+
+      const script = fileURLToPath(new URL("./extract-unlisted-logos.mjs", import.meta.url));
+      const res = spawnSync(
+        process.execPath,
+        ["--import", pathToFileURL(join(dir, "stub.mjs")).href, script, join(dir, "list.xlsx"),
+         "--dry-run", `--out=${join(dir, "out")}`],
+        { encoding: "utf8", env: { ...process.env, NEXT_PUBLIC_SANITY_PROJECT_ID: "stub", SANITY_API_TOKEN: "stub" } },
+      );
+      assert.equal(res.status, 0, `expected a clean exit\n${res.stdout}\n${res.stderr}`);
+
+      // Filed under the DOCUMENT's slug. "Sterlite Grid 5" lives at
+      // wu-sterlite-grid-5, so a name-derived slug would be wrong here.
+      const written = readdirSync(join(dir, "out")).filter((f) => f.endsWith(".jpeg")).sort();
+      assert.deepEqual(written, ["api-holdings-pharmeasy.jpeg", "wu-sterlite-grid-5.jpeg"]);
+
+      // PharmEasy is an alias on BOTH documents; only the alias file separates
+      // them, so this landing anywhere at all is the alias file working.
+      assert.match(res.stdout, /matched through scripts\/unlisted-aliases\.json/);
+
+      // CONFIDENTIALITY: every retail AND dealer figure in the fixture is
+      // unique, so finding any of them anywhere in the output means a price
+      // crossed into the logo path.
+      for (const price of LOGO_FIXTURE_PRICES) {
+        assert.doesNotMatch(res.stdout + res.stderr, new RegExp(`\\b${price}\\b`),
+          `${price} is a price from the workbook and must never reach the logo path's output`);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a rejected image never reaches a document", async () => {
+    // The size floor has to be applied before matching, not after: a company
+    // whose only image is a smudge keeps the monogram rather than getting one.
+    const tiny = await trimUniformWhiteBorder(makeImage(100, 100, 45), "xl/media/image1.png");
+    assert.ok(tiny.tooSmall);
+    const usable = [{ ...(await trimUniformWhiteBorder(makeImage(84, 84, 4), "xl/media/image1.png")), name: "Tata Capital" }];
+    const { planned } = planAttachments(usable, [logoDoc("tata", "Tata Capital")], {});
+    assert.deepEqual(planned.map((p) => p.doc.slug), ["tata"]);
+  });
+}
 
 /* ---------- report ---------- */
 

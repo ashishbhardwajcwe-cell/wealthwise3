@@ -36,11 +36,19 @@
  * way; the Sanity dataset these logos land in is publicly readable.
  * ───────────────────────────────────────────────────────────────────────────
  *
- * Matching: a logo is attached only to an EXISTING unlistedShare document
- * (resolved by slug → aliases → normalised name, same as the price importer).
- * Logos never create documents and never touch a company's name or slug.
- * Rows already carrying a logo are skipped unless --force. A logo whose
- * company can't be resolved is reported by name — it never fails the run.
+ * ── MATCHING ───────────────────────────────────────────────────────────────
+ * A logo is attached only to an EXISTING unlistedShare document. It is
+ * resolved through the SAME resolveUnlistedTarget the price importer uses, with
+ * the SAME declared alias file — so a name lands on the same document whether
+ * it is carrying a price or a picture. That matters more than it sounds: the
+ * partner writes "PharmEasy Unlisted Shares", which is an alias on two of our
+ * documents, so without scripts/unlisted-aliases.json it resolves to neither
+ * and the logo is silently dropped.
+ *
+ * Logos never create documents and never touch a company's name or slug. Rows
+ * already carrying a logo are skipped unless --force. A logo whose company
+ * cannot be resolved is reported by name — it never fails the run.
+ * ───────────────────────────────────────────────────────────────────────────
  *
  * Needs @napi-rs/canvas (devDependencies); the PDF path additionally needs
  * pdf-parse, tesseract.js and @tesseract.js-data/eng. Run `npm install` if
@@ -51,53 +59,61 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve, join, extname } from "node:path";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import {
   loadDotEnvLocal, requireSanityEnv, slugify,
   sanityQuery, sanityMutate, sanityUploadImage,
 } from "./import-shared.mjs";
 import { classifyOcrLine, resolveUnlistedTarget } from "./unlisted-matching.mjs";
+import { loadUnlistedAliases, ALIASES_DISPLAY_PATH } from "./unlisted-aliases.mjs";
 import { readUnlistedXlsx, joinLogosToRows } from "./unlisted-xlsx.mjs";
 
 const require = createRequire(import.meta.url);
 
-// ---------- args ----------
-const args = { dryRun: false, force: false, scale: 4, out: "unlisted-logos" };
-for (const a of process.argv.slice(2)) {
-  if (a === "--dry-run") args.dryRun = true;
-  else if (a === "--force") args.force = true;
-  else if (a.startsWith("--scale=")) args.scale = Number(a.slice(8)) || 4; // PDF only
-  else if (a.startsWith("--out=")) args.out = a.slice(6).trim();
-  else if (a === "--help" || a === "-h") { console.log("See the header of scripts/extract-unlisted-logos.mjs for usage."); process.exit(0); }
-  else if (!a.startsWith("--")) args.file = a;
-  else { console.error(`Unknown flag ${a}`); process.exit(1); }
-}
-if (!args.file) {
-  console.error("Usage: node scripts/extract-unlisted-logos.mjs <pricelist.xlsx|pricelist.pdf> [--dry-run] [--force]");
-  process.exit(1);
-}
-const filePath = resolve(args.file);
-if (!existsSync(filePath)) { console.error(`No such file: ${args.file}`); process.exit(1); }
-const isXlsx = /^\.xls[xm]$/.test(extname(filePath).toLowerCase());
-
-// ---------- env (dry-run may run without it) ----------
-loadDotEnvLocal();
-const hasEnv = !!(process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && process.env.SANITY_API_TOKEN);
-if (!hasEnv && !args.dryRun) requireSanityEnv();
-const env = hasEnv ? requireSanityEnv() : null;
-
 const EXISTING_QUERY =
   `*[_type == "unlistedShare" && !(_id in path("drafts.**"))]{ _id, company, "slug": slug.current, aliases, "hasLogo": defined(logo) }`;
 
-/** @napi-rs/canvas — needed by both paths, so loaded before either branches. */
+/** A pixel at least this bright on every channel counts as background. JPEG
+ *  ringing lifts the "white" around a mark a few levels off 255, so the test
+ *  is a floor rather than equality. */
+export const WHITE_FLOOR = 246;
+
+/** Under this in either dimension, after trimming, an image is a bullet or a
+ *  rule rather than a brand mark — our monogram looks better than a smudge. */
+export const MIN_LOGO_PX = 32;
+
+/** Re-encode quality, used ONLY when a border was actually trimmed. */
+const JPEG_QUALITY = 92;
+
+const MEDIA_TYPES = { jpeg: "image/jpeg", jpg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp" };
+
+// ---------- @napi-rs/canvas, loaded on first use ----------
+// Lazily rather than at import time, so this module can be imported by the
+// test suite (and by anything else) without a native dependency being present.
 let createCanvas, loadImage;
-try {
-  ({ createCanvas, loadImage } = await import("@napi-rs/canvas"));
-} catch {
-  console.error("Logo extraction needs @napi-rs/canvas.\nIt's in devDependencies — run: npm install");
-  process.exit(1);
+async function loadCanvas() {
+  if (createCanvas) return;
+  try {
+    ({ createCanvas, loadImage } = await import("@napi-rs/canvas"));
+  } catch {
+    throw new Error("Logo extraction needs @napi-rs/canvas.\nIt's in devDependencies — run: npm install");
+  }
 }
 
 // ---------- shared: deciding where each logo goes ----------
+
+/**
+ * The file name a crop is written under during a dry run, and uploaded under.
+ *
+ * Named for the DOCUMENT's slug rather than a slug derived from its company
+ * name: they are not always the same ("Sterlite Grid 5" lives at
+ * wu-sterlite-grid-5), and the point of the dry run is to flip through a folder
+ * in Finder and be able to tell which document each picture is going onto.
+ */
+export function cropFileName(doc, crop) {
+  const base = doc ? (doc.slug || slugify(doc.company ?? "")) : slugify(crop.name ?? "");
+  return `${base || "unnamed"}.${crop.extension}`;
+}
 
 /**
  * Decide which EXISTING document each crop belongs to. This is where every
@@ -106,18 +122,26 @@ try {
  *   • a document already claimed this run keeps its first logo;
  *   • a document that already has a logo is left alone unless --force;
  *   • nothing here touches a company's name or slug.
- * Returns { planned: [{ crop, doc }], unmatched: [{ name, reason }] }.
+ *
+ * `declared` is the parsed scripts/unlisted-aliases.json map, passed straight
+ * through to the matcher — the same operator decisions the price import obeys.
+ *
+ * Returns { planned: [{ crop, doc, via }], unmatched: [{ name, reason, crop, doc }] }.
+ * Skipped entries carry their crop so a dry run can still write them out for
+ * review; `doc` is set only where one was resolved.
  */
-function planAttachments(crops, existing, { force }) {
+export function planAttachments(crops, existing, { force = false, declared = null } = {}) {
   const planned = [];
   const unmatched = [];
   const claimed = new Set();
 
   for (const crop of crops) {
-    const target = resolveUnlistedTarget(crop.name, existing, slugify);
+    const target = resolveUnlistedTarget(crop.name, existing, slugify, { declared });
     if (!target.doc) {
       unmatched.push({
         name: crop.name,
+        crop,
+        doc: null,
         reason: target.create
           ? "no matching company (logos never create docs)"
           : target.ambiguous
@@ -127,26 +151,62 @@ function planAttachments(crops, existing, { force }) {
       continue;
     }
     if (claimed.has(target.doc._id)) {
-      unmatched.push({ name: crop.name, reason: `already got a logo this run (${target.doc.company})` });
+      unmatched.push({ name: crop.name, crop, doc: target.doc, reason: `already got a logo this run (${target.doc.company})` });
       continue;
     }
     if (target.doc.hasLogo && !force) {
-      unmatched.push({ name: crop.name, reason: "logo already set (use --force to replace)" });
+      unmatched.push({ name: crop.name, crop, doc: target.doc, reason: "logo already set (use --force to replace)" });
       continue;
     }
     claimed.add(target.doc._id);
-    planned.push({ crop, doc: target.doc });
+    planned.push({ crop, doc: target.doc, via: target.via });
   }
   return { planned, unmatched };
 }
 
+/**
+ * Write EVERY crop to disk for review, split so the top level is exactly what
+ * a real run would upload. The two subfolders hold the rest, because "why is
+ * this logo missing from the site" is a question the dry run should be able to
+ * answer without re-running anything.
+ */
+export function writeCrops(outDir, planned, unmatched) {
+  const dirs = {
+    planned: outDir,
+    hasLogo: join(outDir, "_already-has-logo"),
+    noMatch: join(outDir, "_unmatched"),
+  };
+  const counts = { planned: 0, hasLogo: 0, noMatch: 0, total: 0 };
+  const used = new Map();
+
+  const put = (bucket, doc, crop) => {
+    mkdirSync(dirs[bucket], { recursive: true });
+    const name = cropFileName(doc, crop);
+    // Two rows resolving to one name is itself reportable; don't let the
+    // second silently overwrite the first's picture.
+    const key = `${bucket}/${name}`;
+    const seen = (used.get(key) ?? 0) + 1;
+    used.set(key, seen);
+    writeFileSync(join(dirs[bucket], seen > 1 ? name.replace(/(\.[^.]+)$/, `-${seen}$1`) : name), crop.bytes);
+    counts[bucket]++;
+    counts.total++;
+  };
+
+  for (const { crop, doc } of planned) put("planned", doc, crop);
+  for (const { crop, doc } of unmatched) {
+    if (!crop) continue;
+    put(doc ? "hasLogo" : "noMatch", doc, crop);
+  }
+  return counts;
+}
+
 /** Upload each planned crop and patch its document's `logo`. */
-async function uploadPlan(planned) {
+async function uploadPlan(env, planned) {
   const mutations = [];
   const attached = [];
   for (const { crop, doc } of planned) {
     const asset = await sanityUploadImage(env, crop.bytes, {
-      filename: `${slugify(doc.company)}-logo.${crop.extension}`,
+      filename: cropFileName(doc, crop),
       contentType: crop.contentType,
     });
     mutations.push({ patch: { id: doc._id, set: { logo: { _type: "image", asset: { _type: "reference", _ref: asset._id } } } } });
@@ -170,21 +230,24 @@ function report(attached, unmatched) {
   }
 }
 
-// ═══════════════════ Excel: read the anchored images ═══════════════════
+/**
+ * Load the declared alias file for the matcher.
+ *
+ * A structural problem here is reported and the run continues: logos are
+ * cosmetic, and refusing to attach 160 good ones over a typo in a file that
+ * concerns ten would be the wrong trade. A declaration pointing at a slug no
+ * document has surfaces per-name in the skipped list instead.
+ */
+function loadDeclared() {
+  const { byIncoming, errors, displayPath } = loadUnlistedAliases();
+  if (errors.length) {
+    console.log(`\nWarning: ${displayPath} has problems. Matching continues without the broken entries:`);
+    for (const e of errors) console.log(`  • ${e}`);
+  }
+  return byIncoming;
+}
 
-/** A pixel at least this bright on every channel counts as background. JPEG
- *  ringing lifts the "white" around a mark a few levels off 255, so the test
- *  is a floor rather than equality. */
-const WHITE_FLOOR = 246;
-
-/** Under this in either dimension, after trimming, an image is a bullet or a
- *  rule rather than a brand mark — our monogram looks better than a smudge. */
-const MIN_LOGO_PX = 32;
-
-/** Re-encode quality, used ONLY when a border was actually trimmed. */
-const JPEG_QUALITY = 92;
-
-const MEDIA_TYPES = { jpeg: "image/jpeg", jpg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp" };
+// ═══════════════════ Excel: the embedded images ═══════════════════
 
 /**
  * Trim uniform white borders off an embedded logo.
@@ -198,7 +261,8 @@ const MEDIA_TYPES = { jpeg: "image/jpeg", jpg: "image/jpeg", png: "image/png", g
  * Returns { bytes, contentType, extension, width, height, trimmed }, or
  * { blank } / { tooSmall, width, height } for an image not worth publishing.
  */
-async function trimUniformWhiteBorder(bytes, mediaPath) {
+export async function trimUniformWhiteBorder(bytes, mediaPath) {
+  await loadCanvas();
   const ext = mediaPath.split(".").pop().toLowerCase();
   const contentType = MEDIA_TYPES[ext] ?? "image/jpeg";
 
@@ -242,6 +306,56 @@ async function trimUniformWhiteBorder(bytes, mediaPath) {
     bytes: contentType === "image/png" ? out.toBuffer("image/png") : out.toBuffer("image/jpeg", JPEG_QUALITY),
     contentType, extension: ext, width: cw, height: ch, trimmed: true,
   };
+}
+
+// ═══════════════════ PDF scoring (pure, shared with the tests) ═══════════════════
+
+/**
+ * Keep a crop unless it's near-blank or the partner's monogram placeholder.
+ * A placeholder is a SOLID pale-gray rounded square (fills the cell, almost no
+ * colours, almost no saturation); a real logo — colourful OR a black wordmark
+ * / thin line-art emblem on white — never matches all three. Validated against
+ * the real list: separates 63Sats/Aegeus/Airlife placeholders from real logos
+ * while keeping monochrome marks (Apollo Fashion, Amol Minechem).
+ */
+export const isPlaceholder = (s) => s.fillFrac >= 0.12 && s.distinctColors <= 12 && s.meanSat <= 16;
+export const isRealLogo = (s) => s.fillFrac >= 0.015 && !isPlaceholder(s);
+
+// ═══════════════════════════════ RUN ═══════════════════════════════
+// Only when invoked directly — importing this module must read no file, load
+// no native dependency and touch no Sanity.
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+
+// ---------- args ----------
+const args = { dryRun: false, force: false, scale: 4, out: "unlisted-logos" };
+for (const a of process.argv.slice(2)) {
+  if (a === "--dry-run") args.dryRun = true;
+  else if (a === "--force") args.force = true;
+  else if (a.startsWith("--scale=")) args.scale = Number(a.slice(8)) || 4; // PDF only
+  else if (a.startsWith("--out=")) args.out = a.slice(6).trim();
+  else if (a === "--help" || a === "-h") { console.log("See the header of scripts/extract-unlisted-logos.mjs for usage."); process.exit(0); }
+  else if (!a.startsWith("--")) args.file = a;
+  else { console.error(`Unknown flag ${a}`); process.exit(1); }
+}
+if (!args.file) {
+  console.error("Usage: node scripts/extract-unlisted-logos.mjs <pricelist.xlsx|pricelist.pdf> [--dry-run] [--force]");
+  process.exit(1);
+}
+const filePath = resolve(args.file);
+if (!existsSync(filePath)) { console.error(`No such file: ${args.file}`); process.exit(1); }
+const isXlsx = /^\.xls[xm]$/.test(extname(filePath).toLowerCase());
+
+// ---------- env (dry-run may run without it) ----------
+loadDotEnvLocal();
+const hasEnv = !!(process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && process.env.SANITY_API_TOKEN);
+if (!hasEnv && !args.dryRun) requireSanityEnv();
+const env = hasEnv ? requireSanityEnv() : null;
+
+try {
+  await loadCanvas();
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
 }
 
 if (isXlsx) {
@@ -290,10 +404,14 @@ if (isXlsx) {
 
   // ---------- match ----------
   if (!env) console.log("\n(no Sanity env — crops are written for review, but nothing can be matched or uploaded)");
+  const declared = env ? loadDeclared() : null;
   const existing = env ? await sanityQuery(env, EXISTING_QUERY) : [];
   const { planned, unmatched } = env
-    ? planAttachments(crops, existing, { force: args.force })
+    ? planAttachments(crops, existing, { force: args.force, declared })
     : { planned: crops.map((crop) => ({ crop, doc: null })), unmatched: [] };
+
+  const viaDeclared = planned.filter((p) => p.via === "declared").length;
+  if (viaDeclared) console.log(`\n${viaDeclared} matched through ${ALIASES_DISPLAY_PATH} rather than a heuristic.`);
 
   // Companies the file simply has no logo for. Not a failure — the card falls
   // back to our own monogram, which is the designed behaviour.
@@ -306,22 +424,20 @@ if (isXlsx) {
   // ---------- dry run: write the crops for review ----------
   if (args.dryRun || !env) {
     const outDir = resolve(args.out);
-    mkdirSync(outDir, { recursive: true });
-    const used = new Map();
-    for (const { crop, doc } of planned) {
-      const base = slugify(doc?.company ?? crop.name);
-      const seen = (used.get(base) ?? 0) + 1;
-      used.set(base, seen);
-      writeFileSync(join(outDir, `${base}${seen > 1 ? `-${seen}` : ""}.${crop.extension}`), crop.bytes);
-    }
-    console.log(`\n--dry-run: wrote ${planned.length} crops to ${outDir}/ — open it in Finder and flip through before uploading.`);
+    const written = writeCrops(outDir, planned, unmatched);
+    console.log(
+      `\n--dry-run: wrote ${written.total} crops to ${outDir}/ — open it in Finder and flip through before uploading.\n` +
+      `  ${outDir}/                     ${written.planned} that WILL be uploaded, named <slug>.<ext>\n` +
+      (written.hasLogo ? `  ${outDir}/_already-has-logo/   ${written.hasLogo} whose document already has one (--force replaces them)\n` : "") +
+      (written.noMatch ? `  ${outDir}/_unmatched/          ${written.noMatch} that match no document, named from the list\n` : ""),
+    );
     if (unmatched.length) {
-      console.log(`\n${unmatched.length} logos were NOT written, because they match no document to attach to:`);
+      console.log(`${unmatched.length} logos will NOT be uploaded:`);
       for (const s of unmatched.slice(0, 40)) console.log(`  • ${s.name} — ${s.reason}`);
       if (unmatched.length > 40) console.log(`  … and ${unmatched.length - 40} more`);
     }
     if (rejected.length) {
-      console.log(`\n${rejected.length} images were rejected on size or content:`);
+      console.log(`\n${rejected.length} images were rejected on size or content (no file written):`);
       for (const r of rejected) console.log(`  • ${r.name} — ${r.reason}`);
     }
     console.log("\nRe-run without --dry-run (with Sanity env) to upload and attach them.");
@@ -329,7 +445,7 @@ if (isXlsx) {
   }
 
   // ---------- upload ----------
-  const { mutations, attached } = await uploadPlan(planned);
+  const { mutations, attached } = await uploadPlan(env, planned);
   report(attached, [...unmatched, ...rejected]);
 
   if (mutations.length === 0) { console.log("\nNothing to write."); process.exit(0); }
@@ -353,17 +469,6 @@ try {
 const langDir = require.resolve("@tesseract.js-data/eng/package.json").replace(/package\.json$/, "4.0.0");
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 const pageBuffer = (p) => p.nodeBuffer ?? (p.dataUrl ? Buffer.from(p.dataUrl.split(",")[1], "base64") : null);
-
-/**
- * Keep a crop unless it's near-blank or the partner's monogram placeholder.
- * A placeholder is a SOLID pale-gray rounded square (fills the cell, almost no
- * colours, almost no saturation); a real logo — colourful OR a black wordmark
- * / thin line-art emblem on white — never matches all three. Validated against
- * the real list: separates 63Sats/Aegeus/Airlife placeholders from real logos
- * while keeping monochrome marks (Apollo Fashion, Amol Minechem).
- */
-const isPlaceholder = (s) => s.fillFrac >= 0.12 && s.distinctColors <= 12 && s.meanSat <= 16;
-const isRealLogo = (s) => s.fillFrac >= 0.015 && !isPlaceholder(s);
 
 // ---------- render every page ----------
 console.log(`Rendering ${args.file} at scale ${args.scale}…`);
@@ -477,11 +582,13 @@ if (args.dryRun || !env) {
 
 // ---------- match to existing docs, upload, attach ----------
 const existing = await sanityQuery(env, EXISTING_QUERY);
-const { planned, unmatched } = planAttachments(crops, existing, { force: args.force });
-const { mutations, attached } = await uploadPlan(planned);
+const { planned, unmatched } = planAttachments(crops, existing, { force: args.force, declared: loadDeclared() });
+const { mutations, attached } = await uploadPlan(env, planned);
 report(attached, unmatched);
 
 if (mutations.length === 0) { console.log("\nNothing to write."); process.exit(0); }
 await sanityMutate(env, mutations);
 console.log(`\nWrote ${mutations.length} logo references to Sanity (${env.projectId}/${env.dataset}).`);
 console.log("The unlisted-shares page shows the logos on its next revalidation (≤1h) or deploy.");
+
+}
