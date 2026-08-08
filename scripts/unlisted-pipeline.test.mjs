@@ -35,7 +35,8 @@ import {
   stripListBoilerplate, normalizeCompanyName, declaredNameKey,
 } from "./unlisted-matching.mjs";
 import { loadUnlistedAliases } from "./unlisted-aliases.mjs";
-import { planCleanup } from "./clean-unlisted-dupes.mjs";
+import { planCleanup, planAliasDedupe, dedupeAliases } from "./clean-unlisted-dupes.mjs";
+import { approvalBlockers, selectForApproval, reviewRow, renderTable } from "./approve-unlisted.mjs";
 import {
   auditUnlistedDocs, structuralSignatures, selectPurgeTargets,
   asOfDateHistogram, confirmExactly,
@@ -898,6 +899,122 @@ test("cleanup never deletes the target, and never re-adds an alias it already ha
   assert.deepEqual(plan.aliasAdds, [], "idempotent — the target already answers to this name");
   assert.deepEqual(plan.deletions, [], "the target is never a deletion candidate, whatever it looks like");
   assert.deepEqual(plan.noDuplicate.map((n) => n.target._id), ["t"]);
+});
+
+/* ---------- doubled aliases ---------- */
+
+test("the same name stored twice is tidied to one, keeping the better spelling", () => {
+  // Real alias lists from the dataset. The --adopt-names run appended an old
+  // company name the document already answered to under a spelling that
+  // normalises identically — "…Limi…" and "…Limi".
+  assert.deepEqual(
+    dedupeAliases(["EB Graand Prix Luxury Elevators Limi...", "Graand Prix Luxury Elevators Limited Unlisted Shares", "EB Graand Prix Luxury Elevators Limi"]),
+    ["EB Graand Prix Luxury Elevators Limi", "Graand Prix Luxury Elevators Limited Unlisted Shares"],
+    "the ellipsis-free spelling wins, in the first occurrence's position",
+  );
+  assert.deepEqual(
+    dedupeAliases(["Hellalnfra Market Private Limited", "Hella Infra Market Private Limited", "Hellalnfra Market Private Limited"]),
+    ["Hellalnfra Market Private Limited", "Hella Infra Market Private Limited"],
+  );
+  // A list with nothing to tidy is returned unchanged.
+  assert.deepEqual(dedupeAliases(["Tata Capital", "Tata Capital Limited Unlisted Shares"]),
+    ["Tata Capital", "Tata Capital Limited Unlisted Shares"]);
+  assert.deepEqual(dedupeAliases([]), []);
+});
+
+test("tidying an alias list never drops a distinct name", () => {
+  // The only thing that would matter: a name the document answers to going
+  // missing. Two spellings that normalise apart must both survive.
+  const before = ["Z Cochin International Airport Limit...", "Cochin International Airport Limited", "Cochin International Airport Limit"];
+  const after = dedupeAliases(before);
+  const keys = (list) => new Set(list.map(normalizeCompanyName));
+  assert.deepEqual([...keys(after)].sort(), [...keys(before)].sort());
+  assert.equal(after.length, 3, "leading junk makes these three different names");
+});
+
+test("only documents that actually change are patched", () => {
+  const plan = planAliasDedupe([
+    { _id: "a", slug: "a", company: "A", aliases: ["Foo Limited", "Foo Ltd."] },   // same name twice
+    { _id: "b", slug: "b", company: "B", aliases: ["Bar", "Baz"] },                // nothing to do
+    { _id: "c", slug: "c", company: "C", aliases: ["Only One"] },
+    { _id: "d", slug: "d", company: "D" },                                          // no aliases at all
+  ]);
+  assert.deepEqual(plan.map((p) => p.doc._id), ["a"]);
+  assert.equal(plan[0].removed, 1);
+  assert.deepEqual(plan[0].after, ["Foo Limited"]);
+});
+
+/* ---------- approving the review queue ---------- */
+
+const hiddenDoc = (slug, company, extra = {}) => ({
+  _id: `unlistedShare-${slug}`, slug, company,
+  indicativePriceINR: 100, lotSize: 500, depository: "NSDL & CDSL",
+  asOfDate: "2026-08-06", hasLogo: false, ...extra,
+});
+
+test("--approve-all refuses a document that would embarrass the site", () => {
+  assert.deepEqual(approvalBlockers(hiddenDoc("ok", "Machint Solutions Limited")), []);
+  assert.deepEqual(approvalBlockers(hiddenDoc("a", "Foo", { indicativePriceINR: undefined })), ["no price"]);
+  assert.deepEqual(approvalBlockers(hiddenDoc("b", "Foo", { lotSize: undefined })), ["no minimum lot size"]);
+  assert.deepEqual(approvalBlockers(hiddenDoc("c", "Foo", { lotSize: 0 })), ["no minimum lot size"]);
+  // The real ones from the 06-Aug list.
+  for (const name of ["Bazar India Unlisted Shares", "Cheelizza Pizza Unlisted Shares",
+                      "Gynofem Healthcare Unlisted Shares Price", "IKF Finance Limited Unlisted Shares"]) {
+    assert.deepEqual(approvalBlockers(hiddenDoc("x", name)), ['company name still contains "Unlisted Shares" — rename it in Studio first']);
+  }
+  // Several problems at once are all reported.
+  assert.equal(approvalBlockers(hiddenDoc("y", "Foo Unlisted Shares", { indicativePriceINR: undefined, lotSize: undefined })).length, 3);
+});
+
+test("--approve-all publishes what passes and skips what does not", () => {
+  const docs = [
+    hiddenDoc("good-1", "Machint Solutions Limited"),
+    hiddenDoc("bad-name", "Bazar India Unlisted Shares"),
+    hiddenDoc("good-2", "Vivriti Finance Limited"),
+    hiddenDoc("no-price", "Something Limited", { indicativePriceINR: undefined }),
+  ];
+  const { publish, blocked, unknown } = selectForApproval(docs, { all: true });
+  assert.deepEqual(publish.map((d) => d.slug), ["good-1", "good-2"]);
+  assert.deepEqual(blocked.map((b) => b.doc.slug), ["bad-name", "no-price"]);
+  assert.deepEqual(unknown, []);
+});
+
+test("a named slug that is live, or does not exist, is reported and never touched", () => {
+  // The caller passes ONLY the needsReview set, so a live document simply is
+  // not there — which is what makes "never touch a live document" structural
+  // rather than a rule that has to be remembered.
+  const docs = [hiddenDoc("hidden-1", "Hidden Company Limited")];
+  const { publish, unknown } = selectForApproval(docs, { slugs: ["hidden-1", "tata-capital", "no-such-thing"] });
+  assert.deepEqual(publish.map((d) => d.slug), ["hidden-1"]);
+  assert.deepEqual(unknown, ["tata-capital", "no-such-thing"]);
+});
+
+test("naming a slug explicitly overrides the gate — deliberately", () => {
+  const docs = [hiddenDoc("bad-name", "Bazar India Unlisted Shares")];
+  const { publish, blocked } = selectForApproval(docs, { slugs: ["bad-name"] });
+  assert.deepEqual(publish.map((d) => d.slug), ["bad-name"], "an operator asked for this one by name");
+  assert.deepEqual(blocked, [], "the gate belongs to --approve-all");
+  // …and the caller still has the reasons to print as a warning.
+  assert.equal(approvalBlockers(docs[0]).length, 1);
+});
+
+test("the review table renders every column and truncates rather than wraps", () => {
+  const table = renderTable([
+    hiddenDoc("a-one-steel-india-limited", "A One Steel India Limited", { indicativePriceINR: 272, lotSize: 1000 }),
+    hiddenDoc("e-trav-tech-limited", "E Trav Tech Limited", { depository: undefined, indicativePriceINR: 102 }),
+    hiddenDoc("x", "A Company With A Very Long Name Indeed That Runs On And On", { hasLogo: true }),
+  ].map(reviewRow), { maxCompany: 24 });
+
+  const lines = table.split("\n");
+  for (const head of ["SLUG", "COMPANY", "PRICE", "LOT", "DEPOSITORY", "AS OF", "LOGO"]) {
+    assert.ok(lines[0].includes(head), `missing column ${head}`);
+  }
+  assert.equal(lines.length, 5, "header, rule, three rows");
+  assert.ok(lines[2].includes("₹272") && lines[2].includes("1000"));
+  assert.ok(lines[3].includes("—"), "a missing depository shows as a dash, not blank");
+  assert.ok(lines[4].includes("…"), "a long name is cut, not wrapped");
+  assert.ok(lines[4].includes("yes"), "logo yes/no");
+  assert.ok(lines.every((l) => !/\s$/.test(l)), "no trailing whitespace");
 });
 
 /* ---------- name adoption ---------- */
