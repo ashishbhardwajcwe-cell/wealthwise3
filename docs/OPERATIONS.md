@@ -1,9 +1,16 @@
 # PlanMyCashflows — Master Operations Manual
 
-## Version 3.1 · 8 August 2026
+## Version 3.2 · 8 August 2026
 
 **Assume nothing. Follow exactly. Every command is written out in full.**
 
+> **What changed in V3.2:** the logo import (Part 2 step 9) now matches a row to
+> a document using the same rules and the same `scripts/unlisted-aliases.json`
+> as the price import, so an alias entry fixes the picture as well as the price.
+> The dry run writes **every** crop, named by the document's slug and split into
+> three folders — what will upload, what already has a logo, and what matches
+> nothing — so the review folder and Studio line up.
+>
 > **What changed in V3.1:** `npm run clean:unlisted-names` (Part 2 step 6) now
 > strips the list's row boilerplate off the END of a name as well as OCR junk
 > off the front, so "Bazar India Unlisted Shares" becomes "Bazar India" — that
@@ -641,8 +648,17 @@ npm run logos:unlisted -- "PASTE_PATH_HERE" --dry-run
 ```
 
 Open `~/Desktop/wealthwise3/unlisted-logos/` in Finder, switch to icon view and
-flip through. Each file is named after the company it will be attached to, so a
-wrong pairing is visible at a glance. Then:
+flip through. **Every** crop is written, in three places:
+
+| folder | what's in it |
+| --- | --- |
+| `unlisted-logos/` | exactly what the real run will upload, one file per document, named `<slug>.jpeg` |
+| `unlisted-logos/_already-has-logo/` | the document already has a logo, so it is left alone — `--force` replaces these |
+| `unlisted-logos/_unmatched/` | no document of ours matches this row; named from the partner's list |
+
+The file name is the **document's slug**, which is what you see in Studio's URL
+bar — so a wrong pairing is visible at a glance, and you can go straight to the
+document to check it. Then:
 
 ```
 npm run logos:unlisted -- "PASTE_PATH_HERE"
@@ -653,6 +669,17 @@ out of the file — no rendering, no OCR, and the workbook itself says which row
 each image belongs to. Expect ~161 attached and ~22 companies listed as having
 no logo in the file; those keep our monogram, which is the designed behaviour
 and not a failure. Logos never create companies and never change a name.
+
+A row is matched to a document exactly the way the price import matches it —
+same rules, same `scripts/unlisted-aliases.json`. If you add an entry to that
+file to fix a price, it fixes the logo too, and the run says how many logos it
+placed that way. Two images can never land on one document: the second is
+reported and skipped.
+
+Images are used at the size the partner sends them (40–168px). Nothing is ever
+upscaled — a blown-up 40px mark looks worse than our monogram. Uniform white
+borders are trimmed, and anything under 32px after trimming is dropped and
+listed as rejected.
 
 ### 2.8 — When the file can't be read
 
@@ -937,6 +964,11 @@ Takes the same file as the price import. An `.xlsx` gives the partner's own
 embedded images (fast, exact); a `.pdf` falls back to rendering and OCR
 (slow, approximate). Add `--force` only when you want to replace logos that are
 already set. See Part 2 step 9.
+
+The dry run writes every crop under the document's slug, so the review folder
+and Studio line up. Matching uses the same rules and the same alias file as the
+price import, and reads no price of any kind from either file — only names and
+pictures.
 
 ---
 
