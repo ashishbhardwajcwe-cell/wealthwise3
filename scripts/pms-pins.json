@@ -1,50 +1,57 @@
 {
   "README": [
-    "Persistent import pins for scripts/import-pms.mjs. COMMITTED — these must survive the monthly APMI fetch.",
-    "A pin says: this CSV row belongs to THIS Sanity document, stop asking. It exists for strategies whose names",
-    "are too close for the matcher to separate safely, where guessing would overwrite the wrong document.",
-    "",
-    "Keyed by the normalised (manager, strategyName) pair, so punctuation and abbreviation drift do not break a pin.",
-    "",
-    "To fill in a sanityId, run the importer's dry run — it prints a paste-ready entry for every ambiguous row,",
-    "with the candidate document ids:",
-    "    npm run import:pms -- scripts/pms-data.csv --dry-run",
-    "Pick the right candidate, paste the block into \"pins\" below, and commit it.",
-    "",
-    "An entry with an empty sanityId is reported as UNRESOLVED and is never applied — it only records that the row",
-    "is known to be ambiguous. An entry that matches no CSV row is reported as UNMATCHED, which usually means the",
-    "manager renamed the strategy: re-run the dry run and update the entry."
+    "Persistent import pins for scripts/import-pms.mjs. COMMITTED — these must survive the monthly APMI fetch."
   ],
   "pins": [
     {
-      "manager": "HDFC Asset Management Company Limited",
-      "strategyName": "MF Select",
-      "sanityId": "",
-      "note": "One of two HDFC 'MF Select' variants. Confirm manager/strategyName against the month's CSV and fill in sanityId from a dry run."
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BCAD BREAKOUT 20",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20"
     },
     {
-      "manager": "HDFC Asset Management Company Limited",
-      "strategyName": "MF Select Series II",
-      "sanityId": "",
-      "note": "The second HDFC 'MF Select' variant. Confirm manager/strategyName against the month's CSV and fill in sanityId from a dry run."
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "APJ (Formerly known as APJ 20)",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20"
     },
     {
-      "manager": "Neo Asset Management Private Limited",
-      "strategyName": "Club Moderate",
-      "sanityId": "",
-      "note": "Neo Club set — Moderate / Moderately Conservative / Moderately Aggressive resolve to each other. Fill in sanityId from a dry run."
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BLENDED- RANGOLI",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-blended-rangoli"
     },
     {
-      "manager": "Neo Asset Management Private Limited",
-      "strategyName": "Club Moderately Conservative",
-      "sanityId": "",
-      "note": "Neo Club set. Fill in sanityId from a dry run."
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "OTHERS EQUITY",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-others-equity"
     },
     {
-      "manager": "Neo Asset Management Private Limited",
-      "strategyName": "Club Moderately Aggressive",
-      "sanityId": "",
-      "note": "Neo Club set. Fill in sanityId from a dry run."
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "INDIVIDUALLY MANAGED ACCOUNTS",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BCAD BREAKOUT 20-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BLENDED- RANGOLI-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-blended-rangoli-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "INDIVIDUALLY MANAGED ACCOUNTS-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "APJ-ND (Formerly known as APJ 20)",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-apj-nd-formerly-known-as-apj-20"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "OTHERS-EQUITY-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-others-equity-nd"
     }
   ]
 }
