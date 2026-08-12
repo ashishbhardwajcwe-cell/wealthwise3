@@ -17,64 +17,64 @@
   ],
   "pins": [
     {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "BCAD BREAKOUT 20",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20, pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20-nd"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "APJ (Formerly known as APJ 20)",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20, pmsStrategy-unifi-capital-p-ltd-apj-nd-formerly-known-as-apj-20"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "BLENDED- RANGOLI",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-blended-rangoli",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-blended-rangoli, pmsStrategy-unifi-capital-p-ltd-blended-rangoli-nd"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "OTHERS EQUITY",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-others-equity",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-others-equity, pmsStrategy-unifi-capital-p-ltd-others-equity-nd"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "INDIVIDUALLY MANAGED ACCOUNTS",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts, pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts-nd"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "BCAD BREAKOUT 20-ND",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20, pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20-nd"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "BLENDED- RANGOLI-ND",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-blended-rangoli",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-blended-rangoli, pmsStrategy-unifi-capital-p-ltd-blended-rangoli-nd"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "INDIVIDUALLY MANAGED ACCOUNTS-ND",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts, pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts-nd"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "APJ-ND (Formerly known as APJ 20)",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20, pmsStrategy-unifi-capital-p-ltd-apj-nd-formerly-known-as-apj-20"
-  }
-  {
-    "manager": "Unifi Capital Pvt Ltd",
-    "strategyName": "OTHERS-EQUITY-ND",
-    "sanityId": "pmsStrategy-unifi-capital-p-ltd-others-equity",
-    "note": "one of: pmsStrategy-unifi-capital-p-ltd-others-equity, pmsStrategy-unifi-capital-p-ltd-others-equity-nd"
-  }
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BCAD BREAKOUT 20",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20, pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "APJ (Formerly known as APJ 20)",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20, pmsStrategy-unifi-capital-p-ltd-apj-nd-formerly-known-as-apj-20"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BLENDED- RANGOLI",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-blended-rangoli",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-blended-rangoli, pmsStrategy-unifi-capital-p-ltd-blended-rangoli-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "OTHERS EQUITY",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-others-equity",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-others-equity, pmsStrategy-unifi-capital-p-ltd-others-equity-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "INDIVIDUALLY MANAGED ACCOUNTS",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts, pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BCAD BREAKOUT 20-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20-nd",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20, pmsStrategy-unifi-capital-p-ltd-bcad-breakout-20-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "BLENDED- RANGOLI-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-blended-rangoli-nd",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-blended-rangoli, pmsStrategy-unifi-capital-p-ltd-blended-rangoli-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "INDIVIDUALLY MANAGED ACCOUNTS-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts-nd",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts, pmsStrategy-unifi-capital-p-ltd-individually-managed-accounts-nd"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "APJ-ND (Formerly known as APJ 20)",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-apj-nd-formerly-known-as-apj-20",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-apj-formerly-known-as-apj-20, pmsStrategy-unifi-capital-p-ltd-apj-nd-formerly-known-as-apj-20"
+    },
+    {
+      "manager": "Unifi Capital Pvt Ltd",
+      "strategyName": "OTHERS-EQUITY-ND",
+      "sanityId": "pmsStrategy-unifi-capital-p-ltd-others-equity-nd",
+      "note": "one of: pmsStrategy-unifi-capital-p-ltd-others-equity, pmsStrategy-unifi-capital-p-ltd-others-equity-nd"
+    }
   ]
 }
