@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/newsletters.test.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -24,7 +25,8 @@
     "audit:unlisted": "node scripts/audit-unlisted.mjs",
     "archive:pms": "node scripts/archive-pms.mjs",
     "test:pms": "node scripts/pms-pipeline.test.mjs",
-    "test:unlisted": "node scripts/unlisted-pipeline.test.mjs"
+    "test:unlisted": "node scripts/unlisted-pipeline.test.mjs",
+    "test:newsletters": "node scripts/newsletters.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

@@ -34,6 +34,7 @@ const learnMenu: NavMenuItem[] = [
   { href: "/resources/calculators", label: "Calculators", desc: "PMS fees, SIP, retirement, FIRE and more", icon: "Calculator", tone: "#7C3AED", emoji: "🧮" },
   { href: "/resources/glossary", label: "Glossary", desc: "Plain-English finance terms, explained", icon: "BookA", tone: "#0F766E", emoji: "📖" },
   { href: "/resources/downloads", label: "Free PDFs", desc: "Checklists and PDF playbooks", icon: "Download", tone: "#16A34A", emoji: "📥" },
+  { href: "/resources/newsletter", label: "Monthly brief", desc: "Every issue of the monthly PMS brief, free to read", icon: "BookOpen", tone: "#0E7C56", emoji: "🗞️" },
 ];
 
 const plannersMenu: NavMenuItem[] = [

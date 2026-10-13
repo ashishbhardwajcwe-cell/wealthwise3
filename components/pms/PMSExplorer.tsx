@@ -286,6 +286,11 @@ export default function PMSExplorer({
 
         {/* monthly brief signup */}
         <NewsletterBand source="pms-explorer" />
+        <p className="font-ui" style={{ fontSize: 13, margin: 0, marginTop: 10, textAlign: "right" }}>
+          <Link href="/resources/newsletter" className="hover:underline" style={{ color: "var(--green)", fontWeight: 500 }}>
+            Read the latest brief →
+          </Link>
+        </p>
 
         {/* footnote */}
         <ComplianceFootnote asOn={asOf} benchName={benchmark.name} />
