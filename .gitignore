@@ -48,6 +48,8 @@ pms-newsletter*.html
 
 # generated reports
 *.pdf
+# published newsletter PDFs are served from the site — keep them tracked
+!public/newsletters/*.pdf
 
 # large media - keep outside the repo
 *.mp4
