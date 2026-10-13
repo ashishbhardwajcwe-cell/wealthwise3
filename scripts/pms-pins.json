@@ -52,6 +52,24 @@
       "manager": "Unifi Capital Pvt Ltd",
       "strategyName": "OTHERS-EQUITY-ND",
       "sanityId": "pmsStrategy-unifi-capital-p-ltd-others-equity-nd"
+    },
+    {
+      "manager": "Equitree Capital Advisors Private Limited",
+      "strategyName": "EQUITREE EMERGING OPPORTUNITIES II",
+      "sanityId": "pmsStrategy-equitree-capital-advisors-private-limite-equitree-emerging-opportunities-ii-371ab1f5",
+      "note": "Separate strategy from EMERGING OPPORTUNITIES (I) - new document"
+    },
+    {
+      "manager": "Bajaj Alternate Investment Management Limited",
+      "strategyName": "Bajaj Alts Flexicap Strategy Discretionary PMS",
+      "sanityId": "pmsStrategy-bajaj-alternate-investment-management-li-bajaj-alts-flexicap-strategy-discretionary-pms-b66abee3",
+      "note": "Discretionary variant - new document, must not take the Non-Discretionary one"
+    },
+    {
+      "manager": "Bajaj Alternate Investment Management Limited",
+      "strategyName": "Bajaj Alts Flexicap Strategy Non-Discretionary PMS",
+      "sanityId": "pmsStrategy-bajaj-alternate-investment-management-li-bajaj-alts-flexicap-strategy-non-discretionary-pms-41d9c225",
+      "note": "Existing Non-Discretionary document"
     }
   ]
 }
