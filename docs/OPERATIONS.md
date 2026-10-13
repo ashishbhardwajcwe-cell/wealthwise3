@@ -1050,6 +1050,11 @@ git commit -m "Newsletter July 2026"
 git push
 ```
 
+`public/newsletters/*.pdf` is explicitly un-ignored in `.gitignore` (the repo
+otherwise ignores `*.pdf`). Keep each issue's HTML source in
+`newsletters/issues/YYYY-MM-pms-brief.html` — root-level `pms-newsletter*.html`
+working copies are ignored and will not commit.
+
 ### Step 6 — Send
 
 Subscribers in **BCC** — never CC, that leaks every address to everyone. Attach
