@@ -1037,11 +1037,28 @@ Open the HTML in Chrome → `Cmd`+`P` → "Save as PDF" → save into
 
 ### Step 5 — Publish to the site
 
+**Add the issue to the archive page.** Open `lib/newsletters.ts` and add a new
+entry at the **top** of `NEWSLETTERS` (newest first) — slug (`2026-10`), label
+(`October 2026`), `asOfDate` (zero-padded, `2026-10-31`), title, a one-sentence
+neutral summary (no "best"/"top", no predictions), `file`
+(`/newsletters/PlanMyCashflows-PMS-Brief-October-2026.pdf`) and page count.
+That entry is what puts the issue on https://planmycashflows.com/resources/newsletter
+— without it the PDF is on the server but linked from nowhere.
+
+Check it before committing:
+
+```
+npm run test:newsletters
+```
+
+This also runs automatically before every build (`prebuild`): if an entry
+points at a PDF that isn't in `public/newsletters/`, the build fails.
+
 ```
 cd ~/Desktop/wealthwise3
 ```
 ```
-git add public/newsletters/ newsletters/
+git add public/newsletters/ newsletters/ lib/newsletters.ts
 ```
 ```
 git commit -m "Newsletter July 2026"

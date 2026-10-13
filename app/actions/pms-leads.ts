@@ -19,9 +19,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Runtime allow-list. MUST list every LeadSource — a source present in the
  *  type but missing here is rejected as a generic error at submit time, which
  *  is how the homepage's Featured grid enquiries were silently failing. */
-const SOURCES = ["pms-explorer", "pms-strategy-page", "aif-directory", "unlisted-page", "homepage-featured", "compare"];
+const SOURCES = ["pms-explorer", "pms-strategy-page", "aif-directory", "unlisted-page", "homepage-featured", "compare", "newsletter-archive"];
 
-export type LeadSource = "pms-explorer" | "pms-strategy-page" | "aif-directory" | "unlisted-page" | "homepage-featured" | "compare";
+export type LeadSource = "pms-explorer" | "pms-strategy-page" | "aif-directory" | "unlisted-page" | "homepage-featured" | "compare" | "newsletter-archive";
 
 export interface LeadInput {
   name: string;
