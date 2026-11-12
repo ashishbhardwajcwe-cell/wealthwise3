@@ -35,7 +35,7 @@ import {
   pairKey,
 } from "./pms-matching.mjs";
 import { lastDayOfMonth, monthEndIso } from "./import-shared.mjs";
-import { loadPins } from "./pms-pins.mjs";
+import { loadPins, applyPins, exactKey } from "./pms-pins.mjs";
 import {
   AMBIGUOUS,
   CANONICAL_CATEGORIES,
@@ -277,15 +277,115 @@ test("a pin with no sanityId is reported, never applied", () => {
   );
 });
 
-test("two pins claiming one strategy is an error, not a silent last-wins", () => {
+test("two pins claiming one exact strategy is an error, not a silent last-wins", () => {
   withPinsFile(
     { pins: [
       { manager: "Neo Asset Management", strategyName: "Club Moderate", sanityId: "pmsStrategy-a" },
-      { manager: "Neo Asset Management", strategyName: "PMS Club Moderate Fund", sanityId: "pmsStrategy-b" },
+      { manager: "NEO ASSET  MANAGEMENT", strategyName: " club moderate ", sanityId: "pmsStrategy-b" },
     ] },
     (pins) => {
       assert.equal(pins.errors.length, 1);
       assert.match(pins.errors[0], /duplicates pins\[0\]/);
+    },
+  );
+});
+
+test("two pins pointing at one document is an error", () => {
+  withPinsFile(
+    { pins: [
+      { manager: "DV", strategyName: "Bespoke-Dynamic Debt", sanityId: "pmsStrategy-same" },
+      { manager: "DV", strategyName: "Bespoke Dynamic Debt", sanityId: "pmsStrategy-same" },
+    ] },
+    (pins) => {
+      assert.equal(pins.errors.length, 1);
+      assert.match(pins.errors[0], /pins\[0\] already claims/);
+    },
+  );
+});
+
+test("the exact key keeps the words and punctuation the pair key strips", () => {
+  const pairs = [
+    ["Neo Club - Multi Asset Structure Investment Product", "Neo Club - Multi Asset Structure Investment Strategy"],
+    ["DVIA Bespoke-Dynamic Debt Portfolio", "DVIA Bespoke Dynamic Debt Portfolio"],
+    ["DVIA Bespoke All Weather Portfolio", "DVIA Bespoke All-Weather Portfolio"],
+  ];
+  for (const [a, b] of pairs) {
+    assert.equal(pairKey("M", a), pairKey("M", b), `expected "${a}" / "${b}" to share a pairKey (this test documents the bug)`);
+    assert.notEqual(exactKey("M", a), exactKey("M", b), `"${a}" / "${b}" must stay distinct`);
+  }
+  // Only case and whitespace are forgiven.
+  assert.equal(exactKey("DV  Investment", " DVIA  Bespoke\tAll-Weather "), exactKey("dv investment", "dvia bespoke all-weather"));
+});
+
+test("sibling pins on one pair key load cleanly and match by exact name only", () => {
+  withPinsFile(
+    { pins: [
+      { manager: "Neo Alt", strategyName: "Club - MAS Investment Product", sanityId: "pmsStrategy-product" },
+      { manager: "Neo Alt", strategyName: "Club - MAS Investment Strategy", sanityId: "pmsStrategy-strategy" },
+      { manager: "Neo Alt", strategyName: "Core Income", sanityId: "pmsStrategy-core" },
+    ] },
+    (pins) => {
+      assert.deepEqual(pins.errors, []);
+      assert.equal(pins.byExact.size, 3);
+      assert.ok(!pins.byKey.has(pairKey("Neo Alt", "Club - MAS Investment Product")), "a shared pairKey must not be in byKey");
+      assert.equal(pins.byKey.get(pairKey("Neo Alt", "Core Income"))?.sanityId, "pmsStrategy-core", "a lone pin keeps the pair fallback");
+
+      const docs = [row("Neo Alt", "Club - MAS Investment Strategy"), row("Neo Alt", "Club - MAS Investment Product")];
+      applyPins(docs, pins);
+      assert.equal(docs[0].__pinnedId, "pmsStrategy-strategy");
+      assert.equal(docs[1].__pinnedId, "pmsStrategy-product");
+    },
+  );
+});
+
+test("an unpinned sibling is not dragged onto its pinned sibling's document", () => {
+  withPinsFile(
+    { pins: [{ manager: "DV", strategyName: "DVIA Bespoke All Weather Portfolio", sanityId: "pmsStrategy-allweather" }] },
+    (pins) => {
+      const pinned = row("DV", "DVIA Bespoke All Weather Portfolio");
+      const sibling = row("DV", "DVIA Bespoke All-Weather Portfolio");
+      applyPins([sibling, pinned], pins); // sibling first: order must not matter
+      assert.equal(pinned.__pinnedId, "pmsStrategy-allweather");
+      assert.equal(sibling.__pinnedId, undefined, "the sibling must fall through to the normal matcher");
+      assert.equal(pins.resolved[0].matched, 1);
+    },
+  );
+});
+
+test("a lone pin still follows its strategy through drift when nothing matches exactly", () => {
+  withPinsFile(
+    { pins: [{ manager: "Neo Asset Management Private Limited", strategyName: "Club Moderately Conservative", sanityId: "pmsStrategy-neo-cmc" }] },
+    (pins) => {
+      const drifted = row("Neo Asset Management Private Limited", "PMS Club Moderately Conservative Strategy");
+      applyPins([drifted], pins);
+      assert.equal(drifted.__pinnedId, "pmsStrategy-neo-cmc");
+      assert.equal(drifted.__pinnedBy, "pins-file");
+    },
+  );
+});
+
+test("a pair-fallback pin catching two rows is counted, so TOO BROAD still fires", () => {
+  withPinsFile(
+    { pins: [{ manager: "M", strategyName: "Core", sanityId: "pmsStrategy-core" }] },
+    (pins) => {
+      applyPins([row("M", "Core Fund"), row("M", "Core Strategy")], pins);
+      assert.equal(pins.resolved[0].matched, 2);
+    },
+  );
+});
+
+test("a CSV sanityId wins, and its pin neither re-pins it nor drags a sibling", () => {
+  withPinsFile(
+    { pins: [{ manager: "DV", strategyName: "Bespoke-Dynamic Debt", sanityId: "pmsStrategy-from-file" }] },
+    (pins) => {
+      const csvPinned = { ...row("DV", "Bespoke-Dynamic Debt"), __pinnedId: "pmsStrategy-from-csv", __pinnedBy: "csv" };
+      const sibling = row("DV", "Bespoke Dynamic Debt");
+      applyPins([csvPinned, sibling], pins);
+      assert.equal(csvPinned.__pinnedId, "pmsStrategy-from-csv");
+      assert.equal(csvPinned.__pinnedBy, "csv");
+      assert.equal(sibling.__pinnedId, undefined);
+      assert.equal(pins.resolved[0].matched, 0);
+      assert.equal(pins.resolved[0].overridden, 1, "reported as overridden, not as an unmatched rename");
     },
   );
 });
@@ -313,6 +413,57 @@ test("the committed pins file parses and every entry is well-formed", () => {
   for (const p of [...pins.resolved, ...pins.unresolved]) {
     assert.ok(p.manager && p.strategyName, "every entry needs both names");
   }
+});
+
+test("October 2026: the committed pins resolve every once-ambiguous row to its own document", () => {
+  // The rows that aborted the 2026-10-31 dry run with "ambiguous 11", against
+  // the documents September's import left in Sanity (Neo still under its old
+  // manager name). Every row is pinned, and no two rows share a document.
+  const OLD_NEO = "Neo Asset Management Private Limited";
+  const NEO = "Neo Alternatives Asset Managers Private Limited";
+  const DV = "DV INVESTMENT ADVISORS LLP";
+  const ONE = "360 One Portfolio Managers Limited (Formerly Known As Iifl Wealth Portfolio Managers Limited)";
+  const neoNames = [
+    "Neo Club - Multi Asset Structure Investment Product",
+    "Neo Club - Multi Asset Structure Investment Strategy",
+    "Neo Club - Multi Asset Structure Investment Strategy - Moderately Conservative Portfolio",
+    "Neo Club - Multi Asset Structure Investment Strategy - Neo Eka Arista (Conservative) PMS",
+    "Neo Club - Multi Asset Structure Investment Strategy - Moderately Aggressive portfolio",
+    "Neo Club - Multi Asset Structure Investment Strategy - Moderate Portfolio",
+    "Neo Club - Multi Asset Structure Investment Strategy - Aggressive portfolio",
+    "Neo - Club Multi Asset Structure Investment Strategy - Debt (Moderate)",
+  ];
+  const pins = loadPins();
+  assert.deepEqual(pins.errors, []);
+  const idFor = (m, s) => pins.byExact.get(exactKey(m, s))?.sanityId;
+
+  const existing = [
+    ...neoNames.map((s) => ({ _id: idFor(NEO, s), manager: OLD_NEO, strategyName: s })),
+    { _id: idFor(DV, "DVIA Bespoke-Dynamic Debt Portfolio"), manager: DV, strategyName: "DVIA Bespoke-Dynamic Debt Portfolio" },
+    { _id: idFor(DV, "DVIA Bespoke All Weather Portfolio"), manager: DV, strategyName: "DVIA Bespoke All Weather Portfolio" },
+    { _id: idFor(ONE, "360 ONE Open - Enhancer Series - Hybrid Enhancer"), manager: ONE, strategyName: "360 ONE Open - Enhancer Series - Hybrid Enhancer" },
+  ];
+  for (const d of existing) assert.ok(d._id, `no committed pin for ${d.strategyName}`);
+  const docs = [
+    ...neoNames.map((s) => row(NEO, s)),
+    row(DV, "DVIA Bespoke-Dynamic Debt Portfolio"),
+    row(DV, "DVIA Bespoke Dynamic Debt Portfolio"),
+    row(DV, "DVIA Bespoke All Weather Portfolio"),
+    row(DV, "DVIA Bespoke All-Weather Portfolio"),
+    row(ONE, "360 ONE Open - Enhancer Series - Hybrid Enhancer"),
+    row(ONE, "360 ONE Open - Enhancer Series - Liquid Enhancer"),
+  ];
+  applyPins(docs, pins);
+  const claimed = new Map();
+  for (const d of docs) {
+    assert.ok(d.__pinnedId, `${d.strategyName} is unpinned`);
+    assert.ok(!claimed.has(d.__pinnedId), `${d.strategyName} and ${claimed.get(d.__pinnedId)} both write ${d.__pinnedId}`);
+    claimed.set(d.__pinnedId, d.strategyName);
+  }
+  // Every existing document is still owned by the row carrying its exact name.
+  for (const e of existing) assert.equal(claimed.get(e._id), e.strategyName);
+  // And the three October newcomers each get a document of their own.
+  assert.equal(claimed.size, existing.length + 3);
 });
 
 /* ---------- category enrichment ---------- */

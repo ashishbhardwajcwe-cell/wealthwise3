@@ -213,10 +213,31 @@ id is never rewritten. Four guards make this robust:
   column, so every fetch deleted them and the same rows aborted the import
   every single month.
 
-  Pins are keyed by the normalised `(manager, strategyName)` pair — the same
-  key the matcher uses — so a pin survives punctuation and abbreviation drift.
-  The CSV's own `sanityId` column still works and still wins, as a one-off
-  override.
+  Each pin is matched in two passes (`applyPins` in `scripts/pms-pins.mjs`):
+
+  1. **Exact name** — manager and strategy lowercased with whitespace
+     collapsed, every word and punctuation mark kept. This is what tells
+     apart siblings the matcher's normalisation merges: APMI lists
+     `…Investment Product` *and* `…Investment Strategy`, `DVIA
+     Bespoke-Dynamic Debt` *and* `DVIA Bespoke Dynamic Debt`.
+  2. **Normalised pair** — the `(manager, strategyName)` key the matcher
+     uses, so a pin still survives punctuation and abbreviation drift. This
+     fallback applies only to a pin no row matched exactly, and only when it
+     is the *sole* pin on that pair key. An unpinned sibling sharing the key
+     falls through to the normal matcher instead of being dragged onto its
+     sibling's document.
+
+  Siblings that share a pair key therefore each need their own pin, written
+  with the exact APMI name. Two pins with the same exact name, or two pins
+  pointing at the same `sanityId`, stop the import before anything is
+  resolved. The CSV's own `sanityId` column still works and still wins, as a
+  one-off override.
+
+  A pin may point at an id that doesn't exist yet, for a strategy that
+  should get a document of its own rather than fuzzy-match onto a sibling.
+  Use the id the importer would mint itself (`newStrategyId(manager,
+  strategyName)` in `scripts/pms-matching.mjs`). It reports as `STALE` until
+  the first real import creates the document.
 
   ```jsonc
   {
@@ -241,7 +262,7 @@ id is never rewritten. Four guards make this robust:
   | `UNRESOLVED` | the entry names a known-ambiguous row but its `sanityId` is still empty, so nothing is pinned |
   | `UNMATCHED` | no CSV row matches this pin — almost always a strategy the manager has renamed, which means it is unpinned this month and may abort |
   | `STALE` | the pinned `sanityId` matches no document, so importing would *create* one under that id rather than update |
-  | `TOO BROAD` | one pin matches several CSV rows, which would write them all to a single document |
+  | `TOO BROAD` | one pin matches several CSV rows through the pair-key fallback, which would write them all to a single document |
 - **Carry-forward.** Hand-curated fields the CSV doesn't carry — category,
   notes, fees, minInvestmentL — are preserved from the existing document
   instead of being wiped by the update. Returns and AUM always come from
@@ -279,9 +300,11 @@ It asserts the three properties no normal run can show you:
 - month-end dates are the real last day and always zero-padded
   (`scripts/import-shared.mjs`). A wrong date imports perfectly happily and
   mislabels the entire site;
-- the pins file loads, rejects malformed entries, and never treats an empty
-  `sanityId` as a pin (`scripts/pms-pins.mjs`). A pin that quietly fails to
-  load surfaces a month later as an ambiguity abort.
+- the pins file loads, rejects malformed entries, duplicate names and shared
+  ids, never treats an empty `sanityId` as a pin, and matches siblings by
+  exact name without dragging an unpinned one onto a pinned one's document
+  (`scripts/pms-pins.mjs`). A pin that quietly fails to load surfaces a month
+  later as an ambiguity abort.
 
 Strategies you add by hand in the Studio are never touched unless a CSV row
 matches them. Keep `scripts/pms-data.csv` out of git if you prefer (it
