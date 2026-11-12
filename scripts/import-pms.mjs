@@ -67,7 +67,7 @@ import { readFileSync } from "node:fs";
 import { requireSanityEnv, readCsvArg, num, prune, sanityUpsert, sanityQuery, normalizeIsoDate } from "./import-shared.mjs";
 import { CSV_COLUMNS, RETURN_COLUMNS } from "./pms-csv.mjs";
 import { resolveImportTarget, buildExistingIndex, legacyStrategyId, pairKey } from "./pms-matching.mjs";
-import { loadPins, pinSuggestion } from "./pms-pins.mjs";
+import { loadPins, applyPins, pinSuggestion } from "./pms-pins.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -281,31 +281,30 @@ if (pins.errors.length) {
   process.exit(1);
 }
 
-for (const doc of docs) {
-  if (doc.__pinnedId) continue; // CSV column wins
-  const pin = pins.byKey.get(pairKey(doc.manager, doc.strategyName));
-  if (!pin) continue;
-  pin.matched++;
-  doc.__pinnedId = pin.sanityId;
-  doc.__pinnedBy = "pins-file";
-}
+// Exact name first, then the pairKey fallback for pins nothing matched
+// exactly — see applyPins. The CSV column still wins.
+applyPins(docs, pins);
 
 const pinsMatched = pins.resolved.filter((p) => p.matched > 0);
 const rowsPinnedByFile = docs.filter((d) => d.__pinnedBy === "pins-file").length;
 const pinsFromCsv = docs.filter((d) => d.__pinnedBy === "csv").length;
-const pinsUnmatched = pins.resolved.filter((p) => p.matched === 0);
+// A pin whose exact row carried its own CSV sanityId was overridden, not
+// lost to a rename — don't send anyone hunting for a new name.
+const pinsOverridden = pins.resolved.filter((p) => p.matched === 0 && p.overridden > 0);
+const pinsUnmatched = pins.resolved.filter((p) => p.matched === 0 && p.overridden === 0);
 // A pin pointing at an id that no longer exists would silently CREATE a
 // document under that id rather than updating one — worth saying out loud.
 const pinsStale = pinsMatched.filter((p) => !existingById.has(p.sanityId));
-// One pin key can catch two rows: pairKey normalises away the decorations
-// ("Core Fund" and "Core Strategy" are one key), so an over-broad pin would
-// aim both rows at a single document. The import aborts on that anyway; say
-// which pin caused it.
+// One pin can still catch two rows through the pairKey fallback: pairKey
+// normalises away the decorations ("Core Fund" and "Core Strategy" are one
+// key), so a pin matched by neither row's exact name aims both at a single
+// document. The import aborts on that anyway; say which pin caused it.
 const pinsOverBroad = pinsMatched.filter((p) => p.matched > 1);
 
 if (pins.resolved.length || pins.unresolved.length || pinsFromCsv) {
   console.log(`\nPins: ${pinsMatched.length} of ${pins.resolved.length} in ${pins.displayPath} matched — ${rowsPinnedByFile} row(s) pinned` +
-    `${pinsFromCsv ? ` · ${pinsFromCsv} pinned inline by the CSV's sanityId column` : ""}`);
+    `${pinsFromCsv ? ` · ${pinsFromCsv} pinned inline by the CSV's sanityId column` : ""}` +
+    `${pinsOverridden.length ? ` · ${pinsOverridden.length} pin(s) overridden by that column` : ""}`);
 }
 
 const pinProblems = pinsUnmatched.length + pins.unresolved.length + pinsStale.length + pinsOverBroad.length;

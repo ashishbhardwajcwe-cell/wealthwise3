@@ -70,6 +70,90 @@
       "strategyName": "Bajaj Alts Flexicap Strategy Non-Discretionary PMS",
       "sanityId": "pmsStrategy-bajaj-alternate-investment-management-li-bajaj-alts-flexicap-strategy-non-discretionary-pms-41d9c225",
       "note": "Existing Non-Discretionary document"
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo Club - Multi Asset Structure Investment Product",
+      "sanityId": "pmsStrategy-neo-asset-management-private-limited-neo-club-multi-asset-structure-investment-product",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo Club - Multi Asset Structure Investment Strategy",
+      "sanityId": "pmsStrategy-neo-asset-management-private-limited-neo-club-multi-asset-structure-investment-strategy",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo Club - Multi Asset Structure Investment Strategy - Moderately Conservative Portfolio",
+      "sanityId": "pmsStrategy-neo-club-mas-moderately-conservative-a1",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo Club - Multi Asset Structure Investment Strategy - Neo Eka Arista (Conservative) PMS",
+      "sanityId": "pmsStrategy-neo-asset-management-private-limited-neo-club-multi-asset-structure-investment-strategy-neo-eka-",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo Club - Multi Asset Structure Investment Strategy - Moderately Aggressive portfolio",
+      "sanityId": "pmsStrategy-neo-asset-management-private-limited-neo-club-multi-asset-structure-investment-strategy-moderate",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo Club - Multi Asset Structure Investment Strategy - Moderate Portfolio",
+      "sanityId": "pmsStrategy-neo-club-mas-moderate-portfolio-a1",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo Club - Multi Asset Structure Investment Strategy - Aggressive portfolio",
+      "sanityId": "pmsStrategy-neo-asset-management-private-limited-neo-club-multi-asset-structure-investment-strategy-aggressi",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "Neo Alternatives Asset Managers Private Limited",
+      "strategyName": "Neo - Club Multi Asset Structure Investment Strategy - Debt (Moderate)",
+      "sanityId": "pmsStrategy-neo-asset-management-private-limited-neo-club-multi-asset-structure-investment-strategy-debt-mod",
+      "note": "Manager renamed from Neo Asset Management Private Limited (Oct 2026). Existing document; exact-name pin, as siblings share a pairKey."
+    },
+    {
+      "manager": "DV INVESTMENT ADVISORS LLP",
+      "strategyName": "DVIA Bespoke-Dynamic Debt Portfolio",
+      "sanityId": "pmsStrategy-dv-investment-advisors-llp-dvia-bespoke-dynamic-debt-portfolio-523aa026",
+      "note": "Existing document - the only Dynamic Debt row in Sep 2026; AUM continues (11.83 -> 11.88 Cr)."
+    },
+    {
+      "manager": "DV INVESTMENT ADVISORS LLP",
+      "strategyName": "DVIA Bespoke Dynamic Debt Portfolio",
+      "sanityId": "pmsStrategy-dv-investment-advisors-llp-dvia-bespoke-dynamic-debt-portfolio-944b9587",
+      "note": "New in Oct 2026 (no AUM, all-zero returns) - new document; differs from the hyphenated sibling only by punctuation."
+    },
+    {
+      "manager": "DV INVESTMENT ADVISORS LLP",
+      "strategyName": "DVIA Bespoke All Weather Portfolio",
+      "sanityId": "pmsStrategy-dv-investment-advisors-llp-dvia-bespoke-all-weather-portfolio-dca45d41",
+      "note": "Existing document - the only All Weather row in Sep 2026; AUM continues (302.89 -> 317.34 Cr)."
+    },
+    {
+      "manager": "DV INVESTMENT ADVISORS LLP",
+      "strategyName": "DVIA Bespoke All-Weather Portfolio",
+      "sanityId": "pmsStrategy-dv-investment-advisors-llp-dvia-bespoke-all-weather-portfolio-baec6f20",
+      "note": "New in Oct 2026 (no AUM, all-zero returns) - new document; differs from the unhyphenated sibling only by punctuation."
+    },
+    {
+      "manager": "360 One Portfolio Managers Limited (Formerly Known As Iifl Wealth Portfolio Managers Limited)",
+      "strategyName": "360 ONE Open - Enhancer Series - Hybrid Enhancer",
+      "sanityId": "pmsStrategy-360-one-portfolio-managers-limited-forme-360-one-open-enhancer-series-hybrid-enhancer-9646eb0b",
+      "note": "Existing document."
+    },
+    {
+      "manager": "360 One Portfolio Managers Limited (Formerly Known As Iifl Wealth Portfolio Managers Limited)",
+      "strategyName": "360 ONE Open - Enhancer Series - Liquid Enhancer",
+      "sanityId": "pmsStrategy-360-one-portfolio-managers-limited-forme-360-one-open-enhancer-series-liquid-enhancer-25bd65ea",
+      "note": "New in Oct 2026 - new document; must not fuzzy-match onto Hybrid Enhancer."
     }
   ]
 }
