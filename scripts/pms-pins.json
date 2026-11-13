@@ -154,6 +154,24 @@
       "strategyName": "360 ONE Open - Enhancer Series - Liquid Enhancer",
       "sanityId": "pmsStrategy-360-one-portfolio-managers-limited-forme-360-one-open-enhancer-series-liquid-enhancer-25bd65ea",
       "note": "New in Oct 2026 - new document; must not fuzzy-match onto Hybrid Enhancer."
+    },
+    {
+      "manager": "Fortuna Asset Managers LLP",
+      "strategyName": "Fortuna One: Long term Capital Compounding Approach",
+      "sanityId": "pmsStrategy-fortuna-asset-managers-llp-fortuna-one",
+      "note": "APMI renamed this strategy after the 12 Nov 2026 fetch; October figures identical to the old name. Existing document."
+    },
+    {
+      "manager": "Fortuna Asset Managers LLP",
+      "strategyName": "Fortuna Two: Inflation Protect Approach",
+      "sanityId": "pmsStrategy-fortuna-asset-managers-llp-fortuna-two",
+      "note": "APMI renamed this strategy after the 12 Nov 2026 fetch; October figures identical to the old name. Existing document."
+    },
+    {
+      "manager": "Fortuna Asset Managers LLP",
+      "strategyName": "Fortuna Three: Mutual Fund Focused Growth Strategy",
+      "sanityId": "pmsStrategy-fortuna-asset-managers-llp-fortuna-three-multi-asset-growth-strategy",
+      "note": "APMI renamed this strategy after the 12 Nov 2026 fetch; October figures identical to the old name. Existing document."
     }
   ]
 }

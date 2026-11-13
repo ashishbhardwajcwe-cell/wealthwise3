@@ -36,6 +36,7 @@ import {
 } from "./pms-matching.mjs";
 import { lastDayOfMonth, monthEndIso } from "./import-shared.mjs";
 import { loadPins, applyPins, exactKey } from "./pms-pins.mjs";
+import { parseIaReportHtml } from "./apmi-html.mjs";
 import {
   AMBIGUOUS,
   CANONICAL_CATEGORIES,
@@ -464,6 +465,48 @@ test("October 2026: the committed pins resolve every once-ambiguous row to its o
   for (const e of existing) assert.equal(claimed.get(e._id), e.strategyName);
   // And the three October newcomers each get a document of their own.
   assert.equal(claimed.size, existing.length + 3);
+});
+
+/* ---------- APMI table parsing ---------- */
+
+const apmiTable = (headers, rows) =>
+  `<table><thead><tr>${headers.map((h) => (h.startsWith("<!--") ? h : `<th>${h}</th>`)).join("")}</tr></thead><tbody>` +
+  rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") + "</tbody></table>";
+const APMI_HEAD = ["PMS Provider Name", "IA Name", "AUM <br>(in INR Cr.)", "1 Month ", "3 Months ", "6 Months "];
+const APMI_TAIL = ["1 Year", "2 Years", "3 Years", "4 Years", "5 Years", "Since <br> Inception"];
+
+test("APMI: the commented-out 9 Months column is ignored, every window lands in its own column", () => {
+  const html = apmiTable([...APMI_HEAD, "<!-- <th>9 Months </th>-->", ...APMI_TAIL], [
+    ["Stallion Asset Private Limited", "STALLION ASSET CORE FUND", "10,673.62", "-4.36", "0.97", "13.71", "11.20", "8.57", "29.83", "30.62", "22.89", "27.26"],
+    ["Growthfiniti Wealth Pvt Ltd", "GROWTHFINITI FOCUS 10", "2.13", "5.28", "2.26", "NA", "NA", "NA", "NA", "NA", "NA", "6.79"],
+  ]);
+  const { records, errors } = parseIaReportHtml(html);
+  assert.deepEqual(errors, []);
+  assert.equal(records.length, 2);
+  assert.deepEqual(
+    [records[0].aumCr, records[0].m1, records[0].m3, records[0].m6, records[0].y1, records[0].y3, records[0].y5, records[0].si],
+    ["10673.62", "-4.36", "0.97", "13.71", "11.20", "29.83", "22.89", "27.26"],
+  );
+  assert.equal(records[1].m6, "", "APMI's NA is no figure");
+  assert.equal(records[1].si, "6.79");
+});
+
+test("APMI: if the 9 Months column comes back, 1Y still reads 1 Year (no silent shift)", () => {
+  const html = apmiTable([...APMI_HEAD, "9 Months ", ...APMI_TAIL], [
+    ["M", "S", "100", "1", "3", "6", "9", "12", "24", "36", "48", "60", "99"],
+  ]);
+  const { records, errors } = parseIaReportHtml(html);
+  assert.deepEqual(errors, []);
+  assert.equal(records[0].m6, "6");
+  assert.equal(records[0].y1, "12", "1Y must not pick up the 9-month figure");
+  assert.equal(records[0].si, "99");
+});
+
+test("APMI: an unrecognised header or a short row stops the read instead of shifting columns", () => {
+  const renamed = apmiTable([...APMI_HEAD.slice(0, 3), "One Month", ...APMI_HEAD.slice(4), ...APMI_TAIL], []);
+  assert.match(parseIaReportHtml(renamed).errors.join(), /column m1 matched 0/);
+  const short = apmiTable([...APMI_HEAD, ...APMI_TAIL], [["M", "S", "100", "1", "3", "6", "12", "24", "36", "48", "99"]]);
+  assert.match(parseIaReportHtml(short).errors.join(), /row has 11 cells, header has 12/);
 });
 
 /* ---------- category enrichment ---------- */

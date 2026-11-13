@@ -5,7 +5,9 @@
  *   node scripts/fetch-apmi-pms.mjs 6 2026                  # writes scripts/pms-data.csv
  *   node scripts/fetch-apmi-pms.mjs 6 2026 --min-aum 100    # only strategies >= 100 cr
  *   node scripts/fetch-apmi-pms.mjs 6 2026 --ason 30-06-2026  # send this exact asOnDate
- * Data-row layout (verified): Provider, IA, AUM, 1M, 3M, 6M, 1Y, 2Y, 3Y, 4Y, 5Y, SI (12 cells).
+ * Columns are read by HEADER LABEL via ./apmi-html.mjs, never by position: APMI's
+ * table has a commented-out "9 Months" column, and re-enabling it would shift a
+ * positional reader. An unreadable header stops the fetch.
  *
  * TWO DATES, deliberately not the same value:
  *
@@ -26,9 +28,8 @@
  *                    outright.
  */
 import { monthEndIso, lastDayOfMonth } from "./import-shared.mjs";
+import { parseIaReportHtml, fetchIaReport, STRATEGIES, SERVICE_TYPES } from "./apmi-html.mjs";
 
-const ENDPOINT = "https://www.apmiindia.org/apmi/welcomeiaperformance.htm?action=loadIAReport";
-const REFERER  = "https://www.apmiindia.org/apmi/welcomeiaperformance.htm?action=PMSmenu";
 const args = process.argv.slice(2);
 const month = args[0] || "6", year = args[1] || "2026";
 const probe = args.includes("--probe");
@@ -53,32 +54,17 @@ const asOnDateRequest = asonIdx !== -1
   : `${year}-${Number(month)}-${lastDayOfMonth(year, month)}`;
 const MN = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const SOURCE = `APMI monthly report ${MN[Number(month)] || month} ${year}`;
-const STRATEGIES = ["Equity","Debt","Hybrid","Multi Asset"];
-const SERVICE_TYPES = ["D","N"];
 function mapCategory(name){const s=(name||"").toLowerCase();return (s.includes("debt")||s.includes("hybrid")||s.includes("multi asset")||s.includes("multiasset"))?"Hybrid":"";}
-async function fetchCombo(strategyname, servicetype){
-  const body=new URLSearchParams();
-  body.append("strategyname",strategyname); body.append("servicetype",servicetype);
-  body.append("",""); body.append("","");
-  body.append("fromMonth",String(Number(month))); body.append("fromYears",String(year)); body.append("asOnDate",asOnDateRequest);
-  const res=await fetch(ENDPOINT,{method:"POST",headers:{
-    "Content-Type":"application/x-www-form-urlencoded","Accept":"text/html,*/*",
-    "Origin":"https://www.apmiindia.org","Referer":REFERER,
-    "User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
-  },body:body.toString()});
-  if(!res.ok) throw new Error(`HTTP ${res.status} for ${strategyname}/${servicetype}`);
-  return await res.text();
-}
-function stripTags(s){return s.replace(/<[^>]*>/g," ").replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&#8377;|₹/g,"").replace(/&[a-z]+;/gi," ").replace(/\s+/g," ").trim();}
-function cleanName(s){if(!s)return"";let t=s.includes("-->")?s.slice(s.lastIndexOf("-->")+3):s;return t.replace(/\s+/g," ").trim();}
-function parseRows(html){const rows=[];const trRe=/<tr[^>]*>([\s\S]*?)<\/tr>/gi;let m;while((m=trRe.exec(html))!==null){const cells=[];let c;const cellRe=/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;while((c=cellRe.exec(m[1]))!==null)cells.push(stripTags(c[1]));if(cells.length)rows.push(cells);}return rows;}
-function num(v){if(v==null)return"";const t=String(v).replace(/[₹,%\s]/g,"");if(t===""||/^NA$|^ND$|^-+$/i.test(t))return"";return t;}
-// Data rows: Provider, IA, AUM, 1M, 3M, 6M, 1Y, 2Y, 3Y, 4Y, 5Y, SI  (12 cells; NO 9-month)
-function rowToRecord(cells){
-  if(cells.length<12)return null;
-  const[provider,ia,aum,m1,m3,m6,y1,y2,y3,y4,y5,si]=cells;
-  if(!provider||!ia||/PMS Provider Name/i.test(provider))return null;
-  return{provider:cleanName(provider),ia:cleanName(ia),aumCr:num(aum),m1:num(m1),m3:num(m3),m6:num(m6),y1:num(y1),y2:num(y2),y3:num(y3),y4:num(y4),y5:num(y5),si:num(si)};
+const fetchCombo=(strategyname,servicetype)=>fetchIaReport(strategyname,servicetype,{month,year,asOnDate:asOnDateRequest});
+/** Parse one combo's table; any header/row-shape problem is fatal. */
+function readCombo(label, html){
+  const {records,header,errors}=parseIaReportHtml(html);
+  if(errors.length){
+    console.error(`  ✗ ${label}: APMI's table could not be read safely — nothing written.`);
+    for(const e of errors.slice(0,5))console.error(`      ${e}`);
+    process.exit(1);
+  }
+  return {records,header};
 }
 function csvEscape(v){const s=String(v??"");return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;}
 async function main(){
@@ -89,9 +75,9 @@ async function main(){
     // before anyone spends time on the parser.
     console.log(`  POST asOnDate : ${asOnDateRequest}${asonIdx !== -1 ? "  (--ason override)" : "  (unpadded month, real month-end — format UNVERIFIED against a live call)"}`);
     console.log(`  CSV asOfDate  : ${asOfDateCsv}  (zero-padded — what the importer requires)`);
-    const rows=parseRows(await fetchCombo("Equity","D"));
-    const recs=rows.map(rowToRecord).filter(Boolean);
-    console.log("Parsed <tr> rows:",rows.length,"| Mapped records:",recs.length);
+    const {records:recs,header}=readCombo("Equity/D",await fetchCombo("Equity","D"));
+    console.log("Header:",header.join(" | "));
+    console.log("Mapped records:",recs.length);
     console.log("=== FIRST 5 MAPPED RECORDS ===");
     recs.slice(0,5).forEach(r=>console.log(JSON.stringify(r)));
     if(!recs.length)console.log("(none parsed — send this to Claude)");
@@ -102,7 +88,7 @@ async function main(){
   const lines=[header.join(",")];const seen=new Set();let total=0;
   for(const st of STRATEGIES)for(const svc of SERVICE_TYPES){
     let html;try{html=await fetchCombo(st,svc);}catch(e){console.error(`  ! ${st}/${svc}: ${e.message}`);continue;}
-    const recs=parseRows(html).map(rowToRecord).filter(Boolean);let added=0;
+    const {records:recs}=readCombo(`${st}/${svc}`,html);let added=0;
     for(const r of recs){
       const key=`${r.provider}|||${r.ia}`;if(seen.has(key))continue;
       if(MIN_AUM>0&&(r.aumCr===""||parseFloat(r.aumCr)<MIN_AUM))continue;
