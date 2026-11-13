@@ -27,6 +27,16 @@ export interface NewsletterIssue {
 
 export const NEWSLETTERS: NewsletterIssue[] = [
   {
+    slug: "2026-10",
+    label: "October 2026",
+    asOfDate: "2026-10-31",
+    title: "More than half didn't beat the index.",
+    summary:
+      "Over three years, 578 of 1,014 PMS strategies returned less than the S&P BSE 500 TRI, net of fees.",
+    file: "/newsletters/PlanMyCashflows-PMS-Brief-October-2026.pdf",
+    pages: 3,
+  },
+  {
     slug: "2026-09",
     label: "September 2026",
     asOfDate: "2026-09-30",

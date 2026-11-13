@@ -1017,9 +1017,23 @@ cd ~/Desktop/wealthwise3
 open scripts/archive/
 ```
 
-Open the newest CSV in Excel or Numbers. Pull: how many strategies beat the
-benchmark, the top 5 by **3-year alpha** (not raw return — alpha is your brand),
-and anything notable.
+Don't count by eye — let the script do it:
+
+```
+node scripts/pms-brief-figures.mjs scripts/pms-data.csv
+```
+
+It reads the month's CSV and the benchmark document in Sanity (the same one the
+site uses for card alpha) and prints every figure the issue uses: the 1M desk
+count, the scorecard (beat the index over 1Y, 3Y, and all of 1/3/5Y), the 3Y
+median, the alpha honour roll (equity, ₹100 Cr+, one per manager, ranked on
+**3-year alpha** — never raw return), category leaders and reality-check
+candidates. If the benchmark isn't for the same as-on date as the CSV it
+**stops** — run Part 3 Step 9 first. It writes nothing.
+
+Category leaders use only the hand-curated categories in Sanity (never a guess
+from the name). While most strategies are uncategorised, check how many sit in
+each category before quoting a "leader" — a category of one has no leader.
 
 ### Step 3 — Fill the template
 
@@ -1034,6 +1048,13 @@ Duplicate `pms-newsletter.html`, rename for the month, edit in TextEdit.
 Open the HTML in Chrome → `Cmd`+`P` → "Save as PDF" → save into
 `~/Desktop/wealthwise3/public/newsletters/` as
 `PlanMyCashflows-PMS-Brief-July-2026.pdf`.
+
+Or, without the print dialog (this is how the September and October 2026 PDFs
+were made — same Chrome engine, A4 from the issue's own `@page` rule):
+
+```
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer --print-to-pdf="$PWD/public/newsletters/PlanMyCashflows-PMS-Brief-October-2026.pdf" "file://$PWD/newsletters/issues/2026-10-pms-brief.html"
+```
 
 ### Step 5 — Publish to the site
 
