@@ -923,6 +923,20 @@ Open https://planmycashflows.com/investment-products/pms after an hour. Confirm
 the as-on date changed and cards show 1M/6M figures. Open two strategy pages and
 check the returns against APMI's table.
 
+### Step 12 — Check every fund against APMI
+
+```
+node scripts/verify-pms-vs-apmi.mjs 7 2026
+```
+
+This checks every fund, not just two. Want `✓ Every APMI figure is on the portal.`
+A blank where APMI shows `NA` is fine: the strategy is too young for that window.
+
+**If it lists `NOT ON PORTAL` or `MISSING`**, managers filed late or renamed a
+strategy after you fetched. Re-run Steps 4, 7 and 8 (fetch, dry run, import).
+A rename shows up in the dry run as a new document. Pin it to the old one in
+`scripts/pms-pins.json` instead (see `docs/pms-data-import.md`).
+
 ---
 
 # PART 4 — AIF DATA (quarterly)
@@ -1034,6 +1048,20 @@ candidates. If the benchmark isn't for the same as-on date as the CSV it
 Category leaders use only the hand-curated categories in Sanity (never a guess
 from the name). While most strategies are uncategorised, check how many sit in
 each category before quoting a "leader" — a category of one has no leader.
+
+### Step 2b — Draw the charts
+
+```
+node scripts/pms-brief-figures.mjs scripts/pms-data.csv --json /tmp/brief.json
+```
+```
+node scripts/pms-brief-charts.mjs /tmp/brief.json newsletters/issues/2026-10-pms-brief.html
+```
+
+The issue file carries two chart slots (`<!-- chart:distribution:start -->`
+and `<!-- chart:scorecard:start -->`). The second command redraws both from
+the month's numbers. Blue = beat the index, orange = trailed. Don't swap in the
+brand red/green: colour-blind readers can't tell them apart.
 
 ### Step 3 — Fill the template
 

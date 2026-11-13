@@ -253,3 +253,25 @@ for (const p of pairs.slice(0, 5)) {
   console.log(`    weak:   ${line(p.weak)}  ${rets(p.weak)}  3Y alpha ${f1(alpha(p.weak, "3Y"))}`);
 }
 if (!pairs.length) console.log("  none found");
+
+/* ---------- chart data (--json <file>) ---------- */
+// Everything scripts/pms-brief-charts.mjs draws comes from this file, so each
+// chart traces to the same computation as the figures above.
+if (args.includes("--json")) {
+  const { writeFileSync } = await import("node:fs");
+  const out = args[args.indexOf("--json") + 1];
+  writeFileSync(out, JSON.stringify({
+    asOf: AS_OF,
+    source: sources.join(" | "),
+    benchmark: { name: bench.name, asOfDate: bench.asOfDate, returns: bench.returns },
+    universe: current.length,
+    scorecard: [
+      { label: "Over 1 year", beat: beat1, of: y1.length, index: bench.returns["1Y"], annualised: false },
+      { label: "Over 3 years", beat: beat3, of: y3.length, index: bench.returns["3Y"], annualised: true },
+      { label: "In all of 1, 3 and 5 years", beat: all135.length, of: full135.length, index: null, annualised: true },
+    ],
+    median3y: median(y3.map((s) => s.returns["3Y"])),
+    returns3y: y3.map((s) => s.returns["3Y"]).sort((a, b) => a - b),
+  }, null, 1));
+  console.log(`\nChart data written to ${out}`);
+}

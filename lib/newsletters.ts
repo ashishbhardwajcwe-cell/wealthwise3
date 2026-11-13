@@ -34,7 +34,7 @@ export const NEWSLETTERS: NewsletterIssue[] = [
     summary:
       "Over three years, 578 of 1,014 PMS strategies returned less than the S&P BSE 500 TRI, net of fees.",
     file: "/newsletters/PlanMyCashflows-PMS-Brief-October-2026.pdf",
-    pages: 3,
+    pages: 4,
   },
   {
     slug: "2026-09",

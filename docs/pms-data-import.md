@@ -46,7 +46,19 @@ npm run import:pms -- scripts/pms-data.csv
 # 5. CATEGORIES — only worth running when new strategies appeared.
 npm run enrich:categories > categories.csv     # dry run, writes nothing
 npm run enrich:categories -- --apply
+
+# 6. VERIFY the portal against APMI's live table. Writes nothing.
+node scripts/verify-pms-vs-apmi.mjs 7 2026
 ```
+
+Step 6 compares every strategy in Sanity with APMI's own table, window by
+window. It flags `MISSING` (APMI has a figure, the portal doesn't),
+`MISMATCH`, `NOT ON PORTAL` (a late filer or a rename that needs a pin), and
+`STALE` documents APMI didn't report this month. A blank where APMI itself
+says `NA` is correct and isn't flagged: a strategy younger than six months
+has no 6M or 1Y figure. Managers keep filing after the 12th, so re-run it a
+few days later; if it reports late filers, re-fetch, dry-run and import again.
+Exit code 1 means the portal and APMI disagree.
 
 Between steps 3 and 4, deal with anything the dry run flags: ambiguous rows
 (record them in `scripts/pms-pins.json` — it prints paste-ready entries),
@@ -96,10 +108,14 @@ deliberately not the same value:
 
 ### Step 2 — the two fetchers
 
-`fetch-apmi-pms.mjs` calls APMI live but parses the response table by column
-*position*. `fetch:pms` reads a saved payload but maps by column *label*, so it
-survives APMI reordering columns. Prefer `fetch:pms` whenever the layout may
-have moved; use the live fetcher when it hasn't.
+Both fetchers map columns by *label*, never by position.
+`fetch-apmi-pms.mjs` calls APMI live and reads the HTML table through
+`scripts/apmi-html.mjs`, which strips HTML comments and matches each header
+("1 Month", "6 Months", "1 Year", …). APMI's table carries a "9 Months"
+column that is commented out today. The old positional reader would have
+shifted every figure from 1Y onwards the day it came back. Now an unmapped
+header or a row whose cell count doesn't match the header stops the fetch.
+`fetch:pms` reads a saved JSON payload instead.
 
 `fetch:pms` writes every column below — including all nine return windows —
 straight from APMI's own report, so no period can be left out by hand. Run
