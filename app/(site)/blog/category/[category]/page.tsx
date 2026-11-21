@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     (c) => c.toLowerCase().replace(/\s+/g, "-").replace("&", "and") === category,
   );
   return {
-    title: `${cat ?? category} — PlanMyCashflows Blog`,
+    title: `${cat ?? category} — Blog`,
     description: `All PlanMyCashflows essays in the ${cat ?? category} category.`,
   };
 }

@@ -5,7 +5,7 @@ import { CTASection } from "@/components/CTASection";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "About PlanMyCashflows — Our Mission",
+  title: "About Us — Our Mission",
   description:
     "PlanMyCashflows is an AI-powered, education-first platform helping Indian investors discover, compare and understand PMS and AIF. Learn about our mission and approach.",
 };

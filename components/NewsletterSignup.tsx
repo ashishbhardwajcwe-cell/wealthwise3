@@ -2,30 +2,32 @@
 
 import { useState } from "react";
 import { Mail, Check, Loader2 } from "lucide-react";
+import { subscribeToBrief } from "@/app/actions/pms-leads";
 
-export function NewsletterSignup({ source = "footer" }: { source?: string }) {
+// `source` is kept for call-site compatibility; the footer always records "footer".
+export function NewsletterSignup(_props: { source?: string } = {}) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [website, setWebsite] = useState(""); // honeypot
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.includes("@")) return;
     setState("loading");
     try {
-      const res = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source }),
-      });
-      if (!res.ok) throw new Error();
-      setState("done");
+      const res = await subscribeToBrief({ email, source: "footer", website });
+      if (res.ok) setState("done");
+      else { setErrMsg(res.error); setState("error"); }
     } catch {
+      setErrMsg(null);
       setState("error");
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm">
+      <input value={website} onChange={(e) => setWebsite(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: -10000, height: 0, width: 0, opacity: 0 }} />
       <label className="text-xs uppercase tracking-wider text-[var(--color-gold-light)] font-semibold">
         Get our weekly note
       </label>
@@ -60,7 +62,7 @@ export function NewsletterSignup({ source = "footer" }: { source?: string }) {
         )}
       </div>
       {state === "error" && (
-        <p className="text-xs text-[var(--color-ruby)] mt-2">Could not subscribe. Please try again later.</p>
+        <p className="text-xs text-[var(--color-ruby)] mt-2">{errMsg ?? "Could not subscribe. Please try again later."}</p>
       )}
     </form>
   );

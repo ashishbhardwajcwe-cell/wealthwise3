@@ -6,7 +6,7 @@ import { CTASection } from "@/components/CTASection";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "Wealth Planner — Snapshot, Guided Plan, Full App | PlanMyCashflows",
+  title: "Wealth Planner — Snapshot, Guided Plan, Full App",
   description:
     "Three ways to plan: a free 60-second AI snapshot, a 10-minute guided plan, or the full CashFlow Planner app with portfolio aggregation, tax harvesting and PDF reports.",
 };
