@@ -40,6 +40,14 @@ pms-logos.csv
 # local reference material - never published
 _local/
 _incoming/
+
+# partner price lists converted to CSV. These carry the DEALER (cost) column,
+# and this repository is PUBLIC. Keep incoming lists in _incoming/ (above);
+# these patterns are a second line of defence if one lands elsewhere.
+*[Pp]rice [Ll]ist*.csv
+*price-list*.csv
+*[Dd]ealer*.csv
+*[Uu]nlisted*.csv
 pms-data.csv
 scripts/pms-data.csv
 scripts/apmi-report.json

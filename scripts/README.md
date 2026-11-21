@@ -131,11 +131,20 @@ partner's daily "Unlisted Shares Price List" (PDF or CSV) and live in the
 ```
 npm run import:unlisted -- pricelist.pdf --dry-run     # preview first
 npm run import:unlisted -- pricelist.pdf               # write
-npm run import:unlisted -- prices.csv --date=2026-07-22
+npm run import:unlisted -- _incoming/prices.csv --date=2026-07-22   # from an Excel sheet
 npm run import:unlisted -- --seed-editorial            # one-time content seed
 npm run audit:unlisted                                 # read-only health check
 npm run test:unlisted                                  # parser/guard self-test
 ```
+
+**A spreadsheet beats the PDF** when the partner sends one: prices are read as
+text, so there is no OCR guesswork, no skipped rows and decimals survive. The
+importer takes `.pdf` or `.csv`, so export the sheet to CSV into `_incoming/`
+(git-ignored — a converted list carries the dealer column and this repo is
+public) and pass `--date=`, since a CSV has no header date. Keep every column:
+the dealer one is identified only so it can be excluded. Handing the importer
+an `.xlsx` directly prints these instructions and stops. Logos still need the
+PDF — see `docs/unlisted-monthly-runbook.md`.
 
 The PDF's "DATE 22 Jul 2026" header sets the as-of date (`--date` overrides;
 everything is zero-padded ISO). Matching runs slug → aliases → normalised

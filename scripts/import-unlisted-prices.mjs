@@ -185,6 +185,22 @@ const filePath = resolve(args.file);
 if (!existsSync(filePath)) { console.error(`No such file: ${args.file}`); process.exit(1); }
 const isPdf = /\.pdf$/i.test(filePath);
 
+// A spreadsheet is the BETTER source than the PDF — exact numbers, no OCR, no
+// skipped rows — but this importer reads .pdf and .csv only, and handing it a
+// binary workbook used to fail with the useless "CSV has no data rows".
+if (/\.(xlsx|xlsm|xltx|xls|ods|numbers)$/i.test(filePath)) {
+  console.error(
+    `${args.file} is a spreadsheet, and this importer reads .pdf or .csv only.\n\n` +
+    "  Export it to CSV first (Excel/Numbers → File → Save As / Export → CSV), then import that.\n" +
+    "  Keep every column — the importer finds the retail price by header name and drops the\n" +
+    "  dealer column itself; you do not need to delete it by hand.\n\n" +
+    "  Save the CSV into _incoming/ (git-ignored). A converted price list carries the partner's\n" +
+    "  DEALER column, and this repository is public.\n\n" +
+    "  A spreadsheet is the better source when you can get one: exact prices, no OCR guesswork.",
+  );
+  process.exit(1);
+}
+
 /** Rows: { name, price, depository?, lotSize? }. Dealer prices never leave the parser. */
 let rows = [];
 const skipped = []; // { line, reason }

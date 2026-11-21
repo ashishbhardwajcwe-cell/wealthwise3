@@ -21,7 +21,8 @@ Code session each month starts knowing the rules rather than rediscovering them.
 - **Never touch an existing document's `company` or `slug` from partner data.**
   Partner names are noisy; our names are curated. The importer only ever appends
   a raw list name to `aliases`.
-- Dates are zero-padded `YYYY-MM-DD`.
+- Dates are zero-padded `YYYY-MM-DD`. A PDF carries its own `DATE` header; a
+  CSV usually does not, so pass `--date=` when importing one.
 - Auto-created companies land with `needsReview: true` and stay off the site
   until a human clears them in Studio.
 
@@ -47,11 +48,15 @@ bad parse through. If the names in the dry-run look wrong, the parse is wrong.
 
 ## The monthly run
 
-### 1. Drop the new PDF in the UNLISTED folder
+### 1. Drop the new file in the UNLISTED folder
 
-Keep the partner's filename. The importer takes **`.pdf` or `.csv` only** — an
-`.xlsx` is read as CSV and fails on the header check. If all you have is an
-Excel sheet, export it to CSV first.
+Keep the partner's filename.
+
+**If you got a PDF** (the usual case) — go straight to step 2.
+
+**If you got an Excel sheet** — use it. It is the better source, and worth
+asking the partner for. See *Excel sheets* below, convert it to CSV, then
+continue from step 2 with the CSV.
 
 ### 2. Dry run
 
@@ -111,6 +116,89 @@ revalidation (≤5 min) or deploy.
 
 ---
 
+---
+
+## Excel sheets — prefer one when you can get it
+
+A spreadsheet is a materially better source than the PDF, and worth asking the
+partner for even though they usually send a PDF:
+
+| | PDF | Excel |
+|---|---|---|
+| How prices are read | rendered to images, OCR'd, ~5s/page | read as text, exactly |
+| Price accuracy | a glyph can misread (`24` → `2%`) | exact |
+| Skipped rows | a handful per list, entered by hand | none |
+| Decimals | often lost | preserved (`26.50`) |
+| Run time | minutes | seconds |
+
+The OCR path exists only because the partner's PDF has no text layer. When you
+have a sheet, none of that machinery is needed.
+
+### Converting it
+
+The importer reads **`.pdf` or `.csv` only**. Hand it an `.xlsx` and it stops
+with instructions rather than failing obscurely.
+
+1. Open the sheet in Excel or Numbers.
+2. **File → Save As** (Excel) or **File → Export To → CSV** (Numbers).
+3. Save it into **`_incoming/`**, which is git-ignored.
+
+**Keep every column.** Do not delete the dealer column by hand — the importer
+identifies it by header name purely in order to exclude it, and its index is
+never returned by the header mapper. Deleting columns is more likely to break
+the header match than to help.
+
+> **The converted CSV carries the dealer column in plain text, and this repo is
+> public.** Keep it in `_incoming/`. `.gitignore` also blocks `*Price List*.csv`,
+> `*dealer*.csv`, `*unlisted*.csv` and `*price-list*.csv` as a second line of
+> defence, but the folder is the rule. Delete the CSV once the import is done.
+
+### Columns it expects
+
+Headers are matched by tolerant regex, not by position, so column order can
+change between months. The partner's current layout maps cleanly:
+
+| Sheet column | Read as |
+|---|---|
+| `Share Name` | company |
+| `Retail Price` | `indicativePriceINR` |
+| `Dealer Price` | **excluded by design — never read** |
+| `Depository Applicable` | `depository` |
+| `Minimum Lot Size` | `lotSize` |
+| `S.No` | ignored |
+
+What it needs: one column whose header contains company/scrip/security/stock/
+share/name, and exactly one non-dealer column containing price/rate. If there
+are two plausible price columns it stops and asks you to rename one to
+`retail price` rather than guess.
+
+If a header changes and it can't find a column, it prints the headers it saw.
+Rename the column in the sheet, re-export, run again.
+
+### After converting
+
+Everything else is identical — same dry run, same guards, same review gate:
+
+```bash
+npm run import:unlisted -- _incoming/price-list-2026-11-20.csv --dry-run
+```
+
+The `--date` flag matters more here. A PDF carries its own `DATE` header; a CSV
+usually doesn't, so the import would otherwise stamp *today*. Pass the list's
+own date explicitly:
+
+```bash
+npm run import:unlisted -- _incoming/price-list-2026-11-20.csv --date=2026-11-20
+```
+
+**Logos still need the PDF.** `npm run logos:unlisted` crops each company's logo
+out of the rendered page, so it cannot run against a CSV. If you have both, take
+prices from the CSV and logos from the PDF. If you only have the sheet, skip
+step 4 — existing logos are untouched, and new companies show the fallback
+monogram until a PDF turns up.
+
+---
+
 ## Known false positives — do not delete these
 
 These are genuine documents, live with correct retail prices, two of them
@@ -161,9 +249,10 @@ conversation with the partner, not something the script settles.
 
 | Command | Does |
 |---|---|
-| `npm run import:unlisted -- <file> --dry-run` | parse and preview, write nothing |
-| `npm run import:unlisted -- <file>` | write prices to Sanity |
-| `npm run logos:unlisted -- <file>` | attach logos to companies that lack one |
+| `npm run import:unlisted -- <file.pdf> --dry-run` | parse and preview, write nothing |
+| `npm run import:unlisted -- <file.pdf>` | write prices to Sanity |
+| `npm run import:unlisted -- <file.csv> --date=<date>` | same, from a converted Excel sheet |
+| `npm run logos:unlisted -- <file.pdf>` | attach logos to companies that lack one (PDF only) |
 | `npm run audit:unlisted` | read-only health check |
 | `npm run audit:unlisted -- --purge-import=<date>` | delete one bad import |
 | `npm run test:unlisted` | self-test the parser and the guards |
