@@ -31,9 +31,18 @@
     "w-kineco-limited": ["Kineco Limited Unlisted Share"],
     "hur-solar-private-limited": ["HVR Solar Private Limited"],
     "chennai-super-kings": ["CSK Unlisted Shares"],
-    "api-holdings-pharmeasy": ["PharmEasy Unlisted Shares"]
+    "api-holdings-pharmeasy": ["PharmEasy Unlisted Shares"],
+    "cochin-international-airport": ["Cochin International Airport Limited Unlisted Shares"],
+    "motilal-oswal-home-finance": ["Motilal Oswal Home Finance Limited Unlisted Shares"],
+    "oravel-stays-oyo": ["ORAVEL STAYS LIMITED (Oyo Unlisted Shares)"],
+    "b-orbis-financial-corporation": ["Orbis Financials Corporation Unlisted Shares"],
+    "sterlite-electric-limited-formerly": ["Sterlite Electric Limited Unlisted Shares"],
+    "net-ncl-buildtek-limited-previously-n": ["NCL Buildtek Limited Unlisted Shares"]
   },
   "notes": {
+    "cochin-international-airport": "Nov-2026: curated doc is the survivor. z-cochin-international-airport-limit (OCR name, logo, 22-Jul price) is a duplicate to merge by hand in Studio.",
+    "motilal-oswal-home-finance": "Nov-2026: curated doc is the survivor. motilal-oswal-home-finance-limi (OCR name, logo, 22-Jul price) is a duplicate to merge by hand in Studio.",
+    "oravel-stays-oyo": "Nov-2026: curated doc is the survivor. oravel-stays-limited (logo, 22-Jul price) is a duplicate to merge by hand in Studio.",
     "chennai-super-kings": "Three documents exist for this company: chennai-super-kings (editorial), i-csk (22-Jul price, OCR name) and csk-unlisted-shares (06-Aug). The editorial one is the survivor. i-csk still needs merging by hand — it is not a 06-Aug creation, so the cleanup will not touch it.",
     "api-holdings-pharmeasy": "'PharmEasy Unlisted Shares' is ALSO an alias on pharm-easy, which carries the 06-Aug price and a logo. This entry makes the editorial document win the match; pharm-easy has to be merged in Studio because the cleanup refuses to delete a document with a logo."
   }

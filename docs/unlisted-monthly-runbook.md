@@ -47,16 +47,17 @@ bad parse through. If the names in the dry-run look wrong, the parse is wrong.
 
 ## The monthly run
 
-### 1. Drop the new PDF in the UNLISTED folder
+### 1. Drop the new file in the UNLISTED folder
 
-Keep the partner's filename. The importer takes **`.pdf` or `.csv` only** — an
-`.xlsx` is read as CSV and fails on the header check. If all you have is an
-Excel sheet, export it to CSV first.
+Keep the partner's filename. The importer reads **`.xlsx` directly** (preferred:
+no OCR, exact prices), as well as `.pdf` and `.csv`. No conversion is needed for
+an Excel sheet. A workbook carries no "As on" date, so pass `--date=YYYY-MM-DD`
+explicitly or the import stamps today.
 
 ### 2. Dry run
 
 ```bash
-npm run import:unlisted -- "<path to the new PDF>" --dry-run
+npm run import:unlisted -- "<path to the new file>" --date=YYYY-MM-DD --dry-run
 ```
 
 Read the output before anything else:
@@ -76,14 +77,17 @@ re-run with `--allow-drift`.
 ### 3. Write
 
 ```bash
-npm run import:unlisted -- "<path to the new PDF>"
+npm run import:unlisted -- "<path to the new file>" --date=YYYY-MM-DD
 ```
 
 ### 4. Logos
 
 ```bash
-npm run logos:unlisted -- "<path to the new PDF>"
+npm run logos:unlisted -- "<path to the new file>"
 ```
+
+Works with the `.xlsx` as well as the PDF — the workbook carries its own row
+logos, so no PDF is needed.
 
 No `--force`. Documents that already carry a logo are skipped and reported as
 such; only companies new this month get one. Logos never create documents and
@@ -161,8 +165,8 @@ conversation with the partner, not something the script settles.
 
 | Command | Does |
 |---|---|
-| `npm run import:unlisted -- <file> --dry-run` | parse and preview, write nothing |
-| `npm run import:unlisted -- <file>` | write prices to Sanity |
+| `npm run import:unlisted -- <file> --date=<date> --dry-run` | parse and preview, write nothing |
+| `npm run import:unlisted -- <file> --date=<date>` | write prices to Sanity |
 | `npm run logos:unlisted -- <file>` | attach logos to companies that lack one |
 | `npm run audit:unlisted` | read-only health check |
 | `npm run audit:unlisted -- --purge-import=<date>` | delete one bad import |
