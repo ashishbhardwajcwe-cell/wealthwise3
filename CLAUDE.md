@@ -27,6 +27,16 @@
 - Apply the implausible-return filter (−95% to +300%) before anything reaches
   a public page.
 
+## Unlisted updates
+- Monthly unlisted update: run `/unlisted-update <file>`; the runbook is
+  `docs/unlisted-monthly-runbook.md`. Always dry-run first and pass `--date`
+  (workbooks carry none). Never use `--force`, `--publish`, `--adopt-names` or
+  `--allow-drift` without explicit OK. Never replace an existing logo, and never
+  edit or delete an existing doc's `company`/`slug` from partner data. The
+  audit's logo count must not go down. An alias goes only where the existing
+  doc is clearly the same company; never alias onto a different one (e.g.
+  Sterlite Grid 5 is separate from Sterlite Electric).
+
 ## Architecture
 - Large dynamic routes pre-render a top-N slice in `generateStaticParams` and
   rely on ISR for the long tail. Never pre-render all ~1,700 PMS pages — it

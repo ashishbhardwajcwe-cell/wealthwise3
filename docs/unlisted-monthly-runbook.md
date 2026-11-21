@@ -57,7 +57,7 @@ explicitly or the import stamps today.
 ### 2. Dry run
 
 ```bash
-npm run import:unlisted -- "<path to the new PDF>" --dry-run
+npm run import:unlisted -- "<path to the new file>" --date=YYYY-MM-DD --dry-run
 ```
 
 Read the output before anything else:
@@ -77,14 +77,17 @@ re-run with `--allow-drift`.
 ### 3. Write
 
 ```bash
-npm run import:unlisted -- "<path to the new PDF>"
+npm run import:unlisted -- "<path to the new file>" --date=YYYY-MM-DD
 ```
 
 ### 4. Logos
 
 ```bash
-npm run logos:unlisted -- "<path to the new PDF>"
+npm run logos:unlisted -- "<path to the new file>"
 ```
+
+Works with the `.xlsx` as well as the PDF — the workbook carries its own row
+logos, so no PDF is needed.
 
 No `--force`. Documents that already carry a logo are skipped and reported as
 such; only companies new this month get one. Logos never create documents and
@@ -162,8 +165,8 @@ conversation with the partner, not something the script settles.
 
 | Command | Does |
 |---|---|
-| `npm run import:unlisted -- <file> --dry-run` | parse and preview, write nothing |
-| `npm run import:unlisted -- <file>` | write prices to Sanity |
+| `npm run import:unlisted -- <file> --date=<date> --dry-run` | parse and preview, write nothing |
+| `npm run import:unlisted -- <file> --date=<date>` | write prices to Sanity |
 | `npm run logos:unlisted -- <file>` | attach logos to companies that lack one |
 | `npm run audit:unlisted` | read-only health check |
 | `npm run audit:unlisted -- --purge-import=<date>` | delete one bad import |
