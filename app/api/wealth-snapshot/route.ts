@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { redis, snapshotRateLimit, inputHash, isRedisConfigured, getClientIp } from "@/lib/redis";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { notifySlack, escapeSlack } from "@/lib/slack";
 import { currencyForCountry } from "@/lib/utils";
 
@@ -60,8 +60,6 @@ function validate(input: Partial<SnapshotInput>): input is SnapshotInput {
   );
 }
 
-const CACHE_TTL_SECONDS = 60 * 60 * 24; // 24h
-
 export async function POST(req: NextRequest) {
   try {
     const data: Partial<SnapshotInput> = await req.json();
@@ -73,30 +71,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Rate limit per IP (3 / hour). Skipped silently if Upstash isn't configured.
-    if (snapshotRateLimit) {
-      const ip = getClientIp(req);
-      const result = await snapshotRateLimit.limit(ip);
+    // Rate limit per IP (3 / hour). Fails open if Supabase is unreachable.
+    {
+      const result = await checkRateLimit("snapshot", getClientIp(req), 3, 3600);
       if (!result.success) {
-        const reset = Math.max(0, result.reset - Date.now());
         return NextResponse.json(
           {
             error: "Rate limit reached. You can generate up to 3 snapshots per hour from this IP.",
-            retryInSeconds: Math.ceil(reset / 1000),
+            retryInSeconds: result.retryAfter,
           },
           { status: 429 },
         );
-      }
-    }
-
-    // Cache lookup by stable input hash
-    const cacheKey = isRedisConfigured() ? `auris:snapshot:cache:${await inputHash(data)}` : null;
-    if (cacheKey && redis) {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        // Upstash auto-deserialises JSON, but tolerate either shape
-        const value = typeof cached === "string" ? JSON.parse(cached) : cached;
-        return NextResponse.json(value, { headers: { "X-Cache": "HIT" } });
       }
     }
 
@@ -138,27 +123,12 @@ Provide a calm, honest assessment. Use educational language only. Output JSON on
 
     const parsed = JSON.parse(jsonText);
 
-    // Cache, audit metrics, and team notification are all independent of the
-    // response and of each other — run them concurrently so none blocks the
-    // reply, and a failure in one (e.g. a cache write) doesn't fail the request.
-    // Only runs on a fresh generation; cache hits returned earlier.
+    // Team notification is independent of the response — a failure in it
+    // doesn't fail the request.
     const sideEffects: Promise<unknown>[] = [
       // Anonymised (no PII), consistent with the audit log below.
       notifySlack(`:bar_chart: New AI wealth snapshot — ${escapeSlack(data.country)}, age ${data.age}, ${data.riskTolerance}`),
     ];
-    if (cacheKey && redis) {
-      sideEffects.push(redis.set(cacheKey, JSON.stringify(parsed), { ex: CACHE_TTL_SECONDS }));
-    }
-    if (redis) {
-      const r = redis;
-      // Anonymised audit log (just shape of input + country/age bucket).
-      // hincrby must precede expire, so chain those two; run the chain in parallel.
-      const metricsKey = `auris:snapshot:metrics:${new Date().toISOString().slice(0, 10)}`;
-      sideEffects.push(
-        r.hincrby(metricsKey, `${data.country}|${data.riskTolerance}`, 1)
-          .then(() => r.expire(metricsKey, 60 * 60 * 24 * 90)),
-      );
-    }
 
     const results = await Promise.allSettled(sideEffects);
     for (const settled of results) {

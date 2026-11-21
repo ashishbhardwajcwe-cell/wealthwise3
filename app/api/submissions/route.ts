@@ -4,7 +4,7 @@ import { createClient as createSanityClient } from "next-sanity";
 import { z } from "zod";
 import { resend, FROM_ADDRESS, REPLY_TO, NOTIFY_ADDRESS, isResendConfigured } from "@/lib/resend";
 import { notifySlack, escapeSlack } from "@/lib/slack";
-import { formRateLimit, getClientIp } from "@/lib/redis";
+import { checkFormRateLimit, getClientIp } from "@/lib/rate-limit";
 import { projectId, dataset, apiVersion, isSanityConfigured } from "@/sanity/env";
 import { markdownToPortableText, estimateReadTime } from "@/lib/markdown-to-portable-text";
 import { slugifyHeading } from "@/lib/slugify";
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Please sign in to submit an article." }, { status: 401 });
     }
 
-    if (formRateLimit) {
-      const { success } = await formRateLimit.limit(`submission:${getClientIp(req)}`);
+    {
+      const { success } = await checkFormRateLimit("submission", getClientIp(req));
       if (!success) {
         return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
       }
