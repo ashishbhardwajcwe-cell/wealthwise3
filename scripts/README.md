@@ -119,6 +119,11 @@ the last stored benchmark, so it never crashes or blanks while you catch up.
 
 ### Unlisted shares — daily partner price list
 
+> Running the monthly update? Follow **`docs/unlisted-monthly-runbook.md`** —
+> the step-by-step procedure, the guards and what to do when one trips. This
+> section is the reference for how the pipeline works.
+
+
 Mode 2 of the unlisted section: indicative prices come from the distribution
 partner's daily "Unlisted Shares Price List" (PDF or CSV) and live in the
 `unlistedShare` documents.

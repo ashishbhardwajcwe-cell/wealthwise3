@@ -434,6 +434,9 @@ function printReport(state, { scope = null, flaggedOnly = false, heading = "read
   console.log(`  flagged                ${flagged.length}`);
   console.log(`    · with a clean twin  ${deletable.length}  → deletable with --delete-flagged`);
   console.log(`    · manual review      ${manual.length}`);
+  // Logos are hand-extracted and never re-created by an import, so this count
+  // is the cheap way to prove a purge or a re-import did not drop any.
+  console.log(`  carrying a logo        ${scoped.filter((r) => r.doc.logo).length}`);
 
   if (flagged.length) {
     console.log(
@@ -509,12 +512,17 @@ if (args.purgeDate) {
     );
   }
 
+  const logosNow = state.rows.filter((r) => r.doc.logo).length;
+  const logosLost = targets.filter((r) => r.doc.logo).length;
+
   console.log("After this purge");
   console.log("─".repeat(72));
   console.log(`  deleted                ${targets.length}`);
   console.log(`  remaining              ${state.published.length - targets.length}`);
   console.log(`    · other import dates ${otherDates.length}`);
   console.log(`    · clean, same date   ${cleanSameDate.length}  (price needs repair — see above)`);
+  console.log(`  logos  ${logosNow} now → ${logosNow - logosLost} after` +
+    (logosLost ? `   (${logosLost} lost with the deleted documents — re-attach with npm run logos:unlisted)` : "   (none lost)"));
 
   const curated = targets.filter((r) => r.blockers.some((b) => /hand-curated/.test(b)));
   if (curated.length) {
