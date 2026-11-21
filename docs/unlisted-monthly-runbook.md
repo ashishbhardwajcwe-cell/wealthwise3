@@ -47,11 +47,12 @@ bad parse through. If the names in the dry-run look wrong, the parse is wrong.
 
 ## The monthly run
 
-### 1. Drop the new PDF in the UNLISTED folder
+### 1. Drop the new file in the UNLISTED folder
 
-Keep the partner's filename. The importer takes **`.pdf` or `.csv` only** — an
-`.xlsx` is read as CSV and fails on the header check. If all you have is an
-Excel sheet, export it to CSV first.
+Keep the partner's filename. The importer reads **`.xlsx` directly** (preferred:
+no OCR, exact prices), as well as `.pdf` and `.csv`. No conversion is needed for
+an Excel sheet. A workbook carries no "As on" date, so pass `--date=YYYY-MM-DD`
+explicitly or the import stamps today.
 
 ### 2. Dry run
 
