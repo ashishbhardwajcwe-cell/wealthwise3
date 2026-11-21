@@ -28,6 +28,9 @@
   a public page.
 
 ## Unlisted updates
+- Only the RETAIL price is ever stored. The partner's DEALER price column is
+  never read, printed, logged or stored. The Sanity dataset is publicly
+  readable.
 - Monthly unlisted update: run `/unlisted-update <file>`; the runbook is
   `docs/unlisted-monthly-runbook.md`. Always dry-run first and pass `--date`
   (workbooks carry none). Never use `--force`, `--publish`, `--adopt-names` or

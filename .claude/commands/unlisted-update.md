@@ -25,8 +25,8 @@ move logos by hand.
    "As on" date, so always pass `--date`.
 
 3. **Baseline.** `npm run audit:unlisted` — record flagged count, logo count,
-   total docs, and the document count of the most recent existing asOfDate
-   (that is "last month's updated count").
+   total docs, and the document count of the most recent asOfDate (the
+   baseline).
 
 4. **Dry run.**
    `npm run import:unlisted -- "<file>" --date=<date> --dry-run`
@@ -37,7 +37,8 @@ move logos by hand.
    - AMBIGUOUS = 0
    - no company name (Created or Updated) ends in price-like digits, e.g. `(PPFAS) 19850`
    - Created ≤ 20% of rows read (rows read = the "N rows read" figure, minus blank/header rows)
-   - Updated ≥ last month's count from step 3
+   - Updated ≥ 90% of the baseline count from step 3. If lower, stop and list
+     last month's companies that didn't match this list.
    - no "POSSIBLE DUPLICATE" entries left unresolved
    If any fail, STOP and show me the dry-run summary and which check failed.
    Do not add aliases or override guards on your own; propose them and wait.
