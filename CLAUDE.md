@@ -7,7 +7,9 @@
   branch instead — files downloaded to a laptop have already been lost once.
 - Nothing exists until it is committed. Every task ends with a commit and a
   pushed branch or PR — data scripts included.
-- Update `docs/pms-data-import.md` whenever a pipeline changes.
+- Update the pipeline's own doc whenever it changes: `docs/pms-data-import.md`
+  for PMS/AIF, `docs/unlisted-monthly-runbook.md` + `scripts/README.md` for
+  unlisted shares.
 
 ## Safety
 - This GitHub repo is PUBLIC. Never commit secrets, tokens, cookies, `.har`
@@ -17,7 +19,9 @@
 ## Data rules
 - Unlisted shares: only the RETAIL/indicative price may be read, stored, or
   displayed. The dealer/cost price is confidential — never into Sanity, logs,
-  or console output.
+  or console output. Existing logos are never replaced (no `--force`).
+  **Read `docs/unlisted-monthly-runbook.md` before touching this pipeline** —
+  the import, the logos, the audit and the recovery path are all in there.
 - Every performance figure carries `asOfDate` and `source`. Reject rows
   missing either.
 - Dates are zero-padded `YYYY-MM-DD` (`2026-06-30`, never `2026-6-30`).
