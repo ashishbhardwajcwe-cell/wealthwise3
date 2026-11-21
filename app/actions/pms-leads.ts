@@ -64,25 +64,40 @@ export async function submitPmsLead(input: LeadInput): Promise<LeadResult> {
     return { ok: false, error: GENERIC_ERROR };
   }
 
-  if (await rateLimited("pms-lead")) {
-    return { ok: false, error: "Too many requests — please try again in a little while." };
-  }
+  try {
+    // A Redis/Upstash outage must never block a lead: fail open on the limiter.
+    let limited = false;
+    try {
+      limited = await rateLimited("pms-lead");
+    } catch (err) {
+      console.error("pms lead rate limiter failed (continuing)", err);
+    }
+    if (limited) {
+      return { ok: false, error: "Too many requests — please try again in a little while." };
+    }
 
-  const supabase = getServerSupabase();
-  if (!supabase) return { ok: false, error: GENERIC_ERROR };
+    const supabase = getServerSupabase();
+    if (!supabase) {
+      console.error("pms lead: Supabase env vars missing (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY)");
+      return { ok: false, error: GENERIC_ERROR };
+    }
 
-  const { error } = await supabase.from("leads").insert({
-    name,
-    email,
-    phone: phone || null,
-    strategy,
-    source: input.source,
-  });
-  if (error) {
-    console.error("pms lead insert failed", error);
+    const { error } = await supabase.from("leads").insert({
+      name,
+      email,
+      phone: phone || null,
+      strategy,
+      source: input.source,
+    });
+    if (error) {
+      console.error("pms lead insert failed", error);
+      return { ok: false, error: GENERIC_ERROR };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error("pms lead unexpected failure", err);
     return { ok: false, error: GENERIC_ERROR };
   }
-  return { ok: true };
 }
 
 /** Newsletter band signup → public.subscribers. Duplicate email → already: true. */
