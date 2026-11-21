@@ -44,10 +44,15 @@ export function EnquireModal({ strategy, source, onClose, title = "Enquire" }: {
     if (!EMAIL_RE.test(email.trim())) { setError("Please enter a valid email address."); return; }
     setError(null);
     setSubmitting(true);
-    const res = await submitPmsLead({ name, email, phone, strategy, source, website });
-    setSubmitting(false);
-    if (res.ok) setDone(true);
-    else setError(res.error);
+    try {
+      const res = await submitPmsLead({ name, email, phone, strategy, source, website });
+      if (res.ok) setDone(true);
+      else setError(res.error);
+    } catch {
+      setError("We couldn't send your enquiry. Please try again, or email hello@planmycashflows.com.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
