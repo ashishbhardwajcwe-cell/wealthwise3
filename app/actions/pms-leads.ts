@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { formRateLimit } from "@/lib/redis";
+import { checkFormRateLimit } from "@/lib/rate-limit";
 
 /**
  * Lead-capture server actions for the PMS explorer and strategy pages.
@@ -39,10 +39,9 @@ export type SubscribeResult = { ok: true; already: boolean } | { ok: false; erro
 const GENERIC_ERROR = "Something went wrong. Please try again, or email hello@planmycashflows.com.";
 
 async function rateLimited(bucket: string): Promise<boolean> {
-  if (!formRateLimit) return false; // Upstash not configured — skip silently
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0].trim() ?? h.get("x-real-ip") ?? "unknown";
-  const { success } = await formRateLimit.limit(`${bucket}:${ip}`);
+  const { success } = await checkFormRateLimit(bucket, ip);
   return !success;
 }
 

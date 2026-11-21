@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resend, FROM_ADDRESS, REPLY_TO, NOTIFY_ADDRESS, isResendConfigured } from "@/lib/resend";
 import { notifySlack, escapeSlack } from "@/lib/slack";
-import { formRateLimit, getClientIp } from "@/lib/redis";
+import { checkFormRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
-    // Rate limit per IP (10 / hour). Skipped silently if Upstash isn't configured.
-    if (formRateLimit) {
-      const { success } = await formRateLimit.limit(getClientIp(req));
+    // Rate limit per IP (10 / hour). Fails open if Supabase is unreachable.
+    {
+      const { success } = await checkFormRateLimit("newsletter", getClientIp(req));
       if (!success) {
         return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
       }
