@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { checkFormRateLimit } from "@/lib/rate-limit";
+import { notifyNewSubscriber } from "@/lib/form-notifications";
 
 /**
  * Lead-capture server actions for the PMS explorer and strategy pages.
@@ -19,9 +20,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Runtime allow-list. MUST list every LeadSource — a source present in the
  *  type but missing here is rejected as a generic error at submit time, which
  *  is how the homepage's Featured grid enquiries were silently failing. */
-const SOURCES = ["pms-explorer", "pms-strategy-page", "aif-directory", "unlisted-page", "homepage-featured", "compare", "newsletter-archive"];
+const SOURCES = ["pms-explorer", "pms-strategy-page", "aif-directory", "unlisted-page", "homepage-featured", "compare", "newsletter-archive", "footer", "home-pms-aif"];
 
-export type LeadSource = "pms-explorer" | "pms-strategy-page" | "aif-directory" | "unlisted-page" | "homepage-featured" | "compare" | "newsletter-archive";
+export type LeadSource = "pms-explorer" | "pms-strategy-page" | "aif-directory" | "unlisted-page" | "homepage-featured" | "compare" | "newsletter-archive" | "footer" | "home-pms-aif";
 
 export interface LeadInput {
   name: string;
@@ -113,19 +114,25 @@ export async function subscribeToBrief(input: {
   }
   if (!SOURCES.includes(input.source)) return { ok: false, error: GENERIC_ERROR };
 
-  if (await rateLimited("pms-subscribe")) {
-    return { ok: false, error: "Too many requests — please try again in a little while." };
-  }
+  try {
+    if (await rateLimited("pms-subscribe")) {
+      return { ok: false, error: "Too many requests — please try again in a little while." };
+    }
 
-  const supabase = getServerSupabase();
-  if (!supabase) return { ok: false, error: GENERIC_ERROR };
+    const supabase = getServerSupabase();
+    if (!supabase) return { ok: false, error: GENERIC_ERROR };
 
-  const { error } = await supabase.from("subscribers").insert({ email, source: input.source });
-  if (error) {
-    // 23505 = unique_violation on subscribers.email — they're already in.
-    if (error.code === "23505") return { ok: true, already: true };
-    console.error("subscriber insert failed", error);
+    const { error } = await supabase.from("subscribers").insert({ email, source: input.source });
+    if (error) {
+      // 23505 = unique_violation on subscribers.email — they're already in.
+      if (error.code === "23505") return { ok: true, already: true };
+      console.error("subscriber insert failed", error);
+      return { ok: false, error: GENERIC_ERROR };
+    }
+    await notifyNewSubscriber(email, input.source); // best-effort, never throws
+    return { ok: true, already: false };
+  } catch (err) {
+    console.error("subscribe unexpected failure", err);
     return { ok: false, error: GENERIC_ERROR };
   }
-  return { ok: true, already: false };
 }

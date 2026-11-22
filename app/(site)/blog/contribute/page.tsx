@@ -6,7 +6,7 @@ import { StructuredData, faqSchema, breadcrumbSchema } from "@/components/Struct
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
-  title: "Write for the Journal — Contribute an Article | PlanMyCashflows",
+  title: "Write for the Journal — Contribute an Article",
   description:
     "Share your expertise with thousands of Indian and global investors. Submit an article on investing, tax, planning, or NRI finance — every piece is editor-reviewed before publishing.",
   alternates: { canonical: `${siteConfig.url}/blog/contribute` },

@@ -6,7 +6,7 @@ import { CTASection } from "@/components/CTASection";
 import { getStockAnalyses } from "@/lib/investment-data";
 
 export const metadata: Metadata = {
-  title: "Stock Analyses — PlanMyCashflows Research",
+  title: "Stock Analyses — Research Notes",
   description:
     "In-depth stock research notes by PlanMyCashflows Research. Thesis, key metrics, strengths, risks, and conclusion for each analysis.",
 };

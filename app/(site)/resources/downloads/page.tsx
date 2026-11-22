@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, FileText, Check, Loader2 } from "lucide-react";
 import { Hero } from "@/components/Hero";
+import { requestDownload } from "@/app/actions/forms";
 
 const DOWNLOADS = [
   {
@@ -30,6 +31,7 @@ export default function DownloadsPage() {
   const [submitted, setSubmitted] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [website, setWebsite] = useState(""); // honeypot
 
   async function handleSubmit(e: React.FormEvent, slug: string) {
     e.preventDefault();
@@ -37,13 +39,9 @@ export default function DownloadsPage() {
     setError(null);
     setLoading(slug);
     try {
-      const res = await fetch("/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, slug }),
-      });
-      if (!res.ok) throw new Error();
-      setSubmitted(slug);
+      const res = await requestDownload({ email, slug, website });
+      if (res.ok) setSubmitted(slug);
+      else setError(res.error);
     } catch {
       setError("Couldn't queue the download. Please try again.");
     } finally {
@@ -81,6 +79,10 @@ export default function DownloadsPage() {
                   </div>
                 ) : (
                   <form onSubmit={(e) => handleSubmit(e, d.slug)} className="flex gap-2">
+                    <input
+                      value={website} onChange={(e) => setWebsite(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true"
+                      style={{ position: "absolute", left: -10000, height: 0, width: 0, opacity: 0 }}
+                    />
                     <input
                       type="email" required value={email}
                       disabled={loading === d.slug}

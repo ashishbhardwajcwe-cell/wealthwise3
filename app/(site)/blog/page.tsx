@@ -6,7 +6,7 @@ import { BlogCard } from "@/components/BlogCard";
 import { getAllBlogCards, getFeaturedOrLatest, BLOG_CATEGORIES } from "@/lib/blog";
 
 export const metadata: Metadata = {
-  title: "Blog — PlanMyCashflows",
+  title: "Blog — Wealth, Tax & PMS Essays",
   description:
     "In-depth essays on wealth management, taxation, financial planning, PMS & AIF, and NRI investing — by PlanMyCashflows Research.",
 };

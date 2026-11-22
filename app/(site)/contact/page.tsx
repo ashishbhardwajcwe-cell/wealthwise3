@@ -4,31 +4,33 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Mail, MessageCircle, MapPin, Check } from "lucide-react";
 import { Hero } from "@/components/Hero";
+import { submitContactMessage } from "@/app/actions/forms";
 import { siteConfig } from "@/lib/site-config";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const body = new URLSearchParams();
-    body.append("form-name", "contact");
-    formData.forEach((value, key) => body.append(key, value.toString()));
-
+    if (sending) return;
+    const f = new FormData(e.currentTarget);
+    const val = (k: string) => String(f.get(k) ?? "");
+    setSending(true);
     try {
-      const res = await fetch("/", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: body.toString(),
+      const res = await submitContactMessage({
+        name: val("name"), email: val("email"), phone: val("phone"),
+        topic: val("topic"), message: val("message"), website: val("website"),
       });
-      if (!res.ok) throw new Error("Submission failed");
-      setSubmitted(true);
+      if (res.ok) setSubmitted(true);
+      else setError(res.error);
     } catch {
-      setError("Couldn't send your message. Please email us directly.");
+      setError(`Couldn't send your message. Please email us at ${siteConfig.email}.`);
+    } finally {
+      setSending(false);
     }
   }
 
@@ -55,10 +57,10 @@ export default function ContactPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <input type="hidden" name="form-name" value="contact" />
-                <p hidden>
-                  <label>Don&apos;t fill this out: <input name="bot-field" /></label>
-                </p>
+                {/* Honeypot — hidden from humans, bots fill it. */}
+                <div aria-hidden="true" style={{ position: "absolute", left: -10000, height: 0, width: 0, overflow: "hidden" }}>
+                  <label>Website <input name="website" tabIndex={-1} autoComplete="off" /></label>
+                </div>
                 <Field label="Name" name="name" required />
                 <Field label="Email" name="email" type="email" required />
                 <Field label="Phone (optional)" name="phone" type="tel" />
@@ -73,7 +75,7 @@ export default function ContactPage() {
                 ]} />
                 <Field label="Message" name="message" textarea required />
                 {error && <p className="text-sm text-[var(--color-ruby)]">{error}</p>}
-                <button type="submit" className="btn-primary w-full">Send</button>
+                <button type="submit" disabled={sending} className="btn-primary w-full disabled:opacity-60">{sending ? "Sending…" : "Send"}</button>
               </form>
             )}
           </div>

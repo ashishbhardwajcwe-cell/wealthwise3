@@ -27,7 +27,7 @@ import { fmtAsOf, latestAmfiDate } from "@/lib/format";
 
 const PAGE_TITLE = "PlanMyCashflows | Explore India's Leading PMS & AIF Strategies";
 const PAGE_DESCRIPTION =
-  "Discover, compare and understand Portfolio Management Services (PMS) and Alternative Investment Funds (AIF) across India's leading fund houses. AI-powered, unbiased and education-first — for HNIs, professionals, business owners and NRIs.";
+  "Discover, compare and understand PMS and AIF strategies across India's leading fund houses. Unbiased, education-first, with alpha over benchmark.";
 
 export const metadata: Metadata = {
   title: { absolute: PAGE_TITLE },
@@ -40,11 +40,13 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "PlanMyCashflows" }],
   },
   twitter: {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
+    images: ["/opengraph-image"],
   },
 };
 

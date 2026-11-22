@@ -2,29 +2,29 @@
 
 import { useState } from "react";
 import { Check, Loader2, Mail } from "lucide-react";
+import { subscribeToBrief } from "@/app/actions/pms-leads";
 
 /**
- * Homepage newsletter capture — same /api/newsletter endpoint as the
+ * Homepage newsletter capture — same subscribeToBrief action as the
  * footer form, but light-themed and with an explicit consent checkbox.
  */
 export function HomeNewsletter() {
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [website, setWebsite] = useState(""); // honeypot
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.includes("@") || !consent) return;
     setState("loading");
     try {
-      const res = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source: "home-pms-aif" }),
-      });
-      if (!res.ok) throw new Error();
-      setState("done");
+      const res = await subscribeToBrief({ email, source: "home-pms-aif", website });
+      if (res.ok) setState("done");
+      else { setErrMsg(res.error); setState("error"); }
     } catch {
+      setErrMsg(null);
       setState("error");
     }
   }
@@ -39,6 +39,7 @@ export function HomeNewsletter() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-md mx-auto">
+      <input value={website} onChange={(e) => setWebsite(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: -10000, height: 0, width: 0, opacity: 0 }} />
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-slate)]" aria-hidden />
@@ -75,7 +76,7 @@ export function HomeNewsletter() {
         </span>
       </label>
       {state === "error" && (
-        <p className="text-xs text-[var(--color-ruby)] mt-2">Could not subscribe. Please try again later.</p>
+        <p className="text-xs text-[var(--color-ruby)] mt-2">{errMsg ?? "Could not subscribe. Please try again later."}</p>
       )}
     </form>
   );
