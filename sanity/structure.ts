@@ -56,6 +56,7 @@ export const deskStructure: StructureResolver = (S) =>
                     .filter('_type == "unlistedShare" && needsReview == true')
                     .apiVersion("2024-09-01"),
                 ),
+              S.documentTypeListItem("unlistedFundamentals").title("Unlisted Fundamentals"),
             ]),
         ),
     ]);

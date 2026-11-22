@@ -1,0 +1,54 @@
+{
+  "_readme": "Thresholds for the unlisted-shares fundamentals scorecard (scripts/unlisted-fundamentals-lib.mjs). Edit numbers here only. Each factor is shown on its own as green/amber/red with the number and the rule; factors are NEVER summed, weighted or ranked. Price momentum is never an input. Missing data is 'not available', never a guess.",
+  "implausibleGrowthPct": { "min": -95, "max": 300 },
+  "growthQuality": {
+    "label": "Growth quality",
+    "metric": "revenueCagr3yPct",
+    "fallbackMetric": "revenueGrowthYoYPct",
+    "greenMin": 15,
+    "amberMin": 5,
+    "capAtAmberIfLossMaking": true
+  },
+  "profitabilityTrend": {
+    "label": "Profitability trend",
+    "metric": "ebitdaMarginChangePp",
+    "greenMin": 1,
+    "amberMin": -2,
+    "capAtAmberIfLossMaking": true
+  },
+  "balanceSheet": {
+    "label": "Balance sheet",
+    "metric": "debtToEquity",
+    "greenMax": 0.5,
+    "amberMax": 1.5,
+    "greenIfNetCash": true,
+    "redIfNegativeNetWorth": true
+  },
+  "cashConversion": {
+    "label": "Cash conversion",
+    "metric": "cashConversion3y",
+    "fallbackMetric": "cashConversion",
+    "greenMin": 0.8,
+    "amberMin": 0.5
+  },
+  "governance": {
+    "label": "Governance",
+    "redIfQualifiedLatestFy": true,
+    "amberIfAuditorChangedLatestFy": true
+  },
+  "valuation": {
+    "label": "Valuation (at retail price)",
+    "metric": "pe",
+    "greenMax": 25,
+    "amberMax": 50,
+    "fallbackMetric": "evSales",
+    "fallbackGreenMax": 3,
+    "fallbackAmberMax": 8
+  },
+  "ipoVisibility": {
+    "label": "IPO visibility",
+    "approved": "green",
+    "filed": "amber",
+    "none": "red"
+  }
+}
