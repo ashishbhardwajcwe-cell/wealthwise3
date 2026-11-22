@@ -7,6 +7,7 @@ import { pmsStrategy } from "./pmsStrategy";
 import { benchmark } from "./benchmark";
 import { aifFund } from "./aifFund";
 import { unlistedShare } from "./unlistedShare";
+import { unlistedFundamentals } from "./unlistedFundamentals";
 
 export const schemaTypes: SchemaTypeDefinition[] = [
   // Editorial
@@ -19,4 +20,5 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   benchmark,
   aifFund,
   unlistedShare,
+  unlistedFundamentals,
 ];

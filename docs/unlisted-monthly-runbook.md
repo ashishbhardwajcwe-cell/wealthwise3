@@ -113,6 +113,73 @@ Studio → Investment Data → *Unlisted Shares (needs review)*. Check the name 
 sector, then untick `needsReview`. The site picks it up on the next
 revalidation (≤5 min) or deploy.
 
+### 7. Fundamentals (when new results or DRHP news arrive)
+
+Fundamentals are annual, so most months there is nothing to import. When a
+company files results (MCA, annual report) or a DRHP is filed/approved:
+
+1. Copy `_templates/unlisted-fundamentals.csv` (header only; see
+   `_templates/unlisted-fundamentals.example.csv` for filled rows) into
+   `_incoming/` and fill it in. One row per company per FY. A row with a blank
+   `fy_end` updates company-level fields only (DRHP, sector, peers, investors).
+   - Money columns in **₹ crore**; `shares_outstanding` is an absolute count.
+   - `source` is MCA, Tofler, DRHP or Annual report; `source_date` is required.
+   - Blank means "not available". Never type 0 for a figure you don't have.
+   - Identify companies by **`slug`** (as in Studio) or **`cin`**. Never by
+     name. The first import for a company needs its slug.
+   - The CSV has **no price column**. The retail price comes from Sanity at
+     snapshot time. Any price, dealer, cost or buy column aborts the import.
+2. Dry run, then write:
+
+```bash
+npm run import:unlisted-fundamentals -- _incoming/<file>.csv --dry-run
+npm run import:unlisted-fundamentals -- _incoming/<file>.csv
+```
+
+   Unknown slug/CIN refuses the whole file. An FY already on file with
+   different figures is a **restatement**: it is refused and the changed fields
+   listed. Only if the company genuinely restated, re-run with
+   `--allow-restatement`. There is no `--force`.
+3. The write only touches `unlistedFundamentals` documents (Studio → Investment
+   Data → Unlisted Fundamentals). Prices, names, slugs and logos on the Unlisted
+   Shares are never changed. The CSV is copied to
+   `data/unlisted-fundamentals/imports/`. Commit it.
+
+### 8. Monthly newsletter snapshot
+
+After the price import (and any fundamentals import) is confirmed and the
+review queue is cleared:
+
+```bash
+npm run unlisted:snapshot -- --date=YYYY-MM-DD --dry-run   # the price import's asOfDate
+npm run unlisted:snapshot -- --date=YYYY-MM-DD
+npm run check:confidential
+```
+
+It writes `data/unlisted-snapshots/YYYY-MM.json` and refreshes `latest.json`.
+Commit them on a branch and open a PR.
+
+- The month is found by the price import's **asOfDate** (a date ≥20 documents
+  carry), never by name.
+- Per company: latest fundamentals, metrics, the 7-factor scorecard, valuation
+  at that month's **retail** price, and `changesThisMonth` (results filed, DRHP
+  filed/approved, auditor change, qualification added) compared with the
+  previous month's file.
+- **Not a buy signal.** Companies are alphabetical. Factors are never summed,
+  weighted or ranked. Price momentum is never used; the price only feeds market
+  cap, P/E, P/B and EV/Sales.
+- Thresholds live in `config/unlisted-scorecard.json`. Change them there, and
+  the next snapshot shows the new rule text.
+- Missing data is `null`, with the reason in `metricNotes` and on the factor
+  ("not available"). Growth outside −95%..+300% is withheld as implausible.
+- **Retail price only.** The snapshot aborts if a dealer/cost/buy-style field
+  exists in Sanity or the output, or "dealer" appears in the file.
+  `check:confidential` re-scans the data, template and `_incoming/` folders
+  (add `--staged` before committing).
+- `npm run unlisted:snapshot -- --backfill` rebuilds every month in order. A
+  backfilled month only includes fundamentals imported, and DRHP events dated,
+  by that month's end.
+
 ---
 
 ## Known false positives — do not delete these
@@ -171,6 +238,11 @@ conversation with the partner, not something the script settles.
 | `npm run audit:unlisted` | read-only health check |
 | `npm run audit:unlisted -- --purge-import=<date>` | delete one bad import |
 | `npm run test:unlisted` | self-test the parser and the guards |
+| `npm run import:unlisted-fundamentals -- <csv> --dry-run` | validate + preview a fundamentals CSV |
+| `npm run import:unlisted-fundamentals -- <csv>` | write fundamentals to Sanity |
+| `npm run unlisted:snapshot -- --date=<date>` | write the month's newsletter snapshot |
+| `npm run check:confidential` | fail if a dealer/cost price field or term appears |
+| `npm run test:unlisted-fundamentals` | self-test CSV guard, metrics, scorecard |
 
 Env, from `.env.local`: `NEXT_PUBLIC_SANITY_PROJECT_ID` for reads,
 `SANITY_API_TOKEN` (Editor) for writes.

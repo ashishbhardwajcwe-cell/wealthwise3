@@ -26,7 +26,11 @@
     "archive:pms": "node scripts/archive-pms.mjs",
     "test:pms": "node scripts/pms-pipeline.test.mjs",
     "test:unlisted": "node scripts/unlisted-pipeline.test.mjs",
-    "test:newsletters": "node scripts/newsletters.test.mjs"
+    "test:newsletters": "node scripts/newsletters.test.mjs",
+    "import:unlisted-fundamentals": "node scripts/import-unlisted-fundamentals.mjs",
+    "unlisted:snapshot": "node scripts/unlisted-snapshot.mjs",
+    "test:unlisted-fundamentals": "node scripts/unlisted-fundamentals.test.mjs",
+    "check:confidential": "node scripts/check-confidential.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

@@ -1,0 +1,4 @@
+slug,cin,fy_end,revenue_cr,ebitda_cr,pat_cr,operating_cash_flow_cr,net_worth_cr,total_debt_cr,cash_cr,shares_outstanding,auditor,audit_qualified,audit_qualification_note,source,source_date,sector,drhp_status,drhp_filed_date,drhp_approved_date,listed_peers,notable_investors
+example-company,U12345MH2010PTC123456,2024-03-31,820.5,121.3,64.2,70.1,540,120,45,125000000,ABC & Co LLP,no,,MCA,2024-10-28,Specialty Chemicals,,,,NSE:AARTIIND;NSE:VINATIORGA,Fund A;Family office B
+example-company,,2025-03-31,951,150.2,81.7,88.4,621.7,95,60.5,125000000,ABC & Co LLP,no,,Annual report,2025-09-30,,,,,,
+example-company,,,,,,,,,,,,,,,,,approved,2025-09-15,2026-02-10,,
