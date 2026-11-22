@@ -26,7 +26,9 @@
     "archive:pms": "node scripts/archive-pms.mjs",
     "test:pms": "node scripts/pms-pipeline.test.mjs",
     "test:unlisted": "node scripts/unlisted-pipeline.test.mjs",
-    "test:newsletters": "node scripts/newsletters.test.mjs"
+    "test:newsletters": "node scripts/newsletters.test.mjs",
+    "unlisted:snapshot": "node scripts/unlisted-snapshot.mjs",
+    "test:unlisted-snapshot": "node scripts/unlisted-snapshot.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

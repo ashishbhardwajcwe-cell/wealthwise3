@@ -113,6 +113,39 @@ Studio → Investment Data → *Unlisted Shares (needs review)*. Check the name 
 sector, then untick `needsReview`. The site picks it up on the next
 revalidation (≤5 min) or deploy.
 
+### 7. Newsletter snapshot
+
+After the import is confirmed and the review queue is cleared, write the
+month's data file for the newsletter (read-only against Sanity):
+
+```bash
+npm run unlisted:snapshot -- --date=YYYY-MM-DD --dry-run   # same date as the import
+npm run unlisted:snapshot -- --date=YYYY-MM-DD
+```
+
+It writes `data/unlisted-snapshots/YYYY-MM.json`, `YYYY-MM.csv` and refreshes
+`latest.json` (always the newest month). Commit them on a branch and open a PR,
+like every other data step.
+
+- The import is found by **asOfDate** (a date carried by ≥20 documents), never
+  by company name. A date that isn't an import is refused, with the list of
+  real ones.
+- "Previous" = the latest import in an earlier calendar month; `listing` marks
+  each company `new`, `dropped` or `continuing`. Only site-visible companies
+  are included, so clear `needsReview` first.
+- **Retail price only.** The run aborts before writing if any dealer/cost/buy
+  style key appears in the Sanity documents or the rows, or the term "dealer"
+  appears in the output.
+- `pctChange` is absolute (not annualised); anything outside −95%..+300% is
+  withheld and flagged `implausible`.
+- Enquiry counts come from Supabase `leads` via the count-only RPC
+  `unlisted_enquiry_counts` (no names, emails or phones). It needs
+  `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`;
+  without them the file says `enquiries.available: false`. Months before
+  2026-11 have no enquiry data by design.
+- `npm run unlisted:snapshot -- --backfill` rewrites every month (latest import
+  per month). Safe to re-run; output is deterministic.
+
 ---
 
 ## Known false positives — do not delete these
@@ -171,6 +204,8 @@ conversation with the partner, not something the script settles.
 | `npm run audit:unlisted` | read-only health check |
 | `npm run audit:unlisted -- --purge-import=<date>` | delete one bad import |
 | `npm run test:unlisted` | self-test the parser and the guards |
+| `npm run unlisted:snapshot -- --date=<date>` | write the month's newsletter data file |
+| `npm run test:unlisted-snapshot` | self-test the snapshot |
 
 Env, from `.env.local`: `NEXT_PUBLIC_SANITY_PROJECT_ID` for reads,
 `SANITY_API_TOKEN` (Editor) for writes.
