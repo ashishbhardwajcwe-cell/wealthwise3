@@ -68,7 +68,7 @@ const CARDS: PlannerCard[] = [
       "Tax-loss + LTCG harvesting alerts",
       "Stress-test scenarios + PDF export",
     ],
-    cta: { label: "Open the app", href: siteConfig.appDeepLink, external: true },
+    cta: { label: "Open the app", href: siteConfig.appDeepLink },
   },
 ];
 

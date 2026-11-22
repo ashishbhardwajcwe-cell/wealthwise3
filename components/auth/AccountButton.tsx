@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User as UserIcon, LogOut, LayoutDashboard, ChevronDown, ExternalLink } from "lucide-react";
+import { User as UserIcon, LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { LoginModal } from "./LoginModal";
 import { siteConfig } from "@/lib/site-config";
@@ -48,7 +48,7 @@ export function AccountButton({ variant = "desktop" }: { variant?: "desktop" | "
     return (
       <div className="border-b border-[var(--color-silver)]/30 py-3">
         <div className="px-2 text-sm font-semibold text-[var(--color-navy)] mb-2">{displayName}</div>
-        <a href={siteConfig.appDeepLink} target="_blank" rel="noreferrer" className="block px-2 py-2 text-sm text-[var(--color-slate)]">
+        <a href={siteConfig.appDeepLink} className="block px-2 py-2 text-sm text-[var(--color-slate)]">
           Open the app →
         </a>
         <SignOutButton className="px-2 py-2 text-sm text-[var(--color-ruby)] text-left w-full" />
@@ -93,13 +93,10 @@ export function AccountButton({ variant = "desktop" }: { variant?: "desktop" | "
             </div>
             <a
               href={siteConfig.appDeepLink}
-              target="_blank"
-              rel="noreferrer"
               className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--color-sand)]/60 text-sm text-[var(--color-navy)]"
             >
               <LayoutDashboard className="w-4 h-4 text-[var(--color-gold-dim)]" />
               Open the app
-              <ExternalLink className="w-3 h-3 ml-auto text-[var(--color-slate)]" />
             </a>
             <SignOutButton className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--color-sand)]/60 text-sm text-[var(--color-ruby)] w-full text-left" />
           </div>

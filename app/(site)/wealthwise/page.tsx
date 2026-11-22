@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Eye, Brain, GitBranch, Check } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { CTASection } from "@/components/CTASection";
+import { siteConfig } from "@/lib/site-config";
 import { AppScreenshot } from "@/components/Illustrations";
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export default function CashFlowPlannerAppPage() {
         eyebrow="The Product"
         title="The wealth platform that thinks alongside you"
         subtitle="See everything you own, know what you should do next, plan for any future. CashFlow Planner turns 30 spreadsheets and apps into one coherent picture."
-        primaryCta={{ label: "Start 14-day free trial", href: "https://app.planmycashflows.com/?signup" }}
+        primaryCta={{ label: "Start 14-day free trial", href: siteConfig.signupUrl }}
         secondaryCta={{ label: "See pricing", href: "/pricing" }}
       />
 
@@ -125,7 +126,7 @@ export default function CashFlowPlannerAppPage() {
       <CTASection
         title="Start your 14-day free trial"
         subtitle="No credit card required. Cancel anytime in one click. Your data stays private — encrypted in transit and at rest."
-        primaryCta={{ label: "Try CashFlow Planner free", href: "https://app.planmycashflows.com/?signup" }}
+        primaryCta={{ label: "Try CashFlow Planner free", href: siteConfig.signupUrl }}
         secondaryCta={{ label: "See pricing", href: "/pricing" }}
       />
     </>
