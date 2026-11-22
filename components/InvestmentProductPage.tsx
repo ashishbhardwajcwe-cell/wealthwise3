@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, X, AlertTriangle, ArrowRight, ExternalLink } from "lucide-react";
+import { Check, X, AlertTriangle, ArrowRight } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { CTASection } from "@/components/CTASection";
 import { StructuredData, faqSchema } from "@/components/StructuredData";
@@ -156,8 +156,8 @@ export function InvestmentProductPage({
             <Link href="/plan" className="btn-primary">
               Open the Wealth Planner
             </Link>
-            <a href={siteConfig.appUrl} target="_blank" rel="noreferrer" className="btn-outline inline-flex items-center gap-1.5">
-              Open CashFlow Planner <ExternalLink className="w-3.5 h-3.5" />
+            <a href={siteConfig.appUrl} className="btn-outline inline-flex items-center gap-1.5">
+              Open CashFlow Planner <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>
         </div>

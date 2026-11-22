@@ -84,7 +84,7 @@ export default function FinancialPlanningPage() {
               copy="The complete planner: SWOT, retirement scenarios, tax harvesting, insurance gap, asset allocation drift, 5-year cashflow. PDF export."
               time="~30 minutes"
               gate="Free trial · Login required"
-              cta={{ label: "Open the app", href: siteConfig.appUrl, external: true }}
+              cta={{ label: "Open the app", href: siteConfig.appUrl }}
             />
           </div>
 

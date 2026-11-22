@@ -119,12 +119,10 @@ export function Header() {
           <span className="h-5 w-px bg-[var(--color-silver)]/50" aria-hidden />
           <a
             href={siteConfig.appDeepLink}
-            target="_blank"
-            rel="noreferrer"
             className="text-sm font-semibold text-[var(--color-navy)] hover:text-[var(--color-gold-dim)] transition-colors whitespace-nowrap inline-flex items-center gap-1"
             title="Open the AI Wealth Planner — goes straight to data entry"
           >
-            AI Planner <ExternalLink className="w-3.5 h-3.5" />
+            AI Planner
           </a>
           <a
             href={siteConfig.topmateUrl}
@@ -170,12 +168,10 @@ export function Header() {
             <AccountButton variant="mobile" />
             <a
               href={siteConfig.appDeepLink}
-              target="_blank"
-              rel="noreferrer"
               className="px-2 py-3 text-base font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1.5"
               onClick={() => setOpen(false)}
             >
-              AI Planner <ExternalLink className="w-3.5 h-3.5" />
+              AI Planner
             </a>
             <a
               href={siteConfig.topmateUrl}

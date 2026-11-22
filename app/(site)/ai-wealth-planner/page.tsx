@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AIPlannerForm } from "@/components/AIPlannerForm";
 import { siteConfig } from "@/lib/site-config";
 
@@ -27,11 +27,9 @@ export default function AIWealthPlannerPage() {
             Looking for the full app instead?{" "}
             <a
               href={siteConfig.appUrl}
-              target="_blank"
-              rel="noreferrer"
               className="font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1 hover:text-[var(--color-navy)]"
             >
-              Open CashFlow Planner <ExternalLink className="w-3.5 h-3.5" />
+              Open CashFlow Planner <ArrowRight className="w-3.5 h-3.5" />
             </a>
             {" · "}or{" "}
             <Link href="/plan" className="font-semibold text-[var(--color-gold-dim)] inline-flex items-center gap-1 hover:text-[var(--color-navy)]">

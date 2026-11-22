@@ -30,7 +30,7 @@ const WELCOME_HTML = `
         <li><a href="https://planmycashflows.com/plan" style="color: #A08030;">Wealth Planner hub</a> — pick a Snapshot, Guided Plan, or the full app</li>
         <li><a href="https://planmycashflows.com/ai-wealth-planner" style="color: #A08030;">AI Snapshot</a> — 60-second personalised snapshot, no signup</li>
         <li><a href="https://planmycashflows.com/guided" style="color: #A08030;">Guided Plan</a> — 10-minute interactive plan, no signup</li>
-        <li><a href="https://app.planmycashflows.com" style="color: #A08030;">Full CashFlow Planner app</a> — complete planner, 14-day trial, login required</li>
+        <li><a href="https://planmycashflows.com/app" style="color: #A08030;">Full CashFlow Planner app</a> — complete planner, 14-day trial, login required</li>
       </ul>
       <p style="margin-top: 32px;">— The PlanMyCashflows Team</p>
       <hr style="border: none; border-top: 1px solid #C4CDD5; margin: 32px 0;" />
@@ -56,7 +56,7 @@ Where every PlanMyCashflows wealth planner lives:
 - Wealth Planner hub: https://planmycashflows.com/plan
 - AI Snapshot (60 sec): https://planmycashflows.com/ai-wealth-planner
 - Guided Plan (10 min): https://planmycashflows.com/guided
-- Full app: https://app.planmycashflows.com
+- Full app: https://planmycashflows.com/app
 
 — The PlanMyCashflows Team
 
