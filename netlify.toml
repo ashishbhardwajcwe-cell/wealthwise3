@@ -7,3 +7,30 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+# The planner used to live on app.planmycashflows.com (separate site). That
+# hostname is now an alias of this site; send every request to the single
+# domain. Specific old planner paths first, then a catch-all to /app.
+[[redirects]]
+  from = "https://app.planmycashflows.com/dashboard"
+  to = "https://planmycashflows.com/app/dashboard"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://app.planmycashflows.com/guided"
+  to = "https://planmycashflows.com/app/guided"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://app.planmycashflows.com/*"
+  to = "https://planmycashflows.com/app"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://app.planmycashflows.com/*"
+  to = "https://planmycashflows.com/app"
+  status = 301
+  force = true
